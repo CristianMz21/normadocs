@@ -90,9 +90,21 @@ uv run convert_to_apa.py
 
 `uv` descargará Python (si no lo tienes), instalará las librerías necesarias en un entorno aislado y ejecutará el script.
 
-### Paso 4: Obtener el Resultado
-El documento final formateado aparecerá en la carpeta **`DOCS/`** con el nombre:
-📂 `DOCS/ERS_Shoppipai_SENA_COMPLETO_APA.docx`
+### Ejecución con Docker
+
+Si prefieres no instalar nada en tu máquina, puedes usar Docker:
+
+1.  **Construir la imagen:**
+    ```bash
+    docker build -t apascript .
+    ```
+
+2.  **Ejecutar el contenedor:**
+    Para obtener el archivo generado en tu carpeta `DOCS/` local, montamos un volumen:
+    ```bash
+    docker run --rm -v $(pwd)/DOCS:/app/DOCS apascript
+    ```
+
 
 ---
 
