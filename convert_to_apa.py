@@ -30,6 +30,8 @@ import re
 import subprocess
 import sys
 import tempfile
+import argparse
+import shutil
 from pathlib import Path
 
 from docx import Document
@@ -1021,20 +1023,94 @@ def apply_apa_styles(docx_path: str, output_path: str, meta: dict = None):
 # ────────────────────────── Main ──────────────────────────
 
 
+def convert_to_pdf(docx_path: Path, output_dir: Path):
+    """Convert DOCX to PDF using LibreOffice."""
+    print("Paso 5: Generando PDF (LibreOffice)...")
+    try:
+        # LibreOffice requires an outdir, and it keeps the original filename
+        cmd = [
+            "libreoffice",
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            str(output_dir),
+            str(docx_path),
+        ]
+        print(f"  ▸ Ejecutando: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            print(f"  ✗ Error de LibreOffice:\n{result.stderr}", file=sys.stderr)
+            print(
+                "  ⚠ No se pudo generar el PDF. Asegúrate de tener LibreOffice instalado."
+            )
+            return
+
+        pdf_path = output_dir / docx_path.with_suffix(".pdf").name
+        if pdf_path.exists():
+            print(f"  ✓ PDF generado: {pdf_path}")
+        else:
+            print("  ⚠ El PDF no se generó por una razón desconocida.")
+
+    except FileNotFoundError:
+        print("  ⚠ LibreOffice no encontrado. Instálalo para generar PDFs.")
+
+
 def main():
+    parser = argparse.ArgumentParser(
+        description="Conversor ERS Markdown -> DOCX (APA 7a edición)"
+    )
+    parser.add_argument(
+        "input_file",
+        nargs="?",
+        default="ERS_Shoppipai_SENA_COMPLETO.md",
+        help="Archivo Markdown de entrada (por defecto: ERS_Shoppipai_SENA_COMPLETO.md)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        default="DOCS",
+        help="Directorio de salida (por defecto: DOCS)",
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=["docx", "pdf", "all"],
+        default="docx",
+        help="Formato de salida: docx, pdf o all (ambos). Por defecto: docx",
+    )
+
+    args = parser.parse_args()
+
+    input_file = Path(args.input_file)
+    output_dir = Path(args.output_dir)
+
+    # Determine output filename based on input filename
+    output_docx = output_dir / f"{input_file.stem}_APA.docx"
+
     print("╔══════════════════════════════════════════════════╗")
-    print("║   Conversor ERS → DOCX (APA 7ª edición)         ║")
+    print("║   Conversor ERS -> DOCX (APA 7a edición)         ║")
     print("║   Usando Pandoc + python-docx                    ║")
     print("╚══════════════════════════════════════════════════╝")
     print()
 
-    # Create DOCS directory if it doesn't exist
-    if not DOCS_DIR.exists():
-        DOCS_DIR.mkdir(exist_ok=True)
-        print(f"  ✓ Directorio creado: {DOCS_DIR}")
+    if not input_file.exists():
+        print(f"✗ Error: No se encontró el archivo de entrada '{input_file}'")
+        sys.exit(1)
+
+    # Create output directory if it doesn't exist
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
+        print(f"  ✓ Directorio creado: {output_dir}")
 
     # Read source
-    raw_md = Path(INPUT_FILE).read_text(encoding="utf-8")
+    try:
+        raw_md = input_file.read_text(encoding="utf-8")
+    except Exception as e:
+        print(f"✗ Error leyendo archivo: {e}")
+        sys.exit(1)
+
     lines = raw_md.split("\n")
 
     # Step 1: Extract metadata
@@ -1054,28 +1130,35 @@ def main():
     run_pandoc(processed_md, temp_docx)
 
     # Step 4: APA formatting
-    print("Paso 4: Aplicando formato APA 7ª edición...")
-    apply_apa_styles(temp_docx, OUTPUT_FILE, meta)
+    print("Paso 4: Aplicando formato APA 7a edición...")
+    apply_apa_styles(temp_docx, str(output_docx), meta)
 
-    # Cleanup
+    # Cleanup raw pandoc file
     Path(temp_docx).unlink(missing_ok=True)
 
+    # Step 5: PDF Generation (if requested)
+    if args.format in ["pdf", "all"]:
+        convert_to_pdf(output_docx, output_dir)
+        if args.format == "pdf":
+            # If user ONLY wanted PDF, maybe delete the DOCX?
+            # Usually users expect the intermediate DOCX if conversion fails,
+            # but strict interpret might mean delete it.
+            # For safety/utility, I'll keep the DOCX too or strictly follow request.
+            # Let's keep DOCX as intermediate artifact is often useful, unless user explicitly complains.
+            # Actually, standard behavior for "pdf" source usually implies result is PDF.
+            # But here we are "converting". Let's leave DOCX as it's the source for PDF.
+            pass
+
     # Summary
-    file_size = Path(OUTPUT_FILE).stat().st_size
+    if output_docx.exists():
+        file_size = output_docx.stat().st_size
+        print()
+        print(f"✅ DOCX Generado: {output_docx}")
+        print(f"   Tamaño: {file_size / 1024:.1f} KB")
+
     print()
-    print(f"✅ Documento generado: {OUTPUT_FILE}")
-    print(f"   Tamaño: {file_size / 1024:.1f} KB")
+    print("Normas APA 7 aplicadas correctamante.")
     print()
-    print("Normas APA 7 aplicadas:")
-    print("  ✓ Portada en página independiente (centrada)")
-    print("  ✓ Cada título principal (H1) inicia en página nueva")
-    print("  ✓ Sub-secciones (H2, H3) sin salto de página")
-    print("  ✓ Times New Roman 12pt, doble espacio")
-    print('  ✓ Márgenes 1" (2.54 cm)')
-    print('  ✓ Sangría primera línea 0.5" en párrafos')
-    print("  ✓ Tablas con bordes horizontales (estilo APA)")
-    print("  ✓ Referencias con sangría francesa")
-    print("  ✓ Numeración de página (esquina sup. derecha)")
 
 
 if __name__ == "__main__":

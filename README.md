@@ -82,13 +82,39 @@ INPUT_FILE = "Mi_Ensayo.md"
 
 ### Paso 3: Ejecutar la Conversión
 
-Simplemente corre el siguiente comando en la terminal:
+El script ahora admite argumentos para personalizar la ejecución.
 
+#### Uso Básico (DOCX por defecto)
 ```bash
-uv run convert_to_apa.py
+uv run convert_to_apa.py [ARCHIVO_ENTRADA]
+```
+Ejemplo:
+```bash
+uv run convert_to_apa.py mi_ensayo.md
 ```
 
-`uv` descargará Python (si no lo tienes), instalará las librerías necesarias en un entorno aislado y ejecutará el script.
+#### Opciones Avanzadas
+
+| Argumento | Descripción | Ejemplo |
+| :--- | :--- | :--- |
+| `archivo` | Archivo Markdown de entrada (Posicional). | `tesis.md` |
+| `-o`, `--output-dir` | Carpeta donde se guardarán los archivos. | `-o Entregables` |
+| `-f`, `--format` | Formato de salida: `docx`, `pdf` o `all`. | `-f all` |
+
+**Ejemplos:**
+
+1.  **Generar PDF y DOCX:**
+    ```bash
+    uv run convert_to_apa.py ejemplo.md -f all
+    ```
+
+2.  **Guardar en otra carpeta:**
+    ```bash
+    uv run convert_to_apa.py -o ./dist
+    ```
+
+### Paso 4: Obtener el Resultado
+El documento final aparecerá en la carpeta especificada (por defecto `DOCS/`).
 
 ### Ejecución con Docker
 
