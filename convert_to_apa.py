@@ -1060,8 +1060,8 @@ def main():
     parser.add_argument(
         "input_file",
         nargs="?",
-        default="ERS_Shoppipai_SENA_COMPLETO.md",
-        help="Archivo Markdown de entrada (por defecto: ERS_Shoppipai_SENA_COMPLETO.md)",
+        default="example.md",
+        help="Archivo Markdown de entrada (por defecto: example.md)",
     )
     parser.add_argument(
         "-o",
@@ -1086,8 +1086,8 @@ def main():
     output_docx = output_dir / f"{input_file.stem}_APA.docx"
 
     print("╔══════════════════════════════════════════════════╗")
-    print("║   Conversor ERS -> DOCX (APA 7a edición)         ║")
-    print("║   Usando Pandoc + python-docx                    ║")
+    print("║   APAScript – Markdown → DOCX/PDF (APA 7)        ║")
+    print("║   Pandoc + python-docx + LibreOffice              ║")
     print("╚══════════════════════════════════════════════════╝")
     print()
 
