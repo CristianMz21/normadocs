@@ -1,0 +1,2 @@
+# Generated for non-uv users
+python-docx>=1.1.0
