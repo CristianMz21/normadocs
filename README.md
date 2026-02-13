@@ -21,27 +21,30 @@ Este proyecto contiene un script en Python que convierte documentos Markdown (si
 -   Python 3.11 o superior.
 -   [Pandoc](https://pandoc.org/installing.html) instalado y accesible en el PATH del sistema.
 
-## Instalación
+## Instalación y Uso con `uv` (Recomendado)
 
-1.  Clona este repositorio.
-2.  Instala las dependencias de Python:
+Este proyecto está configurado para usarse con [uv](https://github.com/astral-sh/uv), un gestor de paquetes de Python extremadamente rápido.
+
+1.  Asegúrate de tener `uv` instalado.
+2.  Ejecuta el script directamente:
 
     ```bash
+    uv run convert_to_apa.py
+    ```
+
+    `uv` se encargará de instalar Python y las dependencias necesarias automáticamente en un entorno aislado y efímero.
+
+## Instalación Manual (Pip)
+
+Si prefieres usar `pip`:
+
+1.  Instala las dependencias:
+    ```bash
     pip install -r requirements.txt
-    # O si usas pip directamente:
+    # O manualmente:
     pip install python-docx
     ```
-
-## Uso
-
-1.  Coloca tu archivo Markdown en la raíz del proyecto. Puedes usar el archivo `example.md` como plantilla.
-    *   Si tienes tu propio archivo (ej. `ERS_Shoppipai_SENA_COMPLETO.md`), asegúrate de actualizar el nombre en el script o renombrar tu archivo.
-2.  Edita `convert_to_apa.py` si el nombre de tu archivo de entrada es diferente a `ERS_Shoppipai_SENA_COMPLETO.md`.
-    ```python
-    INPUT_FILE = "Tu_Archivo.md"
-    ```
-3.  Ejecuta el script:
-
+2.  Ejecuta:
     ```bash
     python3 convert_to_apa.py
     ```

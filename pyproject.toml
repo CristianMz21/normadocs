@@ -1,9 +1,9 @@
 [project]
-name = "ga1-220501092-aa4"
+name = "apascript"
 version = "0.1.0"
 description = "Script to convert Markdown to DOCX with APA 7th edition formatting."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "python-docx>=1.1.0",
 ]
