@@ -42,10 +42,6 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 
-INPUT_FILE = "ERS_Shoppipai_SENA_COMPLETO.md"
-DOCS_DIR = Path("DOCS")
-OUTPUT_FILE = DOCS_DIR / "ERS_Shoppipai_SENA_COMPLETO_APA.docx"
-
 # Raw OpenXML page break for Pandoc
 PAGEBREAK_OPENXML = """
 ```{=openxml}
