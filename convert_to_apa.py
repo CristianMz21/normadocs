@@ -26,21 +26,19 @@ Reglas APA implementadas:
 
 from __future__ import annotations
 
+import argparse
 import re
 import subprocess
 import sys
 import tempfile
-import argparse
-import shutil
 from pathlib import Path
 
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-
+from docx.shared import Inches, Pt, RGBColor
 
 # Raw OpenXML page break for Pandoc
 PAGEBREAK_OPENXML = """
@@ -1019,8 +1017,11 @@ def apply_apa_styles(docx_path: str, output_path: str, meta: dict = None):
 # ────────────────────────── Main ──────────────────────────
 
 
-def convert_to_pdf(docx_path: Path, output_dir: Path):
-    """Convert DOCX to PDF using LibreOffice."""
+def convert_to_pdf(
+    docx_path: Path, output_dir: Path, md_content: str = None, meta: dict = None
+):
+    """Convert DOCX to PDF using LibreOffice. Fallback to WeasyPrint."""
+
     print("Paso 5: Generando PDF (LibreOffice)...")
     try:
         # LibreOffice requires an outdir, and it keeps the original filename
@@ -1039,7 +1040,8 @@ def convert_to_pdf(docx_path: Path, output_dir: Path):
         if result.returncode != 0:
             print(f"  ✗ Error de LibreOffice:\n{result.stderr}", file=sys.stderr)
             print(
-                "  ⚠ No se pudo generar el PDF. Asegúrate de tener LibreOffice instalado."
+                "  ⚠ No se pudo generar el PDF. "
+                "Asegúrate de tener LibreOffice instalado."
             )
             return
 
@@ -1050,7 +1052,76 @@ def convert_to_pdf(docx_path: Path, output_dir: Path):
             print("  ⚠ El PDF no se generó por una razón desconocida.")
 
     except FileNotFoundError:
-        print("  ⚠ LibreOffice no encontrado. Instálalo para generar PDFs.")
+        print("  ⚠ LibreOffice no encontrado. Intentando fallback con WeasyPrint...")
+        _convert_to_pdf_weasyprint(docx_path, output_dir, md_content, meta)
+
+
+def _convert_to_pdf_weasyprint(
+    docx_path: Path, output_dir: Path, md_content: str, meta: dict = None
+):
+    """Fallback: Convert Markdown -> HTML -> PDF using WeasyPrint."""
+    try:
+        from weasyprint import CSS, HTML
+    except ImportError:
+        print("  ✗ WeasyPrint no instalado. Instala 'weasyprint' para fallback PDF.")
+        return
+
+    # Use Pandoc to convert MD -> HTML
+    pdf_filename = docx_path.with_suffix(".pdf").name
+    pdf_path = output_dir / pdf_filename
+
+    try:
+        # Convert MD to HTML5
+        cmd = ["pandoc", "-f", "markdown", "-t", "html5", "--standalone"]
+        result = subprocess.run(
+            cmd, input=md_content, capture_output=True, text=True, encoding="utf-8"
+        )
+        if result.returncode != 0:
+            print(f"  ✗ Error generando HTML para WeasyPrint:\n{result.stderr}")
+            return
+
+        html_content = result.stdout
+
+        # Basic APA-like CSS
+        apa_css = CSS(
+            string="""
+            @page {
+                size: Letter;
+                margin: 1in;
+                @top-right {
+                    content: counter(page);
+                    font-family: "Times New Roman", serif;
+                    font-size: 12pt;
+                }
+            }
+            body {
+                font-family: "Times New Roman", serif;
+                font-size: 12pt;
+                line-height: 2.0;
+                text-align: left;
+            }
+            h1, h2, h3, h4, h5 {
+                font-weight: bold;
+                line-height: 2.0;
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+            h1 { text-align: center; }
+            h2 { text-align: left; }
+            h3 { text-align: left; font-style: italic; }
+            p {
+                margin-top: 0;
+                margin-bottom: 0;
+                text-indent: 0.5in;
+            }
+        """
+        )
+
+        HTML(string=html_content).write_pdf(target=pdf_path, stylesheets=[apa_css])
+        print(f"  ✓ PDF generado (WeasyPrint): {pdf_path}")
+
+    except Exception as e:
+        print(f"  ✗ Error en WeasyPrint: {e}")
 
 
 def main():
@@ -1134,15 +1205,16 @@ def main():
 
     # Step 5: PDF Generation (if requested)
     if args.format in ["pdf", "all"]:
-        convert_to_pdf(output_docx, output_dir)
+        # We pass the PRE-PROCESSED markdown to PDF generator
+        # Note: preprocess_markdown adds raw openxml for page breaks.
+        # Pandoc->HTML handles openxml gracefully (ignores it mostly),
+        # but we might want the original raw_md for better HTML semantic mapping,
+        # OR we accept that openxml blocks appear as empty code blocks in HTML.
+        # Let's use `processed_md` to keep the content structure (like title page)
+        # created by our script.
+        convert_to_pdf(output_docx, output_dir, md_content=processed_md, meta=meta)
         if args.format == "pdf":
-            # If user ONLY wanted PDF, maybe delete the DOCX?
-            # Usually users expect the intermediate DOCX if conversion fails,
-            # but strict interpret might mean delete it.
-            # For safety/utility, I'll keep the DOCX too or strictly follow request.
-            # Let's keep DOCX as intermediate artifact is often useful, unless user explicitly complains.
-            # Actually, standard behavior for "pdf" source usually implies result is PDF.
-            # But here we are "converting". Let's leave DOCX as it's the source for PDF.
+            # Keep DOCX as intermediate artifact.
             pass
 
     # Summary

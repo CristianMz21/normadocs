@@ -8,6 +8,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     default-jre-headless \
     curl \
     ca-certificates \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libcairo2 \
+    libjpeg62-turbo \
+    libopenjp2-7 \
+    libffi-dev \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 

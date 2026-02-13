@@ -5,5 +5,20 @@ description = "Script to convert Markdown to DOCX with APA 7th edition formattin
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "python-docx>=1.1.0",
+    "python-docx>=1.2.0",
+    "weasyprint>=68.1",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = []
+
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.1",
 ]
