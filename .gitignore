@@ -20,3 +20,7 @@ build/
 # Project Specific
 DOCS/
 _pandoc_raw.docx
+
+# Private Data
+ERS_Shoppipai_SENA_COMPLETO.md
+

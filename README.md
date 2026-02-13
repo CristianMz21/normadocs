@@ -34,8 +34,13 @@ Este proyecto contiene un script en Python que convierte documentos Markdown (si
 
 ## Uso
 
-1.  Coloca tu archivo Markdown en la raíz del proyecto (por defecto busca `ERS_Shoppipai_SENA_COMPLETO.md`).
-2.  Ejecuta el script:
+1.  Coloca tu archivo Markdown en la raíz del proyecto. Puedes usar el archivo `example.md` como plantilla.
+    *   Si tienes tu propio archivo (ej. `ERS_Shoppipai_SENA_COMPLETO.md`), asegúrate de actualizar el nombre en el script o renombrar tu archivo.
+2.  Edita `convert_to_apa.py` si el nombre de tu archivo de entrada es diferente a `ERS_Shoppipai_SENA_COMPLETO.md`.
+    ```python
+    INPUT_FILE = "Tu_Archivo.md"
+    ```
+3.  Ejecuta el script:
 
     ```bash
     python3 convert_to_apa.py
