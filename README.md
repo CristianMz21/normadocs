@@ -1,58 +1,110 @@
-# APAScript: Markdown to APA 7 Converter
+# APAScript: Conversor de Markdown a APA 7
 
-Este proyecto contiene un script en Python que convierte documentos Markdown (siguiendo la estructura ERS) a documentos DOCX con formato APA 7ª edición.
+Este proyecto es una herramienta automatizada para convertir documentos escritos en **Markdown** a documentos **Microsoft Word (.docx)** que cumplen estrictamente con las normas **APA 7ª edición**.
 
-## Características
+Es ideal para aprendices SENA, estudiantes y profesionales que prefieren escribir en Markdown pero necesitan entregar documentos en formato APA.
 
--   **Conversión Markdown a DOCX:** Utiliza Pandoc para la conversión inicial.
--   **Formato APA 7 Automatizado:**
-    -   Portada en página independiente.
-    -   Saltos de página antes de cada título de nivel 1.
-    -   Fuente Times New Roman 12pt.
-    -   Doble espaciado.
-    -   Márgenes de 1 pulgada (2.54 cm).
-    -   Sangría de primera línea (0.5 pulgadas).
-    -   Tablas con estilo APA (solo bordes horizontales).
-    -   Referencias con sangría francesa.
-    -   Numeración de páginas.
+## 🚀 Características
 
-## Requisitos
+*   **Automatización Total:** Convierte estructura, fuentes y márgenes automáticamente.
+*   **Gestión de Portada:** Genera una portada APA profesional a partir de metadatos simples.
+*   **Formato de Texto:** Aplica Times New Roman 12pt, doble espaciado y sangrías correctas.
+*   **Tablas APA:** Convierte tablas Markdown a tablas con estilo APA (sin bordes verticales).
+*   **Referencias:** Formatea la lista de referencias con sangría francesa.
+*   **Ecuaciones y Citas:** Manejo básico de citas parentéticas (convierte "y" a "&" en citas).
 
--   Python 3.11 o superior.
--   [Pandoc](https://pandoc.org/installing.html) instalado y accesible en el PATH del sistema.
+---
 
-## Instalación y Uso con `uv` (Recomendado)
+## 📋 Requisitos Previos
 
-Este proyecto está configurado para usarse con [uv](https://github.com/astral-sh/uv), un gestor de paquetes de Python extremadamente rápido.
+Antes de empezar, necesitas instalar las siguientes herramientas en tu sistema.
 
-1.  Asegúrate de tener `uv` instalado.
-2.  Ejecuta el script directamente:
-
+### 1. Pandoc (Obligatorio)
+Motor principal de conversión.
+*   **Linux (Debian/Ubuntu):**
     ```bash
-    uv run convert_to_apa.py
+    sudo apt-get update
+    sudo apt-get install pandoc
+    ```
+*   **Windows/Mac:** Descargar desde [pandoc.org](https://pandoc.org/installing.html).
+
+### 2. UV (Gestor de Python Recomendado)
+Usamos `uv` para manejar Python y las dependencias sin ensuciar tu sistema.
+*   **Instalación (Linux/Mac/Windows):**
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-    `uv` se encargará de instalar Python y las dependencias necesarias automáticamente en un entorno aislado y efímero.
+---
 
-## Instalación Manual (Pip)
+## 🛠️ Instalación y Configuración del Proyecto
 
-Si prefieres usar `pip`:
-
-1.  Instala las dependencias:
+1.  **Clonar el repositorio:**
     ```bash
-    pip install -r requirements.txt
-    # O manualmente:
-    pip install python-docx
-    ```
-2.  Ejecuta:
-    ```bash
-    python3 convert_to_apa.py
+    git clone https://github.com/TU_USUARIO/APAScript.git
+    cd APAScript
     ```
 
-3.  El documento generado se guardará en la carpeta `DOCS/` con el nombre `ERS_Shoppipai_SENA_COMPLETO_APA.docx`.
+2.  **Verificar instalación:**
+    No es necesario instalar nada más manualmente si usas `uv`. El proyecto ya tiene configurado `python-docx` como dependencia.
 
-## Estructura del Proyecto
+---
 
--   `convert_to_apa.py`: Script principal de conversión.
--   `DOCS/`: Carpeta de salida para los documentos generados.
--   `pyproject.toml`: Configuración del proyecto y dependencias.
+## 📖 Guía de Uso
+
+### Paso 1: Prepara tu Documento
+Crea un archivo Markdown en la carpeta del proyecto. Puedes usar **`example.md`** como plantilla.
+
+Tu archivo debe tener este encabezado (metadatos) en las primeras líneas para que la portada se genere bien:
+
+```markdown
+**Título de tu Trabajo**
+
+Tu Nombre Completo
+
+Nombre de tu Programa
+Número de Ficha
+Nombre de la Institución (SENA)
+Nombre del Centro
+Fecha
+```
+
+### Paso 2: Configurar el Script (Opcional)
+Por defecto, el script busca un archivo llamado `ERS_Shoppipai_SENA_COMPLETO.md`. Si tu archivo tiene otro nombre (ej. `Mi_Ensayo.md`), tienes dos opciones:
+
+**Opción A (Recomendada):** Renombra tu archivo a `ERS_Shoppipai_SENA_COMPLETO.md`.
+
+**Opción B:** Edita el archivo `convert_to_apa.py` y cambia la línea 43:
+```python
+# Cambia esto por el nombre de tu archivo
+INPUT_FILE = "Mi_Ensayo.md"
+```
+
+### Paso 3: Ejecutar la Conversión
+
+Simplemente corre el siguiente comando en la terminal:
+
+```bash
+uv run convert_to_apa.py
+```
+
+`uv` descargará Python (si no lo tienes), instalará las librerías necesarias en un entorno aislado y ejecutará el script.
+
+### Paso 4: Obtener el Resultado
+El documento final formateado aparecerá en la carpeta **`DOCS/`** con el nombre:
+📂 `DOCS/ERS_Shoppipai_SENA_COMPLETO_APA.docx`
+
+---
+
+## 📂 Estructura del Proyecto
+
+*   `convert_to_apa.py`: **Script principal.** Aquí ocurre la magia.
+*   `example.md`: **Plantilla.** Úsala de base para tus documentos.
+*   `pyproject.toml`: **Configuración.** Define las dependencias para `uv`.
+*   `.gitignore`: **Seguridad.** Evita que subas tus documentos privados a GitHub.
+*   `DOCS/`: **Salida.** Aquí se guardan los archivos .docx generados.
+
+## ⚠️ Solución de Problemas
+
+*   **Error "pandoc not found":** Asegúrate de haber instalado Pandoc (`sudo apt install pandoc`) y que funcionen en tu terminal (`pandoc --version`).
+*   **Error de dependencias:** Si usas `pip` en lugar de `uv`, recuerda instalar manual: `pip install python-docx`.
