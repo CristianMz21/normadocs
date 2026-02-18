@@ -3,8 +3,7 @@ Module for applying APA 7th Edition formatting to DOCX documents.
 """
 
 import re
-from typing import Dict, Any, Optional
-from pathlib import Path
+
 
 from docx import Document
 from docx.document import Document as DocumentObject
@@ -13,7 +12,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
-from docx.styles.style import _ParagraphStyle
+
 
 from .models import DocumentMetadata
 
@@ -133,9 +132,7 @@ class APADocxFormatter:
         for sn, cfg in configs.items():
             try:
                 h = self.doc.styles[sn]
-                self._apply_font_style(
-                    h, size=12, bold=cfg["bold"], italic=cfg["italic"]
-                )
+                self._apply_font_style(h, size=12, bold=cfg["bold"], italic=cfg["italic"])
                 h.paragraph_format.alignment = cfg["align"]
                 h.paragraph_format.line_spacing = 2.0
                 h.paragraph_format.page_break_before = False
@@ -271,10 +268,7 @@ class APADocxFormatter:
                         # But user code had logic for 0 indent.
                 elif style_name in ("Body Text", "Normal", "First Paragraph"):
                     # Regular body text
-                    if (
-                        p.text.strip()
-                        and p.paragraph_format.alignment != WD_ALIGN_PARAGRAPH.CENTER
-                    ):
+                    if p.text.strip() and p.paragraph_format.alignment != WD_ALIGN_PARAGRAPH.CENTER:
                         p.paragraph_format.first_line_indent = Inches(0.5)
 
             # Fix citations (y -> &)
@@ -287,7 +281,6 @@ class APADocxFormatter:
             return
 
         # Simple regex to separate title ... page
-        import re
 
         normalized = text.replace("\u2026", "...")
         match = re.match(r"^(\s*)(.*?)\s*\.{3,}\s*(\d+)\s*$", normalized)
@@ -297,9 +290,7 @@ class APADocxFormatter:
 
             p.clear()
             p.paragraph_format.first_line_indent = Inches(0)
-            p.paragraph_format.left_indent = (
-                Inches(0.5) if indent_level > 0 else Inches(0)
-            )
+            p.paragraph_format.left_indent = Inches(0.5) if indent_level > 0 else Inches(0)
 
             tab_stops = p.paragraph_format.tab_stops
             tab_stops.add_tab_stop(Inches(6.0), alignment=2, leader=4)
@@ -342,9 +333,7 @@ class APADocxFormatter:
                                 run.text = t
                         # Merge runs
                         self._merge_and_clean_paragraph(p)
-                        self._apply_font_to_paragraph(
-                            p, font_size=Pt(10)
-                        )  # Table font 10pt
+                        self._apply_font_to_paragraph(p, font_size=Pt(10))  # Table font 10pt
 
             self._add_table_caption(table, i + 1)
 
@@ -391,8 +380,8 @@ class APADocxFormatter:
         # ... (simplified for brevity, main logic is strictly about inserting the para)
 
         # Insert "Tabla N"
-        tbl_element = table._tbl
-        label_p = OxmlElement("w:p")
+        _tbl_element = table._tbl
+        _label_p = OxmlElement("w:p")
         # For brevity, constructing raw XML paragraphs is verbose.
         # Ideally we'd use doc.add_paragraph and move it, but python-docx move support is limited.
         # So we stick to OxmlElement injection as in original script.
@@ -439,7 +428,7 @@ class APADocxFormatter:
                     break
 
             if next_idx != -1:
-                next_p = self.doc.paragraphs[next_idx]
+                next_p = self.doc.paragraphs[next_idx]  # noqa: F841
                 # Insert Page Break
                 # Insert Title (Center, Bold)
                 # This requires Oxml manipulation to insert *before* next_p

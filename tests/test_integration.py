@@ -3,7 +3,7 @@ Integration Tests (End-to-End).
 """
 
 import unittest
-import os
+import importlib.util
 import shutil
 from pathlib import Path
 from normadocs.preprocessor import MarkdownPreprocessor
@@ -81,13 +81,7 @@ We used integration testing.
         output_pdf = self.test_dir / "output.pdf"
 
         has_libreoffice = shutil.which("libreoffice") is not None
-        has_weasyprint = False
-        try:
-            import weasyprint
-
-            has_weasyprint = True
-        except ImportError:
-            pass
+        has_weasyprint = importlib.util.find_spec("weasyprint") is not None
 
         if has_libreoffice:
             print("  [Integration] Testing LibreOffice PDF generation...")

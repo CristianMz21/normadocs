@@ -4,7 +4,6 @@ Tests for the Markdown Preprocessor.
 
 import unittest
 from normadocs.preprocessor import MarkdownPreprocessor
-from normadocs.models import DocumentMetadata
 
 
 class TestPreprocessor(unittest.TestCase):
