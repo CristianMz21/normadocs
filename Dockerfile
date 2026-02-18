@@ -1,6 +1,7 @@
 FROM python:3.12-slim-bookworm
 
-# Install Pandoc (System dependency) and LibreOffice for PDF conversion
+# Install System dependencies
+# Pandoc (Core), LibreOffice (PDF), and WeasyPrint deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pandoc \
     libreoffice-writer \
@@ -15,11 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenjp2-7 \
     libffi-dev \
     shared-mime-info \
+    make \
     && rm -rf /var/lib/apt/lists/*
-
-
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # Set working directory
 WORKDIR /app
@@ -27,6 +25,9 @@ WORKDIR /app
 # Copy project files
 COPY . .
 
-# Run the script using uv
-# We use 'uv run' which automatically sets up a virtualenv and installs dependencies
-CMD ["uv", "run", "convert_to_apa.py"]
+# Install the package
+# This installs dependencies from pyproject.toml and creates the 'apa-format' command
+RUN pip install --no-cache-dir .
+
+# Default command: Show help
+CMD ["normadocs", "--help"]

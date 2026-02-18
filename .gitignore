@@ -2,25 +2,47 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.venv/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+.env
+.venv
 env/
 venv/
-*.so
-*.egg
-*.egg-info
-dist/
-build/
+ENV/
+env.bak/
+venv.bak/
 
-# MyPy
-.mypy_cache/
+# IDEs
+.idea/
+.vscode/
 
-# Pytest
+# Testing
 .pytest_cache/
+.coverage
+htmlcov/
 
-# Project Specific
-DOCS/
+# Project specific
+ExportDocs/*
 _pandoc_raw.docx
+*_APA.docx
+*_APA.pdf
 
-# Private Data
-ERS_Shoppipai_SENA_COMPLETO.md
-
+IDocs/*

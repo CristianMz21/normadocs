@@ -1,148 +1,87 @@
-# APAScript: Conversor de Markdown a APA 7
+# NormaDocs
 
-Este proyecto es una herramienta automatizada para convertir documentos escritos en **Markdown** a documentos **Microsoft Word (.docx)** que cumplen estrictamente con las normas **APA 7ª edición**.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Es ideal para aprendices SENA, estudiantes y profesionales que prefieren escribir en Markdown pero necesitan entregar documentos en formato APA.
+**NormaDocs** es una herramienta profesional de código abierto diseñada para convertir documentos Markdown a formatos académicos estándar (DOCX, PDF), comenzando con soporte estricto para **APA 7ª Edición**.
 
-## 🚀 Características
+Su arquitectura modular permite la integración futura de otras normas como **ICONTEC**, **IEEE** y más.
 
-*   **Automatización Total:** Convierte estructura, fuentes y márgenes automáticamente.
-*   **Gestión de Portada:** Genera una portada APA profesional a partir de metadatos simples.
-*   **Formato de Texto:** Aplica Times New Roman 12pt, doble espaciado y sangrías correctas.
-*   **Tablas APA:** Convierte tablas Markdown a tablas con estilo APA (sin bordes verticales).
-*   **Referencias:** Formatea la lista de referencias con sangría francesa.
-*   **Ecuaciones y Citas:** Manejo básico de citas parentéticas (convierte "y" a "&" en citas).
+## Características ✨
 
----
+- **Automatización Total**: Convierte Markdown simple en documentos listos para entregar.
+- **Multiformato**: Salida en DOCX y PDF.
+- **Cumplimiento APA 7**:
+  - Portada automática.
+  - Formato Times New Roman 12pt, Doble espacio.
+  - Citas y referencias formateadas.
+- **Modular**: Úsalo como CLI (`normadocs`) o como librería Python (`normadocs`).
 
-## 📋 Requisitos Previos
+## Instalación 📦
 
-Antes de empezar, necesitas instalar las siguientes herramientas en tu sistema.
+### Requisitos Previos
 
-### 1. Pandoc (Obligatorio)
-Motor principal de conversión.
-*   **Linux (Debian/Ubuntu):**
-    ```bash
-    sudo apt-get update
-    sudo apt-get install pandoc
-    ```
-*   **Windows/Mac:** Descargar desde [pandoc.org](https://pandoc.org/installing.html).
+- Python 3.12+
+- [Pandoc](https://pandoc.org/installing.html)
+- LibreOffice (Opcional, para PDF)
 
-### 2. UV (Gestor de Python Recomendado)
-Usamos `uv` para manejar Python y las dependencias sin ensuciar tu sistema.
-*   **Instalación (Linux/Mac/Windows):**
-    ```bash
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    ```
+### Desde el repositorio
 
----
-
-## 🛠️ Instalación y Configuración del Proyecto
-
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/TU_USUARIO/APAScript.git
-    cd APAScript
-    ```
-
-2.  **Verificar instalación:**
-    No es necesario instalar nada más manualmente si usas `uv`. El proyecto ya tiene configurado `python-docx` como dependencia.
-
----
-
-## 📖 Guía de Uso
-
-### Paso 1: Prepara tu Documento
-Crea un archivo Markdown en la carpeta del proyecto. Puedes usar **`example.md`** como plantilla.
-
-Tu archivo debe tener este encabezado (metadatos) en las primeras líneas para que la portada se genere bien:
-
-```markdown
-**Título de tu Trabajo**
-
-Tu Nombre Completo
-
-Nombre de tu Programa
-Número de Ficha
-Nombre de la Institución (SENA)
-Nombre del Centro
-Fecha
+```bash
+git clone https://github.com/mackroph/normadocs.git
+cd normadocs
+make install
 ```
 
-### Paso 2: Configurar el Script (Opcional)
-Por defecto, el script busca un archivo llamado `ERS_Shoppipai_SENA_COMPLETO.md`. Si tu archivo tiene otro nombre (ej. `Mi_Ensayo.md`), tienes dos opciones:
+## Uso 🚀
 
-**Opción A (Recomendada):** Renombra tu archivo a `ERS_Shoppipai_SENA_COMPLETO.md`.
+### Línea de Comandos (CLI)
 
-**Opción B:** Edita el archivo `convert_to_apa.py` y cambia la línea 43:
+El comando principal es `normadocs`:
+
+```bash
+# Ayuda
+normadocs --help
+
+# Conversión básica
+normadocs IDocs/paper.md
+
+# Conversión a PDF y DOCX en carpeta específica
+normadocs IDocs/paper.md -o ./ExportDocs --format pdf
+```
+
+### Como Librería (Python)
+
 ```python
-# Cambia esto por el nombre de tu archivo
-INPUT_FILE = "Mi_Ensayo.md"
+from pathlib import Path
+from normadocs.preprocessor import MarkdownPreprocessor
+from normadocs.docx_formatter import APADocxFormatter
+from normadocs.pandoc_client import PandocRunner
+
+# 1. Pre-procesar
+md_text = Path("paper.md").read_text()
+processor = MarkdownPreprocessor()
+clean_md, meta = processor.process(md_text)
+
+# 2. Convertir
+PandocRunner().run(clean_md, "output.docx")
+
+# 3. Aplicar Normas
+formatter = APADocxFormatter("output.docx")
+formatter.process(meta)
+formatter.save("output_final.docx")
 ```
 
-### Paso 3: Ejecutar la Conversión
+## Desarrollo 🛠️
 
-El script ahora admite argumentos para personalizar la ejecución.
-
-#### Uso Básico (DOCX por defecto)
 ```bash
-uv run convert_to_apa.py [ARCHIVO_ENTRADA]
+make install  # Instalar dependencias
+make test     # Correr tests
+make lint     # Verificar calidad
+make build    # Crear paquete
 ```
-Ejemplo:
-```bash
-uv run convert_to_apa.py mi_ensayo.md
-```
 
-#### Opciones Avanzadas
+## Licencia 📄
 
-| Argumento | Descripción | Ejemplo |
-| :--- | :--- | :--- |
-| `archivo` | Archivo Markdown de entrada (Posicional). | `tesis.md` |
-| `-o`, `--output-dir` | Carpeta donde se guardarán los archivos. | `-o Entregables` |
-| `-f`, `--format` | Formato de salida: `docx`, `pdf` o `all`. | `-f all` |
-
-**Ejemplos:**
-
-1.  **Generar PDF y DOCX:**
-    ```bash
-    uv run convert_to_apa.py ejemplo.md -f all
-    ```
-
-2.  **Guardar en otra carpeta:**
-    ```bash
-    uv run convert_to_apa.py -o ./dist
-    ```
-
-### Paso 4: Obtener el Resultado
-El documento final aparecerá en la carpeta especificada (por defecto `DOCS/`).
-
-### Ejecución con Docker
-
-Si prefieres no instalar nada en tu máquina, puedes usar Docker:
-
-1.  **Construir la imagen:**
-    ```bash
-    docker build -t apascript .
-    ```
-
-2.  **Ejecutar el contenedor:**
-    Para obtener el archivo generado en tu carpeta `DOCS/` local, montamos un volumen:
-    ```bash
-    docker run --rm -v $(pwd)/DOCS:/app/DOCS apascript
-    ```
-
-
----
-
-## 📂 Estructura del Proyecto
-
-*   `convert_to_apa.py`: **Script principal.** Aquí ocurre la magia.
-*   `example.md`: **Plantilla.** Úsala de base para tus documentos.
-*   `pyproject.toml`: **Configuración.** Define las dependencias para `uv`.
-*   `.gitignore`: **Seguridad.** Evita que subas tus documentos privados a GitHub.
-*   `DOCS/`: **Salida.** Aquí se guardan los archivos .docx generados.
-
-## ⚠️ Solución de Problemas
-
-*   **Error "pandoc not found":** Asegúrate de haber instalado Pandoc (`sudo apt install pandoc`) y que funcionen en tu terminal (`pandoc --version`).
-*   **Error de dependencias:** Si usas `pip` en lugar de `uv`, recuerda instalar manual: `pip install python-docx`.
+Este proyecto está bajo la Licencia MIT.
