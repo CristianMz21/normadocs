@@ -1,6 +1,6 @@
 [project]
 name = "normadocs"
-version = "0.1.1a1"
+version = "0.1.2a1"
 description = "Convert Markdown to professionally formatted DOCX/PDF following academic standards (APA 7th, ICONTEC, IEEE)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,12 +27,6 @@ classifiers = [
   "Topic :: Office/Business :: Office Suites",
   "Typing :: Typed",
 ]
-
-[project.urls]
-Homepage = "https://github.com/CristianMz21/normadocs"
-Repository = "https://github.com/CristianMz21/normadocs"
-"Bug Tracker" = "https://github.com/CristianMz21/normadocs/issues"
-
 dependencies = [
   "python-docx>=1.1.0",
   "typer>=0.9.0",
@@ -48,6 +42,11 @@ dev = [
   "build",
   "twine",
 ]
+
+[project.urls]
+Homepage = "https://github.com/CristianMz21/normadocs"
+Repository = "https://github.com/CristianMz21/normadocs"
+"Bug Tracker" = "https://github.com/CristianMz21/normadocs/issues"
 
 [project.scripts]
 normadocs = "normadocs.cli:app"
