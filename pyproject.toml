@@ -3,16 +3,18 @@ name = "normadocs"
 version = "0.1.0"
 description = "Herramienta profesional para convertir Markdown a DOCX/PDF cumpliendo normas (APA, etc.)."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 license = {file = "LICENSE"}
 authors = [
   {name = "Tu Nombre", email = "tu@email.com"},
 ]
 keywords = ["apa", "normas", "docx", "pdf", "markdown", "academic", "writing"]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
 ]
 
@@ -44,6 +46,6 @@ line-length = 100
 target-version = "py312"
 
 [tool.mypy]
-python_version = "3.12"
-strict = true
+python_version = "3.10"
+strict = false
 ignore_missing_imports = true
