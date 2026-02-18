@@ -4,7 +4,6 @@ Module for generating PDFs from DOCX or Markdown.
 
 import subprocess
 import sys
-from pathlib import Path
 
 
 class PDFGenerator:
@@ -23,7 +22,7 @@ class PDFGenerator:
                 str(output_dir),
                 str(docx_path),
             ]
-            print(f"  ▸ Generando PDF con LibreOffice...")
+            print("  ▸ Generando PDF con LibreOffice...")
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             if result.returncode != 0:
