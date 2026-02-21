@@ -626,6 +626,11 @@ class APADocxFormatter(DocumentFormatter):
         run = p.add_run(title)
         self._apply_font_style(run)
 
+        # Prevent Word/LibreOffice from auto-formatting "1. " as a numbered list
+        # which breaks the tab leader layout during PDF conversion
+        if title and title[:1].isdigit():
+            run.text = "\u200b" + run.text
+
         run = p.add_run("\t")
         self._apply_font_style(run)
 
