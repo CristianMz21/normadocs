@@ -501,7 +501,10 @@ class APADocxFormatter(DocumentFormatter):
                     in_toc = True
                     p.paragraph_format.page_break_before = True
                 else:
-                    # If leaving abstract section, force page break
+                    # Every Level 1 heading starts a new page in APA 7
+                    if style_name == "Heading 1":
+                        p.paragraph_format.page_break_before = True
+                    # If leaving abstract section, force page break on any heading
                     if in_abstract or just_left_abstract:
                         p.paragraph_format.page_break_before = True
                         just_left_abstract = False
