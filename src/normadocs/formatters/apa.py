@@ -980,47 +980,57 @@ class APADocxFormatter(DocumentFormatter):
                     p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     def _merge_and_clean_paragraph(self, p):
-        """Consolidate runs to fix spacing and remove artifacts from hard returns."""
+        """Consolidate runs while preserving inline formatting boundaries.
+
+        Groups consecutive runs by their (bold, italic) attributes and merges
+        only within each group, so italic titles in references and the
+        "Nota." italic split are kept intact.
+        """
         if not p.runs:
             return
 
-        # Collect all text, joining with space where breaks existed
-        full_text = ""
+        # Build groups of consecutive runs with the same formatting
+        groups: list[tuple[bool, bool, str, str | None, object | None]] = []
         for run in p.runs:
             t = run.text or ""
-            # Replace newlines inside a run with space (hard returns within cells)
             t = t.replace("\n", " ").replace("\r", " ")
             # Clean grid-table artifacts
             t = re.sub(r"[+|][-=]{3,}[+|]?", "", t)
             t = re.sub(r"={3,}", "", t)
             t = t.strip("|")
-            full_text += t
 
-        # Collapse multiple spaces into one
-        full_text = re.sub(r"\s{2,}", " ", full_text).strip()
+            is_bold = bool(run.bold)
+            is_italic = bool(run.italic)
+            font_name = run.font.name
+            font_size = run.font.size
 
-        if not full_text:
-            return
+            if groups and groups[-1][0] == is_bold and groups[-1][1] == is_italic:
+                # Same formatting — append text to the current group
+                groups[-1] = (
+                    is_bold,
+                    is_italic,
+                    groups[-1][2] + t,
+                    font_name or groups[-1][3],
+                    font_size or groups[-1][4],
+                )
+            else:
+                groups.append((is_bold, is_italic, t, font_name, font_size))
 
-        # Preserve the formatting of the first run
-        if p.runs:
-            first_run = p.runs[0]
-            was_bold = first_run.bold
-            was_italic = first_run.italic
-            font_name = first_run.font.name
-            font_size = first_run.font.size
+        # Clear all existing runs
+        for run in list(p.runs):
+            run._r.getparent().remove(run._r)
 
-            # Clear all runs
-            for run in list(p.runs):
-                run._r.getparent().remove(run._r)
+        # Re-create one clean run per formatting group
+        for is_bold, is_italic, text, font_name, font_size in groups:
+            # Collapse multiple spaces
+            text = re.sub(r"\s{2,}", " ", text).strip()
+            if not text:
+                continue
 
-            # Add single clean run
-            new_run = p.add_run(full_text)
-            if font_name:
-                new_run.font.name = font_name
-            if font_size:
-                new_run.font.size = font_size
-            if was_bold:
+            new_run = p.add_run(text)
+            new_run.font.name = font_name or "Times New Roman"
+            new_run.font.size = font_size or Pt(12)
+            if is_bold:
                 new_run.bold = True
-            if was_italic:
+            if is_italic:
                 new_run.italic = True
