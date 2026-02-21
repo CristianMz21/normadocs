@@ -20,7 +20,7 @@ El presente informe documenta el proceso de migración de los requisitos del pro
 
 # Contenido
 
-Resumen ..................................................... 3
+Resumen ..................................................... 2
 
 Introducción ................................................ 4
 
@@ -36,17 +36,17 @@ Desarrollo de la Evidencia (Configuración en Trello) ....... 7
 
 1.  Creación de cuenta y Tablero Principal ............... 7
 
-2.  Migración de Requerimientos y Asignación ............. 8
+2.  Migración de Requerimientos y Asignación ............. 9
 
-3.  Detalle de Tarjeta y Criterios de Aceptación ......... 9
+3.  Detalle de Tarjeta y Criterios de Aceptación ......... 10
 
-4.  Infraestructura Tecnológica .......................... 10
+4.  Infraestructura Tecnológica .......................... 12
 
-5.  Aseguramiento de Calidad (QA) ........................ 11
+5.  Aseguramiento de Calidad (QA) ........................ 13
 
-Conclusiones ................................................ 12
+Conclusiones ................................................ 15
 
-Referencias ................................................. 13
+Referencias ................................................. 17
 
 # Taller para la determinación de las especificaciones funcionales del software y metodología a utilizar
 
