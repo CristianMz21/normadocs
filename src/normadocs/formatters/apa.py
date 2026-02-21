@@ -101,15 +101,21 @@ class APADocxFormatter(DocumentFormatter):
             p.paragraph_format.space_after = Pt(0)
 
     def _format_lists(self):
-        """Apply APA 7 bullet list formatting.
+        """Apply APA 7 list formatting.
 
-        APA 7 requires:
-          - Bullet at 0.5 in (1.27 cm) — same as paragraph indent
-          - Text starts just right of the bullet
-          - Continuation lines align under first letter (hanging indent)
+        Regular bullet lists: bullet at 0.5in, text at 0.75in, hanging indent.
+        Reference entries: no bullet, hanging indent at 0.5in (APA 7 standard).
         """
+        in_references = False
 
         for p in self.doc.paragraphs:
+            # Track sections via headings
+            style_name = p.style.name if p.style else ""
+            if style_name == "Heading 1":
+                text_lower = p.text.lower().strip()
+                in_references = "referencia" in text_lower or "reference" in text_lower
+                continue
+
             pPr = p._element.find(qn("w:pPr"))
             if pPr is None:
                 continue
@@ -118,29 +124,31 @@ class APADocxFormatter(DocumentFormatter):
             if numPr is None:
                 continue
 
-            # This is a list item — remove Pandoc's numbering reference
-            # and replace with manual bullet + APA 7 indentation
+            # Remove Pandoc's numbering reference
             pPr.remove(numPr)
 
-            # APA 7 indentation:
-            # left_indent = 0.75in (where text AND continuation lines align)
-            # first_line_indent = -0.25in (pulls bullet back to 0.5in)
-            p.paragraph_format.left_indent = Inches(0.75)
-            p.paragraph_format.first_line_indent = Inches(-0.25)
+            if in_references:
+                # APA 7 reference: hanging indent, NO bullet
+                p.paragraph_format.left_indent = Inches(0.5)
+                p.paragraph_format.first_line_indent = Inches(-0.5)
+            else:
+                # APA 7 bullet list: bullet at 0.5in, text at 0.75in
+                p.paragraph_format.left_indent = Inches(0.75)
+                p.paragraph_format.first_line_indent = Inches(-0.25)
 
-            # Tab stop at 0.75in so tab after bullet snaps text into position
-            tab_stops = p.paragraph_format.tab_stops
-            tab_stops.add_tab_stop(Inches(0.75), alignment=0)  # LEFT tab
+                # Tab stop so tab after bullet snaps text into position
+                tab_stops = p.paragraph_format.tab_stops
+                tab_stops.add_tab_stop(Inches(0.75), alignment=0)
 
-            # Prepend bullet character to the text
-            text = p.text
-            if not text.startswith("\u2022") and not text.startswith("-"):
-                first_run = p.runs[0] if p.runs else None
-                if first_run:
-                    first_run.text = "\u2022\t" + first_run.text
-                else:
-                    run = p.add_run("\u2022\t")
-                    self._apply_font_style(run)
+                # Prepend bullet character
+                text = p.text
+                if not text.startswith("\u2022") and not text.startswith("-"):
+                    first_run = p.runs[0] if p.runs else None
+                    if first_run:
+                        first_run.text = "\u2022\t" + first_run.text
+                    else:
+                        run = p.add_run("\u2022\t")
+                        self._apply_font_style(run)
 
     def _apply_body_indent(self):
         """Final pass: apply first-line indent to all body paragraphs.
