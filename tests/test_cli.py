@@ -3,8 +3,10 @@ Tests for CLI.
 """
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from typer.testing import CliRunner
+
 from normadocs.cli import app
 
 runner = CliRunner()
@@ -12,10 +14,10 @@ runner = CliRunner()
 
 class TestCLI(unittest.TestCase):
     @patch("normadocs.cli.PandocRunner")
-    @patch("normadocs.cli.APADocxFormatter")
+    @patch("normadocs.cli.get_formatter")
     @patch("normadocs.cli.MarkdownPreprocessor")
     @patch("normadocs.cli.logger")
-    def test_convert_command_success(self, mock_logger, mock_pre, mock_fmt, mock_pandoc):
+    def test_convert_command_success(self, mock_logger, mock_pre, mock_get_fmt, mock_pandoc):
         # Mock file operations
         with runner.isolated_filesystem():
             with open("test.md", "w") as f:

@@ -10,6 +10,13 @@ class PDFGenerator:
     """Handles conversion to PDF."""
 
     @staticmethod
+    def convert(docx_path: str, output_dir: str, md_content: str, output_path: str) -> bool:
+        """Try LibreOffice first, then fall back to WeasyPrint."""
+        if PDFGenerator.convert_with_libreoffice(docx_path, output_dir):
+            return True
+        return PDFGenerator.convert_with_weasyprint(md_content, output_path)
+
+    @staticmethod
     def convert_with_libreoffice(docx_path: str, output_dir: str) -> bool:
         """Convert DOCX to PDF using LibreOffice."""
         try:

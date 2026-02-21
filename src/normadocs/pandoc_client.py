@@ -3,8 +3,8 @@ Module for running Pandoc conversions.
 """
 
 import subprocess
-import tempfile
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -14,7 +14,14 @@ class PandocRunner:
     def __init__(self, pandoc_path: str = "pandoc"):
         self.pandoc_path = pandoc_path
 
-    def run(self, md_text: str, output_path: str) -> bool:
+    def run(
+        self,
+        md_text: str,
+        output_path: str,
+        bibliography: str | None = None,
+        csl: str | None = None,
+        resource_path: str | None = None,
+    ) -> bool:
         """
         Run pandoc to convert Markdown to DOCX.
         Returns True if successful, False otherwise.
@@ -31,13 +38,22 @@ class PandocRunner:
             self.pandoc_path,
             tmp_path,
             "-f",
-            "markdown+raw_attribute",
+            "markdown+raw_attribute-implicit_figures",
             "-t",
             "docx",
             "-o",
             str(path_obj.absolute()),
             "--standalone",
         ]
+
+        if resource_path:
+            cmd.extend([f"--resource-path={resource_path}"])
+
+        if bibliography:
+            cmd.extend([f"--bibliography={bibliography}", "--citeproc"])
+
+        if csl:
+            cmd.extend([f"--csl={csl}"])
 
         print(f"  ▸ Ejecutando Pandoc -> {path_obj.name}")
 

@@ -3,7 +3,6 @@ Data models for APA Document processing.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Dict
 
 
 @dataclass
@@ -11,16 +10,16 @@ class DocumentMetadata:
     """Holds metadata extracted from the source Markdown."""
 
     title: str = "Sin Título"
-    author: Optional[str] = None
-    program: Optional[str] = None
-    ficha: Optional[str] = None
-    institution: Optional[str] = None
-    center: Optional[str] = None
-    date: Optional[str] = None
-    extra: Dict[str, str] = field(default_factory=dict)
+    author: str | None = None
+    program: str | None = None
+    ficha: str | None = None
+    institution: str | None = None
+    center: str | None = None
+    date: str | None = None
+    extra: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, str]) -> "DocumentMetadata":
+    def from_dict(cls, data: dict[str, str]) -> "DocumentMetadata":
         """Create instance from a dictionary, handling known fields."""
         known_fields = {
             "title",

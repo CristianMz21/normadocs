@@ -3,6 +3,7 @@ Tests for Data Models.
 """
 
 import unittest
+
 from normadocs.models import DocumentMetadata, ProcessOptions
 
 

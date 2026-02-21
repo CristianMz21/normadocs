@@ -1,69 +1,221 @@
-# Guía de Integración (Frameworks)
+# Guía de Integración con Frameworks Web
 
-`apa_engine` ha sido diseñado para ser fácilmente integrable en aplicaciones web como Django, FastAPI o Flask.
+**NormaDocs** puede integrarse fácilmente en aplicaciones web como **Django**, **FastAPI** o **Flask** para generar documentos académicos on-demand.
 
-## Instalación como Librería
+## Instalación
 
-Asegúrate de que la carpeta `src` esté en el `PYTHONPATH` de tu aplicación, o instala el paquete via `pip install -e .`.
+```bash
+pip install normadocs
+
+# Con soporte PDF (WeasyPrint)
+pip install normadocs[pdf]
+```
+
+> **Requisito del servidor**: Pandoc debe estar instalado en el sistema.
+>
+> ```bash
+> sudo apt install pandoc              # Debian/Ubuntu
+> sudo dnf install pandoc              # Fedora
+> brew install pandoc                  # macOS
+> ```
+
+## API Básica
+
+```python
+from normadocs.preprocessor import MarkdownPreprocessor
+from normadocs.pandoc_client import PandocRunner
+from normadocs.formatters import get_formatter
+from normadocs.pdf_generator import PDFGenerator
+
+# 1. Pre-procesar Markdown → extraer metadatos + portada
+processor = MarkdownPreprocessor()
+clean_md, meta = processor.process(raw_markdown)
+
+# 2. Convertir a DOCX con Pandoc
+runner = PandocRunner()
+runner.run(clean_md, "output.docx")
+
+# 3. Aplicar formato académico (APA, ICONTEC)
+formatter = get_formatter("apa", "output.docx")
+formatter.process(meta)
+formatter.save("output.docx")
+
+# 4. (Opcional) Generar PDF
+PDFGenerator.convert("output.docx", "/tmp/output/", clean_md, "output.pdf")
+```
+
+### Estilos disponibles
+
+| Estilo           | Valor       | Descripción                                      |
+| ---------------- | ----------- | ------------------------------------------------ |
+| APA 7ª Edición   | `"apa"`     | Times New Roman 12pt, doble espacio, márgenes 1" |
+| ICONTEC NTC 1486 | `"icontec"` | Arial 12pt, espaciado 1.5, márgenes 3/2 cm       |
+
+### Parámetros opcionales de Pandoc
+
+```python
+# Con bibliografía BibTeX y estilo CSL
+runner.run(
+    clean_md,
+    "output.docx",
+    bibliography="references.bib",
+    csl="apa.csl",
+)
+```
 
 ## Ejemplo: Django View
 
 ```python
-# views.py
-from django.http import FileResponse
+import tempfile
 from pathlib import Path
-from apa_engine.preprocessor import MarkdownPreprocessor
-from apa_engine.pandoc_client import PandocRunner
-from apa_engine.docx_formatter import APADocxFormatter
 
-def export_apa(request, document_id):
-    # 1. Obtener contenido Markdown de tu modelo
-    doc = DocumentModel.objects.get(id=document_id)
-    raw_md = doc.content
+from django.http import FileResponse, HttpResponseServerError
 
-    # 2. Definir rutas temporales
-    output_dir = Path("/tmp/apa_exports")
-    output_dir.mkdir(exist_ok=True)
-    temp_docx = output_dir / f"doc_{document_id}.docx"
+from normadocs.preprocessor import MarkdownPreprocessor
+from normadocs.pandoc_client import PandocRunner
+from normadocs.formatters import get_formatter
 
-    # 3. Pipeline de Conversión
-    # A) Pre-proceso
-    processor = MarkdownPreprocessor()
-    processed_md, meta = processor.process(raw_md)
 
-    # B) Pandoc
-    runner = PandocRunner()
-    if not runner.run(processed_md, str(temp_docx)):
-        return HttpResponseServerError("Error en conversión Pandoc")
+def export_document(request, document_id):
+    """Generate a formatted DOCX from a Markdown document."""
+    doc = Document.objects.get(id=document_id)
+    style = request.GET.get("style", "apa")  # ?style=icontec
 
-    # C) Formato APA
-    formatter = APADocxFormatter(str(temp_docx))
-    formatter.process(meta)
-    formatter.save(str(temp_docx))
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = Path(tmpdir) / f"doc_{document_id}.docx"
 
-    # 4. Servir archivo
-    return FileResponse(open(temp_docx, 'rb'), filename=f"{meta.title}.docx")
+        # 1. Pre-procesar
+        processor = MarkdownPreprocessor()
+        clean_md, meta = processor.process(doc.markdown_content)
+
+        # 2. Convertir con Pandoc
+        runner = PandocRunner()
+        if not runner.run(clean_md, str(output_path)):
+            return HttpResponseServerError("Error Pandoc")
+
+        # 3. Aplicar formato
+        formatter = get_formatter(style, str(output_path))
+        formatter.process(meta)
+        formatter.save(str(output_path))
+
+        # 4. Devolver archivo
+        response = FileResponse(
+            open(output_path, "rb"),
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{meta.title}.docx"'
+        return response
 ```
 
-## Ejemplo: FastAPI Background Task
+## Ejemplo: FastAPI Endpoint
 
 ```python
-from fastapi import FastAPI, BackgroundTasks
-from apa_engine.cli import convert_logic # O importar clases individuales
+import tempfile
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+
+from normadocs.preprocessor import MarkdownPreprocessor
+from normadocs.pandoc_client import PandocRunner
+from normadocs.formatters import get_formatter
 
 app = FastAPI()
 
-def process_document(md_content: str, user_email: str):
-    # Lógica de conversión...
-    pass
+
+class ConvertRequest(BaseModel):
+    markdown: str
+    style: str = "apa"
+
 
 @app.post("/convert")
-async def convert_document(md_content: str, background_tasks: BackgroundTasks):
-    background_tasks.add_task(process_document, md_content, "user@example.com")
-    return {"message": "Conversion started"}
+async def convert_document(req: ConvertRequest):
+    """Convert Markdown to a formatted DOCX file."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = Path(tmpdir) / "output.docx"
+
+        # Pipeline
+        processor = MarkdownPreprocessor()
+        clean_md, meta = processor.process(req.markdown)
+
+        runner = PandocRunner()
+        if not runner.run(clean_md, str(output_path)):
+            raise HTTPException(status_code=500, detail="Pandoc conversion failed")
+
+        formatter = get_formatter(req.style, str(output_path))
+        formatter.process(meta)
+        formatter.save(str(output_path))
+
+        return FileResponse(
+            path=str(output_path),
+            filename=f"{meta.title}.docx",
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+```
+
+## Ejemplo: Flask
+
+```python
+import tempfile
+from pathlib import Path
+
+from flask import Flask, request, send_file
+
+from normadocs.preprocessor import MarkdownPreprocessor
+from normadocs.pandoc_client import PandocRunner
+from normadocs.formatters import get_formatter
+
+app = Flask(__name__)
+
+
+@app.route("/convert", methods=["POST"])
+def convert():
+    """Convert Markdown to formatted DOCX."""
+    md_content = request.json.get("markdown", "")
+    style = request.json.get("style", "apa")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = Path(tmpdir) / "output.docx"
+
+        processor = MarkdownPreprocessor()
+        clean_md, meta = processor.process(md_content)
+
+        runner = PandocRunner()
+        if not runner.run(clean_md, str(output_path)):
+            return {"error": "Pandoc conversion failed"}, 500
+
+        formatter = get_formatter(style, str(output_path))
+        formatter.process(meta)
+        formatter.save(str(output_path))
+
+        return send_file(
+            output_path,
+            as_attachment=True,
+            download_name=f"{meta.title}.docx",
+        )
 ```
 
 ## Consideraciones de Despliegue
 
-- **Pandoc**: El servidor debe tener `pandoc` instalado.
-- **Fuentes**: Para que el PDF se genere correctamente con las fuentes adecuadas, el servidor debe tener instaladas las fuentes (ej. `ttf-mscorefonts-installer` para Times New Roman en Linux).
+| Requisito          | Detalle                                                                   |
+| ------------------ | ------------------------------------------------------------------------- |
+| **Pandoc**         | El servidor debe tener `pandoc` instalado en el `PATH`                    |
+| **Fuentes**        | Para PDF: instalar `ttf-mscorefonts-installer` (Times New Roman) en Linux |
+| **LibreOffice**    | `sudo apt install libreoffice` (opción preferida para PDF)                |
+| **WeasyPrint**     | Alternativa para PDF: `pip install normadocs[pdf]`                        |
+| **Almacenamiento** | Usar `tempfile.TemporaryDirectory()` para archivos transitorios           |
+| **Concurrencia**   | Cada petición debe usar su propio directorio temporal                     |
+
+## Docker
+
+Si despliega con Docker, asegúrese de incluir Pandoc en la imagen:
+
+```dockerfile
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y pandoc && rm -rf /var/lib/apt/lists/*
+RUN pip install normadocs[pdf]
+
+# ... su aplicación
+```

@@ -8,12 +8,22 @@ permissions:
   contents: read
 
 jobs:
-  pypi-publish:
-    name: Upload release to PyPI
+  # ── Quality Gate: Run full CI first ──────────────────────────────────
+  ci:
+    name: Quality Gate
+    uses: ./.github/workflows/ci.yml
+
+  # ── Publish: Only runs if CI passes ──────────────────────────────────
+  publish:
+    name: Upload to PyPI
+    needs: ci # ← BLOCKED unless ALL CI jobs pass
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/p/normadocs
+    permissions:
+      id-token: write # Required for trusted publishing
+
     steps:
       - uses: actions/checkout@v4
 
@@ -25,10 +35,10 @@ jobs:
       - name: Install build tools
         run: pip install build
 
-      - name: Build binary wheels and source tarball
+      - name: Build package
         run: python -m build
 
-      - name: Publish package distributions to PyPI
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}

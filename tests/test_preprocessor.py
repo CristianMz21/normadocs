@@ -3,6 +3,7 @@ Tests for the Markdown Preprocessor.
 """
 
 import unittest
+
 from normadocs.preprocessor import MarkdownPreprocessor
 
 
@@ -39,7 +40,7 @@ More text.
 Should not break.
 """
         preprocessor = MarkdownPreprocessor()
-        processed, meta = preprocessor.process(text)
+        processed, _meta = preprocessor.process(text)
 
         # Should have page break before Methodology
         # Note: The exact implementation inserts page break OXML
@@ -47,14 +48,14 @@ Should not break.
 
         # Should NOT have page break before Subsection (which starts with ##)
         # It's hard to test "not before" without strict parsing, but we can check count?
-        # Only 1 page break expected (Title Page -> Intro, Intro -> Method) = actually 2
-        # Title page logic adds one at the end of title page.
-        # Intro starts.
+        # Only 1 page break expected (Intro -> Method) = actually 1
+        # Title page logic no longer adds one in preprocessor.
+        # Temp title -> Intro starts. (No break before first)
         # Method starts -> adds break.
-        # Total breaks: 2
+        # Total breaks: 1
 
         breaks = processed.count('<w:br w:type="page"/>')
-        self.assertTrue(breaks >= 2)
+        self.assertTrue(breaks >= 1)
 
 
 if __name__ == "__main__":

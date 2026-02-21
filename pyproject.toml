@@ -31,16 +31,21 @@ dependencies = [
   "python-docx>=1.1.0",
   "typer>=0.9.0",
   "click>=8.0.0",
-  "weasyprint>=60.0.0",
 ]
 
 [project.optional-dependencies]
+pdf = [
+  "weasyprint>=60.0.0",
+]
 dev = [
   "ruff",
   "mypy",
   "types-setuptools",
   "build",
   "twine",
+  "pytest",
+  "pytest-cov",
+  "bandit[toml]",
 ]
 
 [project.urls]
@@ -55,11 +60,61 @@ normadocs = "normadocs.cli:app"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# ── Ruff ──────────────────────────────────────────────────────────────
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py310"
 
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors
+  "F",    # pyflakes
+  "W",    # pycodestyle warnings
+  "I",    # isort
+  "UP",   # pyupgrade
+  "B",    # flake8-bugbear
+  "SIM",  # flake8-simplify
+  "RUF",  # ruff-specific rules
+]
+ignore = [
+  "E501",   # line too long (handled by formatter)
+  "B008",   # do not perform function calls in argument defaults (typer uses this)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["normadocs"]
+
+# ── MyPy ──────────────────────────────────────────────────────────────
 [tool.mypy]
 python_version = "3.10"
 strict = false
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
 ignore_missing_imports = true
+
+# ── Pytest ────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "--tb=short -q"
+
+# ── Coverage ──────────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["normadocs"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 60
+show_missing = true
+exclude_lines = [
+  "pragma: no cover",
+  "if __name__ == .__main__.",
+  "if TYPE_CHECKING:",
+]
+
+# ── Bandit ────────────────────────────────────────────────────────────
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+skips = ["B404", "B603", "B607"]  # subprocess imports/calls are intentional (pandoc/libreoffice)

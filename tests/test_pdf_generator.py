@@ -3,7 +3,8 @@ Tests for PDF Generator.
 """
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from normadocs.pdf_generator import PDFGenerator
 
 
