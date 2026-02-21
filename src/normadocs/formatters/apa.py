@@ -104,8 +104,8 @@ class APADocxFormatter(DocumentFormatter):
         """Apply APA 7 bullet list formatting.
 
         APA 7 requires:
-          - Bullet at 0.5 in (1.27 cm) from left margin
-          - Text starts at 1.0 in (2.54 cm) from left margin
+          - Bullet at 0.5 in (1.27 cm) — same as paragraph indent
+          - Text starts just right of the bullet
           - Continuation lines align under first letter (hanging indent)
         """
 
@@ -122,27 +122,25 @@ class APADocxFormatter(DocumentFormatter):
             # and replace with manual bullet + APA 7 indentation
             pPr.remove(numPr)
 
-            # Set APA 7 indentation:
-            # left_indent = 1.0in (text block position)
-            # hanging = 0.5in (bullet hangs back from text)
-            p.paragraph_format.left_indent = Inches(1.0)
-            p.paragraph_format.first_line_indent = Inches(-0.5)
+            # APA 7 indentation:
+            # left_indent = 0.75in (where text AND continuation lines align)
+            # first_line_indent = -0.25in (pulls bullet back to 0.5in)
+            p.paragraph_format.left_indent = Inches(0.75)
+            p.paragraph_format.first_line_indent = Inches(-0.25)
+
+            # Tab stop at 0.75in so tab after bullet snaps text into position
+            tab_stops = p.paragraph_format.tab_stops
+            tab_stops.add_tab_stop(Inches(0.75), alignment=0)  # LEFT tab
 
             # Prepend bullet character to the text
             text = p.text
             if not text.startswith("\u2022") and not text.startswith("-"):
-                # Insert a bullet run at the beginning
                 first_run = p.runs[0] if p.runs else None
                 if first_run:
                     first_run.text = "\u2022\t" + first_run.text
                 else:
                     run = p.add_run("\u2022\t")
                     self._apply_font_style(run)
-
-            # Add a right-aligned tab stop at the text start position
-            # so the bullet and text align properly
-            tab_stops = p.paragraph_format.tab_stops
-            tab_stops.add_tab_stop(Inches(1.0), alignment=0)  # LEFT tab
 
     def _apply_body_indent(self):
         """Final pass: apply first-line indent to all body paragraphs.
