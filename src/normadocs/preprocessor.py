@@ -343,6 +343,10 @@ class MarkdownPreprocessor:
                         output_parts.append(PAGEBREAK_OPENXML)
                     found_first_heading = True
 
+            # Escape TOC numbered lines to prevent Pandoc from converting them to ordered lists
+            if re.match(r"^\s*\d+\.\s+.*\.{3,}\s*\d+\s*$", stripped):
+                line = re.sub(r"^(\s*\d+)\.\s+", r"\1\\. ", line)
+
             output_parts.append(line)
 
         return "\n".join(output_parts), meta
