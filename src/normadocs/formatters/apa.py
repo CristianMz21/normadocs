@@ -1023,10 +1023,18 @@ class APADocxFormatter(DocumentFormatter):
         for run in list(p.runs):
             run._r.getparent().remove(run._r)
 
-        # Re-create one clean run per formatting group
-        for is_bold, is_italic, text, font_name, font_size in groups:
-            # Collapse multiple spaces
-            text = re.sub(r"\s{2,}", " ", text).strip()
+        # Re-create one clean run per formatting group, preserving boundary spaces
+        for idx, (is_bold, is_italic, text, font_name, font_size) in enumerate(groups):
+            # Collapse multiple internal spaces but keep single boundary spaces
+            text = re.sub(r"\s{2,}", " ", text)
+
+            # Only strip leading space on the very first group
+            if idx == 0:
+                text = text.lstrip()
+            # Only strip trailing space on the very last group
+            if idx == len(groups) - 1:
+                text = text.rstrip()
+
             if not text:
                 continue
 
