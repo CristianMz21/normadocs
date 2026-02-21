@@ -1031,8 +1031,15 @@ class APADocxFormatter(DocumentFormatter):
         Groups consecutive runs by their (bold, italic) attributes and merges
         only within each group, so italic titles in references and the
         "Nota." italic split are kept intact.
+
+        Skips paragraphs containing embedded images (w:drawing) to avoid
+        destroying their XML structure.
         """
         if not p.runs:
+            return
+
+        # Skip paragraphs with embedded images — clearing runs would destroy them
+        if p._element.findall(f".//{qn('w:drawing')}"):
             return
 
         # Build groups of consecutive runs with the same formatting
