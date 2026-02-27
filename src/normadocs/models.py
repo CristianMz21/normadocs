@@ -15,6 +15,7 @@ class DocumentMetadata:
     ficha: str | None = None
     institution: str | None = None
     center: str | None = None
+    instructor: str | None = None
     date: str | None = None
     extra: dict[str, str] = field(default_factory=dict)
 
@@ -28,6 +29,7 @@ class DocumentMetadata:
             "ficha",
             "institution",
             "center",
+            "instructor",
             "date",
         }
         known_data = {k: v for k, v in data.items() if k in known_fields}

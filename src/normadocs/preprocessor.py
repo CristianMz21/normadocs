@@ -26,8 +26,8 @@ class MarkdownPreprocessor:
 
         # Remaining metadata
         idx = 0
-        # Check lines 2-14 for other metadata, skipping empty lines
-        for i in range(2, 15):
+        # Check lines 2-15 for other metadata, skipping empty lines
+        for i in range(2, 16):
             if i < len(lines):
                 val = lines[i].strip().replace("\r", "")
                 if val and idx < len(METADATA_FIELDS):
@@ -56,13 +56,13 @@ class MarkdownPreprocessor:
         # Metadata fields
         # Note: Order matches the extraction order logic for simplicity in reconstruction
         # but ideally we use the specific fields from the dataclass
-        fields = ["author", "program", "ficha", "institution", "center", "date"]
+        fields = ["author", "program", "ficha", "institution", "center", "instructor", "date"]
         for field in fields:
             val = getattr(meta, field, None)
             if val:
                 parts.append(val + "\n")
 
-        parts.append("</div>\n")
+        parts.append("\n</div>\n\n")
 
         # Page break after title page
         parts.append(PAGEBREAK_OPENXML)

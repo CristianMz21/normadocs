@@ -29,6 +29,7 @@ class APADocxFormatter(DocumentFormatter):
         self._process_paragraphs()
         self._format_tables()
         self._format_figures()
+        self._format_nota_italic()
         self._format_lists()
         self._apply_body_indent()
         self._format_keywords(meta)
@@ -99,6 +100,78 @@ class APADocxFormatter(DocumentFormatter):
             p.paragraph_format.first_line_indent = Inches(0)
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after = Pt(0)
+
+            # Scale oversized images to fit within the usable page area.
+            # Inline images in DOCX CANNOT span pages — LibreOffice clips
+            # them at the page boundary. We must always scale to fit.
+            # Max usable: 6.5in wide x 8.5in tall (leaving room for captions).
+            max_w = Inches(6.5)
+            max_h = Inches(8.5)
+            drawings = p._element.findall(f".//{{{ns_wp}}}inline") + p._element.findall(
+                f".//{{{ns_wp}}}anchor"
+            )
+            for d in drawings:
+                extent = d.find(f"{{{ns_wp}}}extent")
+                if extent is None:
+                    continue
+                cx = int(extent.get("cx", 0))
+                cy = int(extent.get("cy", 0))
+                if cx == 0 or cy == 0:
+                    continue
+
+                scale = 1.0
+                if cx > max_w:
+                    scale = min(scale, max_w / cx)
+                if cy > max_h:
+                    scale = min(scale, max_h / cy)
+
+                if scale < 1.0:
+                    new_cx = int(cx * scale)
+                    new_cy = int(cy * scale)
+                    extent.set("cx", str(new_cx))
+                    extent.set("cy", str(new_cy))
+
+                    # Also update the a:ext in the spPr (shape properties)
+                    ns_a = "http://schemas.openxmlformats.org/drawingml/2006/main"
+                    for ext_el in d.iter(f"{{{ns_a}}}ext"):
+                        old_cx = int(ext_el.get("cx", 0))
+                        old_cy = int(ext_el.get("cy", 0))
+                        if old_cx > 0:
+                            ext_el.set("cx", str(int(old_cx * scale)))
+                        if old_cy > 0:
+                            ext_el.set("cy", str(int(old_cy * scale)))
+
+    def _format_nota_italic(self):
+        """APA 7: 'Nota.' must be italic in figure/table notes.
+
+        Finds paragraphs starting with 'Nota.' and splits the first run
+        so that 'Nota.' is italic and the rest is regular.
+        """
+        for p in self.doc.paragraphs:
+            text = p.text.strip()
+            if not text.startswith("Nota."):
+                continue
+
+            # Get full text and rebuild with italic "Nota."
+            full_text = p.text
+            # Clear all runs
+            for run in list(p.runs):
+                run._element.getparent().remove(run._element)
+
+            # Add "Nota. " as italic
+            nota_run = p.add_run("Nota. ")
+            nota_run.italic = True
+            self._apply_font_style(nota_run, italic=True)
+
+            # Add the rest as regular text
+            rest = full_text[len("Nota.") :].strip()
+            if rest:
+                rest_run = p.add_run(rest)
+                self._apply_font_style(rest_run)
+
+            # Ensure left alignment and no indent for notes
+            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.first_line_indent = Inches(0)
 
     def _format_lists(self):
         """Apply APA 7 list formatting.
@@ -309,9 +382,19 @@ class APADocxFormatter(DocumentFormatter):
             footer.is_linked_to_previous = False
             for p in footer.paragraphs:
                 p.clear()
-                # Also remove any field codes (PAGE) Pandoc may have injected
+                # Remove ALL child elements (runs, field codes, pPr, etc.)
                 for child in list(p._element):
                     p._element.remove(child)
+            # Also set footer distance to zero to suppress any residual space
+            sectPr = section._sectPr
+            existing_pgMar = sectPr.find(qn("w:pgMar"))
+            if existing_pgMar is not None:
+                existing_pgMar.set(qn("w:footer"), "0")
+
+            # Remove the footerReference entirely to prevent LibreOffice
+            # from rendering any footer content
+            for fref in list(sectPr.findall(qn("w:footerReference"))):
+                sectPr.remove(fref)
 
             self._add_page_number(section)
 
@@ -327,19 +410,41 @@ class APADocxFormatter(DocumentFormatter):
         hp = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
         hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
-        run = hp.add_run()
+        # Build PAGE field with begin/separate/end sequence
+        # (LibreOffice requires the 'separate' marker to render page numbers)
+        run_begin = hp.add_run()
         fld_begin = OxmlElement("w:fldChar")
         fld_begin.set(qn("w:fldCharType"), "begin")
-        run._r.append(fld_begin)
+        run_begin._r.append(fld_begin)
+        run_begin.font.name = "Times New Roman"
+        run_begin.font.size = Pt(12)
+
+        run_instr = hp.add_run()
         instr = OxmlElement("w:instrText")
         instr.set(qn("xml:space"), "preserve")
         instr.text = " PAGE "
-        run._r.append(instr)
+        run_instr._r.append(instr)
+        run_instr.font.name = "Times New Roman"
+        run_instr.font.size = Pt(12)
+
+        run_sep = hp.add_run()
+        fld_sep = OxmlElement("w:fldChar")
+        fld_sep.set(qn("w:fldCharType"), "separate")
+        run_sep._r.append(fld_sep)
+        run_sep.font.name = "Times New Roman"
+        run_sep.font.size = Pt(12)
+
+        # Placeholder text (will be replaced by actual page number)
+        run_num = hp.add_run("1")
+        run_num.font.name = "Times New Roman"
+        run_num.font.size = Pt(12)
+
+        run_end = hp.add_run()
         fld_end = OxmlElement("w:fldChar")
         fld_end.set(qn("w:fldCharType"), "end")
-        run._r.append(fld_end)
-        run.font.name = "Times New Roman"
-        run.font.size = Pt(12)
+        run_end._r.append(fld_end)
+        run_end.font.name = "Times New Roman"
+        run_end.font.size = Pt(12)
 
         # Strip excessive paragraphs in header
         while len(header.paragraphs) > 1:
@@ -400,11 +505,38 @@ class APADocxFormatter(DocumentFormatter):
             except KeyError:
                 pass
 
+        # Override Compact style (used by Pandoc for table cells & lists)
+        # Must have single spacing + left alignment for APA tables
+        ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+        for style_el in self.doc.styles.element.findall(f"{{{ns}}}style"):
+            style_id = style_el.get(f"{{{ns}}}styleId", "")
+            if style_id == "Compact":
+                # Replace pPr with single spacing + left alignment
+                old_pPr = style_el.find(f"{{{ns}}}pPr")
+                if old_pPr is not None:
+                    style_el.remove(old_pPr)
+                pPr = OxmlElement("w:pPr")
+                spacing = OxmlElement("w:spacing")
+                spacing.set(qn("w:line"), "240")
+                spacing.set(qn("w:lineRule"), "auto")
+                spacing.set(qn("w:before"), "36")
+                spacing.set(qn("w:after"), "36")
+                pPr.append(spacing)
+                jc = OxmlElement("w:jc")
+                jc.set(qn("w:val"), "left")
+                pPr.append(jc)
+                # Remove first-line indent inherited from BodyText
+                ind = OxmlElement("w:ind")
+                ind.set(qn("w:firstLine"), "0")
+                pPr.append(ind)
+                style_el.append(pPr)
+                break
+
         # Remove Pandoc Table Style borders
         self._neutralize_table_style()
 
     def _neutralize_table_style(self):
-        """Remove borders from the 'Table' style definition."""
+        """Remove borders from 'Table' style and force left-alignment + single spacing."""
         ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
         for style_el in self.doc.styles.element.findall(f"{{{ns}}}style"):
             style_id = style_el.get(f"{{{ns}}}styleId", "")
@@ -423,6 +555,49 @@ class APADocxFormatter(DocumentFormatter):
                         e.set(qn("w:space"), "0")
                         brd.append(e)
                     tblPr_el.append(brd)
+
+                # Add paragraph properties to the Table style (left align + single spacing)
+                # This is authoritative for LibreOffice's style inheritance
+                old_pPr = style_el.find(f"{{{ns}}}pPr")
+                if old_pPr is not None:
+                    style_el.remove(old_pPr)
+                pPr = OxmlElement("w:pPr")
+                jc = OxmlElement("w:jc")
+                jc.set(qn("w:val"), "left")
+                pPr.append(jc)
+                spacing = OxmlElement("w:spacing")
+                spacing.set(qn("w:line"), "240")
+                spacing.set(qn("w:lineRule"), "auto")
+                spacing.set(qn("w:before"), "0")
+                spacing.set(qn("w:after"), "0")
+                pPr.append(spacing)
+                style_el.append(pPr)
+
+                # Add run properties (font) to the Table style
+                old_rPr = style_el.find(f"{{{ns}}}rPr")
+                if old_rPr is not None:
+                    style_el.remove(old_rPr)
+                rPr = OxmlElement("w:rPr")
+                rFonts = OxmlElement("w:rFonts")
+                rFonts.set(qn("w:ascii"), "Times New Roman")
+                rFonts.set(qn("w:hAnsi"), "Times New Roman")
+                rPr.append(rFonts)
+                sz = OxmlElement("w:sz")
+                sz.set(qn("w:val"), "22")  # 11pt
+                rPr.append(sz)
+                style_el.append(rPr)
+
+                # Fix the firstRow tblStylePr: change vAlign from bottom to top
+                for tsp in style_el.findall(f"{{{ns}}}tblStylePr"):
+                    if tsp.get(f"{{{ns}}}type") == "firstRow":
+                        tcPr = tsp.find(f"{{{ns}}}tcPr")
+                        if tcPr is not None:
+                            old_va = tcPr.find(f"{{{ns}}}vAlign")
+                            if old_va is not None:
+                                tcPr.remove(old_va)
+                            va = OxmlElement("w:vAlign")
+                            va.set(qn("w:val"), "top")
+                            tcPr.append(va)
 
     def _apply_font_style(
         self,
@@ -458,24 +633,20 @@ class APADocxFormatter(DocumentFormatter):
         if self.doc.paragraphs:
             self.doc.paragraphs[0].insert_paragraph_before("")
 
-        # Extract extra fields safely
-        instructor = meta.extra.get("instructor", "")
-        due_date = meta.date or ""
-        institution = meta.institution or ""
-        program = meta.program or ""
-        ficha = meta.ficha or ""
-        center = meta.center or ""
+        # Extract fields safely
+        instructor = getattr(meta, "instructor", "") or meta.extra.get("instructor", "")
+        due_date = getattr(meta, "date", "") or ""
+        institution = getattr(meta, "institution", "") or ""
+        program = getattr(meta, "program", "") or ""
+        ficha = getattr(meta, "ficha", "") or ""
+        center = getattr(meta, "center", "") or ""
 
-        # APA 7 Student Paper: title in upper third of page (~3-4 lines down
-        # from top margin), then blank line, then author info.
-        # With double spacing (24pt lines), 6 blank lines ≈ top-third position.
-        elements = [
-            ("", False),  # Spacer
-            ("", False),  # Spacer
-            ("", False),  # Spacer
-            ("", False),  # Spacer
-            ("", False),  # Spacer
-            ("", False),  # Spacer
+        # APA 7 Student Paper: cover page with content centered vertically
+        # in the upper half of the page. Calculate how many spacers to add
+        # above the title: page is ~23 double-spaced lines (11in - 2in margins
+        # = 9in at 24pt line height), so center ≈ ~11 lines from top.
+        # Content takes ~8 lines; centering means ~(23 - 8) / 3 = ~5 spacers.
+        content_lines: list[tuple[str, bool]] = [
             (meta.title, True),  # Title: centred, bold
             ("", False),  # Blank line between title and author info
             (meta.author or "", False),
@@ -484,7 +655,15 @@ class APADocxFormatter(DocumentFormatter):
         # Append remaining fields only if they exist
         for field_val in [program, ficha, institution, center, instructor, due_date]:
             if field_val:
-                elements.append((field_val, False))
+                content_lines.append((field_val, False))
+
+        # Calculate spacers: APA 7 wants title at about 1/3 from the top
+        # of the page. With double spacing (24pt lines), the usable page
+        # height is ~23 lines. 1/3 down = ~line 7-8. We use 3 blank lines
+        # (header + margin already take up space above).
+        n_spacers = 3
+        elements: list[tuple[str, bool]] = [("", False)] * n_spacers
+        elements.extend(content_lines)
 
         ref_p = self.doc.paragraphs[0]
 
@@ -571,6 +750,16 @@ class APADocxFormatter(DocumentFormatter):
                     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
                     for run in p.runs:
                         run.bold = True
+
+                # Strip numbering property from headings (APA 7 doesn't use numbered headings)
+                try:
+                    p_pr = p._element.find(qn("w:pPr"))
+                    if p_pr is not None:
+                        num_pr = p_pr.find(qn("w:numPr"))
+                        if num_pr is not None:
+                            p_pr.remove(num_pr)
+                except Exception:
+                    pass
                 p.paragraph_format.first_line_indent = Inches(0)
 
             # Line spacing
@@ -600,6 +789,11 @@ class APADocxFormatter(DocumentFormatter):
                     if text_strip:
                         p.paragraph_format.left_indent = Inches(0.5)
                         p.paragraph_format.first_line_indent = Inches(-0.5)
+                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        # Force XML tag to prevent tag dropping
+                        p_pr = p._element.get_or_add_pPr()
+                        jc = p_pr.get_or_add_jc()
+                        jc.set(qn("w:val"), "left")
                 elif in_abstract:
                     if p.text.strip():
                         # Abstract block format (no indent per APA 7)
@@ -620,6 +814,11 @@ class APADocxFormatter(DocumentFormatter):
                         p.paragraph_format.page_break_before = True
                         just_left_abstract = False
                     p.paragraph_format.first_line_indent = Inches(0.5)
+                    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                    # Force XML tag to prevent tag dropping
+                    p_pr = p._element.get_or_add_pPr()
+                    jc = p_pr.get_or_add_jc()
+                    jc.set(qn("w:val"), "left")
 
             # Fix citations (y -> &)
             self._fix_citations(p)
@@ -720,10 +919,10 @@ class APADocxFormatter(DocumentFormatter):
             self._apply_apa_table_borders(table)
             table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-            # Set table to full page width with fixed layout
+            # Set table to full page width with FIXED layout
             tbl_pr = table._tbl.tblPr
             if tbl_pr is not None:
-                # Use fixed layout for consistent rendering
+                # Use FIXED layout so LibreOffice respects explicit column widths
                 existing_layout = tbl_pr.find(qn("w:tblLayout"))
                 if existing_layout is not None:
                     tbl_pr.remove(existing_layout)
@@ -739,25 +938,34 @@ class APADocxFormatter(DocumentFormatter):
                 tbl_w.set(qn("w:type"), "pct")
                 tbl_w.set(qn("w:w"), "5000")  # 100% in fifths of a percent
 
-                # Set table-level cell margins to zero
+                # Set table-level cell margins
                 existing_tblcm = tbl_pr.find(qn("w:tblCellMar"))
                 if existing_tblcm is not None:
                     tbl_pr.remove(existing_tblcm)
                 tbl_cell_mar = OxmlElement("w:tblCellMar")
                 for side in ("top", "bottom", "start", "end"):
                     el = OxmlElement(f"w:{side}")
-                    el.set(qn("w:w"), "0")
+                    el.set(qn("w:w"), "57")  # ~1mm padding
                     el.set(qn("w:type"), "dxa")
                     tbl_cell_mar.append(el)
                 tbl_pr.append(tbl_cell_mar)
 
-            # Reduce cell margins for all tables to maximize usable space
+            # Reduce cell margins, set vertical top-alignment and left-alignment
             for row in table.rows:
                 for cell in row.cells:
                     tc_pr = cell._element.find(qn("w:tcPr"))
                     if tc_pr is None:
                         tc_pr = OxmlElement("w:tcPr")
                         cell._element.insert(0, tc_pr)
+
+                    # Vertical alignment: top (APA 7 requirement)
+                    existing_valign = tc_pr.find(qn("w:vAlign"))
+                    if existing_valign is not None:
+                        tc_pr.remove(existing_valign)
+                    v_align = OxmlElement("w:vAlign")
+                    v_align.set(qn("w:val"), "top")
+                    tc_pr.append(v_align)
+
                     # Remove existing margins
                     existing_mar = tc_pr.find(qn("w:tcMar"))
                     if existing_mar is not None:
@@ -765,22 +973,31 @@ class APADocxFormatter(DocumentFormatter):
                     tc_mar = OxmlElement("w:tcMar")
                     for side in ("top", "bottom", "start", "end"):
                         el = OxmlElement(f"w:{side}")
-                        el.set(qn("w:w"), "0")  # zero margin
+                        el.set(qn("w:w"), "28")  # small margin (~0.5mm)
                         el.set(qn("w:type"), "dxa")
                         tc_mar.append(el)
                     tc_pr.append(tc_mar)
 
+                    # Left-align all cell paragraphs (APA 7 for text content)
+                    for p in cell.paragraphs:
+                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        p_pr = p._element.get_or_add_pPr()
+                        jc = p_pr.get_or_add_jc()
+                        jc.set(qn("w:val"), "left")
+
             # Scale font size based on column count
             num_cols = len(table.columns)
             if num_cols >= 6:
-                font_size = 7
-            elif num_cols >= 5:
                 font_size = 8
-            else:
+            elif num_cols >= 5:
+                font_size = 9
+            elif num_cols >= 4:
                 font_size = 10
+            else:
+                font_size = 11
 
             # Set proportional column widths based on content
-            if num_cols > 2:
+            if num_cols >= 2:
                 # Calculate max content length per column (across all rows)
                 max_content_len = [0] * num_cols
                 max_word_len = [0] * num_cols
@@ -793,10 +1010,13 @@ class APADocxFormatter(DocumentFormatter):
                                 max_word_len[ci] = max(max_word_len[ci], len(word))
 
                 # Char width estimate per font size (includes ~0.1in padding)
-                cw_map = {7: 0.08, 8: 0.10, 10: 0.12}
+                cw_map = {8: 0.10, 9: 0.10, 10: 0.12, 11: 0.12}
                 cw = cw_map.get(font_size, 0.10)
-                # Minimum = longest word * char width + padding
-                min_widths = [max(w * cw + 0.12, 0.70) for w in max_word_len]
+
+                # Minimum column width: at least wide enough for longest word
+                # plus enforce a minimum of 1.5in for all columns
+                min_col = 1.5
+                min_widths = [max(w * cw + 0.12, min_col) for w in max_word_len]
                 total_min = sum(min_widths)
 
                 avail = 6.5
@@ -808,11 +1028,12 @@ class APADocxFormatter(DocumentFormatter):
                         extra = remaining * (max_content_len[ci] / total_content)
                         col_widths_inches.append(min_widths[ci] + extra)
                 else:
-                    # Proportional fallback
+                    # Proportional fallback with floor
                     total_content = sum(max_content_len) or 1
+                    floor_w = max(avail / num_cols * 0.4, 0.85)
                     for ci in range(num_cols):
                         proportion = max_content_len[ci] / total_content
-                        col_widths_inches.append(max(avail * proportion, 0.85))
+                        col_widths_inches.append(max(avail * proportion, floor_w))
 
                 # CRITICAL: Normalize total to exactly 6.5in so LibreOffice
                 # doesn't proportionally downscale all columns
@@ -886,6 +1107,43 @@ class APADocxFormatter(DocumentFormatter):
                         # Remove extra paragraphs from the cell
                         for extra_p in list(cell.paragraphs[1:]):
                             extra_p._element.getparent().remove(extra_p._element)
+
+            # FINAL PASS: Force left alignment + single spacing on ALL cell
+            # paragraphs. Must happen AFTER the merge/clear cycle above,
+            # because .clear() strips paragraph-level formatting.
+            for row in table.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        # --- Left alignment (remove old jc, add new) ---
+                        p_pr = p._element.get_or_add_pPr()
+                        old_jc = p_pr.find(qn("w:jc"))
+                        if old_jc is not None:
+                            p_pr.remove(old_jc)
+                        new_jc = OxmlElement("w:jc")
+                        new_jc.set(qn("w:val"), "left")
+                        p_pr.append(new_jc)
+
+                        # --- Single line spacing (APA 7 exception for tables) ---
+                        old_spacing = p_pr.find(qn("w:spacing"))
+                        if old_spacing is not None:
+                            p_pr.remove(old_spacing)
+                        spacing_el = OxmlElement("w:spacing")
+                        spacing_el.set(qn("w:line"), "240")  # single spacing
+                        spacing_el.set(qn("w:lineRule"), "auto")
+                        spacing_el.set(qn("w:before"), "0")
+                        spacing_el.set(qn("w:after"), "40")  # tiny gap between rows
+                        p_pr.append(spacing_el)
+
+            # Add spacing paragraph after table (APA 7: double-space gap)
+            table_element = table._tbl
+            spacing_p = OxmlElement("w:p")
+            spacing_pPr = OxmlElement("w:pPr")
+            spacing_spacing = OxmlElement("w:spacing")
+            spacing_spacing.set(qn("w:line"), "480")
+            spacing_spacing.set(qn("w:lineRule"), "auto")
+            spacing_pPr.append(spacing_spacing)
+            spacing_p.append(spacing_pPr)
+            table_element.addnext(spacing_p)
 
             self._add_table_caption(table, i + 1)
 

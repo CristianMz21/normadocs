@@ -20,4 +20,4 @@ PAGEBREAK_OPENXML = """
 DEFAULT_OUTPUT_DIR = Path("ExportDocs")
 
 # Metadata field order for extraction
-METADATA_FIELDS = ["author", "program", "ficha", "institution", "center", "date"]
+METADATA_FIELDS = ["author", "program", "ficha", "institution", "center", "instructor", "date"]
