@@ -100,7 +100,6 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "--tb=short -q"
-asyncio_default_fixture_loop_scope = "function"
 
 # ── Coverage ──────────────────────────────────────────────────────────
 [tool.coverage.run]
