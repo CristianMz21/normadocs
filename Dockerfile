@@ -2,7 +2,7 @@ FROM python:3.12-slim-bookworm
 
 LABEL maintainer="Cristian Muñoz <cristianmz21@users.noreply.github.com>"
 LABEL description="Markdown to academic DOCX/PDF converter (APA 7th, ICONTEC, IEEE)"
-LABEL version="0.1.2a1"
+LABEL version="0.2.0"
 
 # Install System dependencies
 # Pandoc (Core), LibreOffice (PDF), and WeasyPrint deps

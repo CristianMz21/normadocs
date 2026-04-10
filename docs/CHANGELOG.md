@@ -5,41 +5,43 @@ All notable changes to **NormaDocs** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - 2026-04-10
 
 ### Added
 
-- **IEEE 8th Edition formatter** - Full implementation with Times New Roman 10pt, single spacing, page numbers in headers
-- Multi-standard architecture with `DocumentFormatter` interface.
-- Factory pattern for formatter selection.
-- CLI support for multiple citation styles via `--style` flag.
-- `--bibliography` and `--csl` CLI flags for Pandoc citation processing.
-- APA-style table captions: **Tabla X** (bold) + _Título_ (italic).
-- APA-style table borders (horizontal only, no vertical lines).
-- `PDFGenerator.convert()` convenience method (LibreOffice → WeasyPrint fallback).
-- `py.typed` marker for PEP 561 typed package support.
-- Bandit security scanning in CI.
-- Coverage reporting with 60% minimum threshold.
-- `CONTRIBUTING.md` guidelines.
+- **Complete docstring audit** - All modules now have Google-style docstrings
+- **IEEE 8th Edition formatter** - Full implementation with Times New Roman 10pt, single spacing
+- **Multi-standard architecture** - DocumentFormatter interface with factory pattern
+- **CLI reference documentation** - Complete --help documentation
+- **Troubleshooting guide** - Common issues and solutions
+- **Example documents** - APA, ICONTEC, IEEE templates
+- **MkDocs documentation site** - Material theme with full navigation
+- **GitHub issue/PR templates** - Bug reports and feature requests
+- **Security policy** - SECURITY.md with reporting guidelines
+- **Dependabot configuration** - Automated dependency updates
+- **CODEOWNERS** - Clear code ownership
 
 ### Changed
 
-- **BREAKING (CI)**: `release.yml` now requires full CI to pass before publishing.
-- **BREAKING (CI)**: `docker-publish.yml` now requires CI to pass before building/pushing.
-- Refactored `docx_formatter.py` into separate `formatters/` package.
-- `weasyprint` moved from hard dependency to optional `[pdf]` extra.
-- Ruff configured with strict lint rules (`E, F, W, I, UP, B, SIM, RUF`).
-- MyPy tightened: `check_untyped_defs = true`, `warn_return_any = true`.
-- Docker workflow updated from pinned SHAs to latest major action tags.
-- Improved test suite to verify full formatting pipeline.
+- **CI/CD workflow** - Stricter quality gates (mypy --strict, ruff with no noqa)
+- **Docker workflow** - Multi-architecture support (amd64/arm64), version tagging
+- **Release workflow** - Fixed OIDC trusted publishing, tag-based triggers
+- **Coverage requirement** - Increased from 60% to 78%
+- **All subprocess calls** - Centralized via utils/subprocess.py wrapper
 
 ### Fixed
 
-- `p.style.name` null safety guard in `apa.py` and `icontec.py`.
-- B904: `raise ... from None` in CLI exception handlers.
-- SIM102: Simplified nested `if` in APA body text formatting.
-- All deprecated `typing.List/Dict/Tuple/Optional` replaced with modern syntax.
-- Import sorting enforced across all modules and tests.
+- Empty string split filter in LanguageTool rules
+- Bare except Exception to specific exception types
+- YAML frontmatter 100-line hard limit removed
+- Orphaned table element safety check
+
+### Documentation
+
+- API reference documentation
+- Library usage guide
+- Standard configuration references (APA7, ICONTEC, IEEE)
+- Contributing guidelines
 
 ## [0.1.2a1] - 2026-02-18
 

@@ -1,0 +1,50 @@
+site_name: NormaDocs
+repo_url: https://github.com/CristianMz21/normadocs
+repo_name: CristianMz21/normadocs
+edit_uri: edit/main/docs/src/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - git-revision-date-localized:
+      enabled: !ENV [CI, false]
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage:
+      - CLI: usage/cli.md
+      - Library: usage/library.md
+  - Standards:
+      - standards/index.md
+      - standards/apa7.md
+      - standards/icontec.md
+      - standards/ieee.md
+  - Troubleshooting: troubleshooting.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.mark

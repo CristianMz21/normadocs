@@ -1,0 +1,9 @@
+# Code Owners
+# Default owner for everything
+* @CristianMz21
+
+# Python code
+*.py @CristianMz21
+
+# GitHub workflows
+.github/ @CristianMz21

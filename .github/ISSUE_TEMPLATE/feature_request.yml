@@ -1,0 +1,26 @@
+name: Feature Request
+description: Suggest a new feature for NormaDocs
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Description
+        Describe the feature you'd like to see.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: Detailed description of the proposed feature
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      placeholder: Why would this feature be useful?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      placeholder: What alternatives have you considered?
