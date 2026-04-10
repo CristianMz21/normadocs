@@ -1,6 +1,5 @@
 # Git
 .git
-.gitignore
 
 # Python
 __pycache__
@@ -30,7 +29,7 @@ env
 *.swo
 *~
 
-# Project files not needed in image
+# Project files not needed in Docker image
 .github
 .claude
 .playwright-mcp
@@ -38,14 +37,7 @@ Makefile
 requirements.txt
 uv.lock
 scripts
+tests
 docs
 examples
-tests
-*.md
-!.md
-*.yml
-*.yaml
-
-# OS
-.DS_Store
-Thumbs.db
+CHANGELOG.md
