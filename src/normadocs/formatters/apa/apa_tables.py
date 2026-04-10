@@ -549,8 +549,8 @@ class APATablesHandler:
             first_row = table.rows[0]
             first_cell_text = first_row.cells[0].text.strip()
 
-            # If the first cell is short and looks like a header label (e.g., "Campo", "N°", "Nombre")
-            # then use the second cell or combine cells as the title
+            # If the first cell is short and looks like a header label
+            # (e.g., "Campo", "N", "Nombre") then use the second cell or combine cells
             short_header_indicators = [
                 "n°",
                 "no.",
@@ -651,13 +651,13 @@ class APATablesHandler:
                             else ""
                         )
                         if "desarrollador" in second_cell or "computador" in second_cell:
-                            desc = "Especificaciones técnicas del computador para desarrollo de software."
+                            desc = "Especificaciones técnicas del computador para desarrollo."
                         elif "analista" in second_cell or "qa" in second_cell:
                             desc = (
                                 "Especificaciones técnicas del computador para pruebas de calidad."
                             )
                         elif "servidor" in second_cell or "vps" in second_cell:
-                            desc = "Configuración técnica del servidor virtual privado para desarrollo."
+                            desc = "Configuración técnica del servidor virtual privado."
                         elif (
                             "móvil" in second_cell
                             or "smartphone" in second_cell

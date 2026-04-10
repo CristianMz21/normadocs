@@ -42,3 +42,4 @@ class DocumentFormatter(ABC):
 
     def _format_table_caption(self, table, number: int, title: str) -> None:
         """Format table caption (Table X + Title). Optional override for subclasses."""
+        raise NotImplementedError(f"Caption formatting not implemented for {type(self).__name__}")

@@ -51,7 +51,9 @@ class TestFormatKeywords(unittest.TestCase):
         paragraphs = [
             {"text": "Este es el resumen del documento.", "style": "Normal"},
             {
-                "text": "Palabras clave: aprendizaje automático, educación, inteligencia artificial",
+                "text": (
+                    "Palabras clave: aprendizaje automático, educación, inteligencia artificial"
+                ),
                 "style": "Normal",
             },
             {"text": "Introducción", "style": "Heading 1"},
@@ -353,7 +355,10 @@ class TestApplyBodyIndent(unittest.TestCase):
         paragraphs = [
             {"text": "Introducción", "style": "Heading 1"},
             {
-                "text": "Este es un párrafo de cuerpo con bastante texto para que la sangría se aplique correctamente.",
+                "text": (
+                    "Este es un párrafo de cuerpo con bastante texto "
+                    "para que la sangría se aplique correctamente."
+                ),
                 "style": "Normal",
             },
             {"text": "Segundo párrafo del cuerpo.", "style": "Normal"},

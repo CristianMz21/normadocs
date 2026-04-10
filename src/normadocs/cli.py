@@ -72,7 +72,10 @@ def convert(
         typer.Option(
             "--language-tool",
             "-lt",
-            help="Language for LanguageTool checking (e.g., es, en, fr). Enables pre and post conversion checks.",
+            help=(
+                "Language for LanguageTool checking (e.g., es, en, fr). "
+                "Enables pre and post conversion checks."
+            ),
         ),
     ] = None,
     lt_host: Annotated[
@@ -97,7 +100,9 @@ def convert(
         bool,
         typer.Option(
             "--lt-keep-alive",
-            help="Keep LanguageTool container running after conversion (for faster subsequent runs)",
+            help=(
+                "Keep LanguageTool container running after conversion (for faster subsequent runs)"
+            ),
         ),
     ] = False,
     lt_report: Annotated[
@@ -118,14 +123,20 @@ def convert(
         str | None,
         typer.Option(
             "--lt-disabled-rules",
-            help="Comma-separated list of rule IDs to disable (e.g., WHITESPACE_RULE,UPPERCASE_SENTENCE_START)",
+            help=(
+                "Comma-separated list of rule IDs to disable "
+                "(e.g., WHITESPACE_RULE,UPPERCASE_SENTENCE_START)"
+            ),
         ),
     ] = None,
     lt_ignore_words: Annotated[
         str | None,
         typer.Option(
             "--lt-ignore-words",
-            help="Comma-separated list of words to ignore. Default: uses config file (empty to disable)",
+            help=(
+                "Comma-separated list of words to ignore. "
+                "Default: uses config file (empty to disable)"
+            ),
         ),
     ] = None,
     lt_strict: Annotated[
@@ -139,7 +150,9 @@ def convert(
         bool,
         typer.Option(
             "--lt-no-spelling",
-            help="Disable spell checking (useful for technical documents with many technical terms)",
+            help=(
+                "Disable spell checking (useful for technical documents with many technical terms)"
+            ),
         ),
     ] = False,
 ):

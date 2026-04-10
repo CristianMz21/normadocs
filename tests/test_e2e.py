@@ -87,9 +87,11 @@ SAMPLE_MARKDOWN = textwrap.dedent("""\
 
     # Referencias
 
-    García, A. y López, B. (2023). Machine learning en educación. *Revista Educación*, 45(2), 112-130.
+    García, A. y López, B. (2023). Machine learning en educación.
+        *Revista Educación*, 45(2), 112-130.
 
-    Martínez, C., Rodríguez, D. y Silva, E. (2024). Sistemas adaptativos. *Journal of AI*, 12(1), 45-67.
+    Martínez, C., Rodríguez, D. y Silva, E. (2024). Sistemas adaptativos.
+        *Journal of AI*, 12(1), 45-67.
 """)
 
 

@@ -80,11 +80,7 @@ select = [
   "SIM",  # flake8-simplify
   "RUF",  # ruff-specific rules
 ]
-ignore = [
-  "E501",   # line too long (handled by formatter)
-  "B008",   # do not perform function calls in argument defaults (typer uses this)
-  "B027",   # empty method in ABC is valid for optional hook pattern
-]
+ignore = []
 
 [tool.ruff.lint.isort]
 known-first-party = ["normadocs"]
@@ -122,4 +118,4 @@ exclude_lines = [
 # ── Bandit ────────────────────────────────────────────────────────────
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
-skips = ["B404", "B603", "B607"]  # subprocess calls to pandoc/libreoffice are intentional
+skips = ["B404", "B603", "B607"]

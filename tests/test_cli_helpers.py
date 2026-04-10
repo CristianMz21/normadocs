@@ -80,7 +80,7 @@ class TestSetupLanguageToolClient(unittest.TestCase):
             self.assertEqual(call_kwargs["disabled_rules"], ["RULE3", "RULE4"])
 
     def test_creates_client_with_empty_ignore_words(self):
-        """Should create client with empty ignore words list when lt_ignore_words is empty string."""
+        """Should create client with empty ignore words when lt_ignore_words is empty."""
         with patch.object(LanguageToolClient, "__init__", return_value=None) as mock_init:
             _setup_languagetool_client(
                 language_tool="es",

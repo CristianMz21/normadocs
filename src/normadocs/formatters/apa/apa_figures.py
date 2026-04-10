@@ -193,20 +193,21 @@ class APAFiguresHandler:
                         if text.lower().startswith("nota"):
                             if para_idx > 1:
                                 prev_text = self.doc.paragraphs[para_idx - 1].text.strip()
-                                # Make sure it's a valid title (not a list, not a heading, not empty)
-                                if (
+                                # Verify it's a valid title (not a list, heading, or empty)
+                                is_valid_title = (
                                     prev_text
                                     and not prev_text.startswith("•")
                                     and not prev_text.startswith("-")
                                     and not prev_text.startswith("#")
                                     and not prev_text.startswith("Figura ")
-                                ):
+                                )
+                                if is_valid_title:
                                     title_text = prev_text
                                     title_para_idx = para_idx - 1
                                     title_para = self.doc.paragraphs[para_idx - 1]
                             break
 
-                        # Also check if text starts with "Figura N" - that's the original title from markdown
+                        # Check if text starts with "Figura N" - original title from markdown
                         if re.match(r"^Figura\s+\d+", text):
                             # This is the original title - extract the actual title
                             match = re.match(r"^Figura\s+\d+\s+(.+)$", text)
