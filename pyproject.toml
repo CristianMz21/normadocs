@@ -83,6 +83,7 @@ select = [
 ignore = [
   "E501",   # line too long (handled by formatter)
   "B008",   # do not perform function calls in argument defaults (typer uses this)
+  "B027",   # empty method in ABC is valid for optional hook pattern
 ]
 
 [tool.ruff.lint.isort]

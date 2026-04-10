@@ -6,9 +6,19 @@ from typing import Any
 
 from ..standards import StandardLoader, get_default_config, merge_with_defaults
 from .apa import APADocxFormatter
-from .base import DocumentFormatter  # noqa: F401
+from .base import DocumentFormatter
 from .icontec import IcontecFormatter
 from .ieee import IEEEDocxFormatter
+
+__all__ = [
+    "APADocxFormatter",
+    "DocumentFormatter",
+    "IEEEDocxFormatter",
+    "IcontecFormatter",
+    "get_formatter",
+    "list_available_standards",
+    "load_standard_config",
+]
 
 
 def get_formatter(

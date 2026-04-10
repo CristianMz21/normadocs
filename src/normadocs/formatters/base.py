@@ -40,5 +40,5 @@ class DocumentFormatter(ABC):
         """Save the formatted document."""
         pass
 
-    def _format_table_caption(self, table, number: int, title: str):  # noqa: B027
+    def _format_table_caption(self, table, number: int, title: str) -> None:
         """Format table caption (Table X + Title). Optional override for subclasses."""
