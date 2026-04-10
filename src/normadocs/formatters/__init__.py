@@ -6,7 +6,7 @@ from typing import Any
 
 from ..standards import StandardLoader, get_default_config, merge_with_defaults
 from .apa import APADocxFormatter
-from .base import DocumentFormatter
+from .base import DocumentFormatter  # noqa: F401
 from .icontec import IcontecFormatter
 from .ieee import IEEEDocxFormatter
 
