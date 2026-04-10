@@ -9,6 +9,10 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches
 
+PAGE_CONTENT_WIDTH = 6.5
+
+COMPANY_KEYWORDS = frozenset(["mackroph", "tecnoshop", "devsoft"])
+
 
 class APATablesHandler:
     """Handles table formatting, borders, captions, and notes per APA 7th Edition."""
@@ -155,7 +159,7 @@ class APATablesHandler:
                 min_widths = [max(w * cw + 0.08, min_col) for w in max_word_len]
                 total_min = sum(min_widths)
 
-                avail = 6.5
+                avail = PAGE_CONTENT_WIDTH
                 col_widths_inches = []
                 if total_min <= avail:
                     remaining = avail - total_min
@@ -171,8 +175,7 @@ class APATablesHandler:
                         proportion = max_content_len[ci] / total_content
                         col_widths_inches.append(max(avail * proportion, floor_w))
 
-                # CRITICAL: Normalize total to exactly 6.5in so LibreOffice
-                # doesn't proportionally downscale all columns
+                # CRITICAL: Normalize total to exactly PAGE_CONTENT_WIDTH
                 current_total = sum(col_widths_inches)
                 if current_total > 0 and abs(current_total - avail) > 0.01:
                     scale = avail / current_total
@@ -734,7 +737,7 @@ class APATablesHandler:
                 all_text = " ".join(
                     cell.text.strip().lower() for row in table.rows for cell in row.cells
                 )
-                if "mackroph" in all_text or "tecnoshop" in all_text or "devsoft" in all_text:
+                if COMPANY_KEYWORDS.intersection(all_text.split()):
                     if "criterio" in all_text or "peso" in all_text or "funcional" in all_text:
                         desc = (
                             "Matriz de evaluación técnica y ponderación de criterios por proveedor."
