@@ -2,11 +2,11 @@
 Tests for PDFGenerator - DOCX to PDF conversion.
 """
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
 from docx import Document
 
 from normadocs.pdf_generator import PDFGenerator
@@ -15,84 +15,75 @@ from normadocs.pdf_generator import PDFGenerator
 class TestPDFGeneratorLibreOffice(unittest.TestCase):
     """Tests for convert_with_libreoffice method."""
 
-    def test_libreoffice_success(self):
+    @patch("builtins.print")
+    @patch("subprocess.run")
+    def test_libreoffice_success(self, mock_run, mock_print):
         """LibreOffice conversion should return True on success."""
         with tempfile.TemporaryDirectory() as tmpdir:
             docx_path = Path(tmpdir) / "test.docx"
             Document().save(str(docx_path))
             output_dir = tmpdir
 
-            with (
-                patch("normadocs.pdf_generator.get_command_path") as mock_get_path,
-                patch("normadocs.pdf_generator.run_command") as mock_run,
-            ):
-                mock_get_path.return_value = "libreoffice"
-                mock_result = MagicMock()
-                mock_result.returncode = 0
-                mock_run.return_value = mock_result
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_run.return_value = mock_result
 
-                result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
-                self.assertTrue(result)
+            result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
+            self.assertTrue(result)
 
-    def test_libreoffice_failure(self):
+    @patch("builtins.print")
+    @patch("subprocess.run")
+    def test_libreoffice_failure(self, mock_run, mock_print):
         """LibreOffice should return False on non-zero returncode."""
-        from normadocs.utils.subprocess import CommandFailedError
-
         with tempfile.TemporaryDirectory() as tmpdir:
             docx_path = Path(tmpdir) / "test.docx"
             Document().save(str(docx_path))
             output_dir = tmpdir
 
-            with (
-                patch("normadocs.pdf_generator.get_command_path") as mock_get_path,
-                patch("normadocs.pdf_generator.run_command") as mock_run,
-            ):
-                mock_get_path.return_value = "libreoffice"
-                mock_run.side_effect = CommandFailedError(
-                    returncode=1, cmd=["libreoffice"], stdout="", stderr="Error"
-                )
+            mock_result = MagicMock()
+            mock_result.returncode = 1
+            mock_result.stderr = "Error message"
+            mock_run.return_value = mock_result
 
-                result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
-                self.assertFalse(result)
+            result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
+            self.assertFalse(result)
 
-    def test_libreoffice_not_found(self):
+    @patch("builtins.print")
+    @patch("subprocess.run")
+    def test_libreoffice_not_found(self, mock_run, mock_print):
         """LibreOffice FileNotFoundError should return False."""
         with tempfile.TemporaryDirectory() as tmpdir:
             docx_path = Path(tmpdir) / "test.docx"
             Document().save(str(docx_path))
             output_dir = tmpdir
 
-            with patch("normadocs.pdf_generator.get_command_path") as mock_get_path:
-                mock_get_path.side_effect = FileNotFoundError()
+            mock_run.side_effect = FileNotFoundError()
 
-                result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
-                self.assertFalse(result)
+            result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
+            self.assertFalse(result)
 
-    def test_libreoffice_cmd_structure(self):
+    @patch("builtins.print")
+    @patch("subprocess.run")
+    def test_libreoffice_cmd_structure(self, mock_run, mock_print):
         """LibreOffice command should have correct structure."""
         with tempfile.TemporaryDirectory() as tmpdir:
             docx_path = Path(tmpdir) / "test.docx"
             Document().save(str(docx_path))
             output_dir = tmpdir
 
-            with (
-                patch("normadocs.pdf_generator.get_command_path") as mock_get_path,
-                patch("normadocs.pdf_generator.run_command") as mock_run,
-            ):
-                mock_get_path.return_value = "libreoffice"
-                mock_result = MagicMock()
-                mock_result.returncode = 0
-                mock_run.return_value = mock_result
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_run.return_value = mock_result
 
-                PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
+            PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
 
-                call_args = mock_run.call_args
-                cmd = call_args[0][0]
-                self.assertEqual(cmd[0], "libreoffice")
-                self.assertIn("--headless", cmd)
-                self.assertIn("--convert-to", cmd)
-                self.assertIn("pdf", cmd)
-                self.assertIn("--outdir", cmd)
+            call_args = mock_run.call_args
+            cmd = call_args[0][0]
+            self.assertTrue(cmd[0].endswith("libreoffice") or cmd[0] == "libreoffice")
+            self.assertIn("--headless", cmd)
+            self.assertIn("--convert-to", cmd)
+            self.assertIn("pdf", cmd)
+            self.assertIn("--outdir", cmd)
 
 
 class TestPDFGeneratorWeasyPrint(unittest.TestCase):
