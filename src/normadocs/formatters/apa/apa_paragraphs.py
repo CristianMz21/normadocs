@@ -108,7 +108,7 @@ class APAParagraphsHandler:
                         num_pr = p_pr.find(qn("w:numPr"))
                         if num_pr is not None:
                             p_pr.remove(num_pr)
-                except Exception:
+                except Exception:  # nosec: B110 - XML numPr removal is best-effort
                     pass
                 p.paragraph_format.first_line_indent = Inches(0)
 

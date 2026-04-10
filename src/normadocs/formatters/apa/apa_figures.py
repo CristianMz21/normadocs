@@ -241,7 +241,7 @@ class APAFiguresHandler:
                         # Only remove if it's a different paragraph
                         if title_para_idx != img_pos:
                             title_para._element.getparent().remove(title_para._element)
-                    except Exception:
+                    except Exception:  # nosec: B110 - XML element removal is best-effort
                         pass
             else:
                 # No title found, just create "Figura N"

@@ -43,6 +43,8 @@ dev = [
   "ruff",
   "mypy",
   "types-setuptools",
+  "types-requests",
+  "types-PyYAML",
   "build",
   "twine",
   "pytest",
@@ -119,4 +121,4 @@ exclude_lines = [
 # ── Bandit ────────────────────────────────────────────────────────────
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
-skips = ["B404", "B603", "B607"]  # subprocess imports/calls are intentional (pandoc/libreoffice)
+skips = ["B404", "B603", "B607", "B110"]  # subprocess and best-effort XML handling are intentional
