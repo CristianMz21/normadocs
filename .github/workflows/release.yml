@@ -212,12 +212,15 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Checking if version $VERSION exists on PyPI..."
-          if curl -s "https://pypi.org/pypi/normadocs/$VERSION/json" | python3 -c "import sys,json; d=json.load(sys.stdin); print('exists' if d.get('info',{}).get('version') == '$VERSION' else 'not_found')" 2>/dev/null | grep -q "exists"; then
-            echo "Version $VERSION already exists on PyPI. Skipping upload."
+          RESPONSE=$(curl -s "https://pypi.org/pypi/normadocs/$VERSION/json")
+          PULLUP_VERSION=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('info',{}).get('version','NOT_FOUND'))" 2>/dev/null)
+          echo "Found version on PyPI: '$PULLUP_VERSION'"
+          if [ "$PULLUP_VERSION" = "$VERSION" ]; then
             echo "already_published=true" >> $GITHUB_ENV
+            echo "Version $VERSION already exists on PyPI."
           else
-            echo "Version $VERSION not found on PyPI. Proceeding with upload."
             echo "already_published=false" >> $GITHUB_ENV
+            echo "Version $VERSION not found on PyPI. Will upload."
           fi
 
       - name: Publish to PyPI
@@ -228,6 +231,11 @@ jobs:
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip_existing: true
 
-      - name: Skip publish message
+      - name: Version already published
         if: env.already_published == 'true'
-        run: echo "Skipping PyPI publish - version already exists"
+        run: |
+          echo "========================================"
+          echo "Skipping PyPI publish - version already exists"
+          echo "normadocs $VERSION is already published at:"
+          echo "https://pypi.org/project/normadocs/$VERSION/"
+          echo "========================================"
