@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -76,7 +76,7 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload coverage (3.12 only)
         if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-report
           path: coverage.xml
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v5
         with:
@@ -127,7 +127,50 @@ jobs:
         run: twine check dist/*
 
       - name: Upload dist artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dist
           path: dist/
+
+  annotations-check:
+    name: Ensure Zero Annotations
+    needs: [quality, security, tests, build-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+    steps:
+      - name: Check for annotations
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = context.runId;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            const response = await github.rest.actions.listJobsForWorkflowRun({
+              owner,
+              repo,
+              run_id: runId
+            });
+            
+            const jobs = response.data.jobs;
+            let totalAnnotations = 0;
+            let annotationDetails = [];
+            
+            for (const job of jobs) {
+              if (job.annotations && job.annotations.length > 0) {
+                totalAnnotations += job.annotations.length;
+                for (const ann of job.annotations) {
+                  annotationDetails.push(`[${job.name}] ${ann.annotation_type}: ${ann.message} (${ann.location.path}:${ann.location.start_line})`);
+                }
+              }
+            }
+            
+            if (totalAnnotations > 0) {
+              console.log('Found annotations:');
+              annotationDetails.forEach(a => console.log(a));
+              core.setFailed(`CI failed: ${totalAnnotations} annotation(s) found. Fix all warnings before merging.`);
+            } else {
+              console.log('No annotations found. CI passed with zero warnings!');
+            }
