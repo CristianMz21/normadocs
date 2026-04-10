@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `short_title` field in `DocumentMetadata` for APA 7 running head
+- Complete APA 7th Edition documentation (`docs/src/standards/apa7.md`)
+- `examples/example_apa.md` - Full APA 7 paper example in English
+- Unit tests for `APAPageHandler` (15 tests)
+- Unit tests for `APAStylesHandler` (24 tests)
+- Running head implementation in `APAPageHandler` (short title uppercase in left header)
+
+### Changed
+
+- Standardized all caption prefixes to English ("Table", "Figure") in APA formatter
+- APA 7 documentation now comprehensive with all formatting rules documented
+- `apa7.yaml` caption prefixes updated from Spanish to English
+
+### Fixed
+
+- Spanish hardcoding removed from `apa_tables.py` defaults
+- `apa_figures.py` now uses `caption_prefix` dynamically from config
+- `apa_keywords.py` default `caption_prefix` fixed from "Figura" to "Figure"
+
+### chore
+
+- Excluded `scripts/` directory from ruff linting (utility scripts)
+- Fixed lint issues in `test_apa_page.py` and `test_apa_styles.py`
+
 ## [0.2.1] - 2026-04-10
 
 ### Fixed

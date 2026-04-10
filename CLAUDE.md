@@ -28,9 +28,11 @@ Three-stage pipeline:
 1. **Preprocessor** (`src/normadocs/preprocessor.py`) — Extracts metadata (title, author, keywords), builds cover pages, joins hard-wrapped lines, converts multiline tables to pipe tables
 2. **PandocRunner** (`src/normadocs/pandoc_client.py`) — Converts Markdown to DOCX, handles BibTeX bibliography and CSL styles
 3. **DocumentFormatter** (`src/normadocs/formatters/`) — Applies academic formatting (fonts, margins, spacing, tables). Factory pattern:
-   - `formatters/apa.py` — APA 7th Edition
+   - `formatters/apa/` — APA 7th Edition (subpackage with handlers for cover, figures, keywords, page, paragraphs, styles, tables)
    - `formatters/icontec.py` — ICONTEC NTC 1486
    - `formatters/ieee.py` — IEEE 8th Edition
+
+**APA 7 Running Head**: The running head (short title in uppercase, left header) is implemented in `apa_page.py`. Use `short_title` in YAML frontmatter to enable it.
 
 ## Key Files
 
@@ -54,7 +56,7 @@ normadocs document.md -b refs.bib -c apa.csl    # With bibliography
 ## Code Standards
 
 - **Type checking**: MyPy `strict = true` (configured in pyproject.toml)
-- **Linting**: Ruff (pycodestyle, pyflakes, isort, pyupgrade, bugbear)
+- **Linting**: Ruff (pycodestyle, pyflakes, isort, pyupgrade, bugbear). Scripts in `scripts/` are excluded.
 - **Testing**: pytest with pytest-cov, minimum 78% coverage
 - **Security**: Bandit (excludes B404, B603, B607 — subprocess calls to pandoc/libreoffice are intentional)
 
