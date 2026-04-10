@@ -49,7 +49,7 @@ class APAKeywordsHandler:
             Keywords configuration dictionary.
         """
         default_config: dict[str, Any] = {
-            "caption_prefix": "Figura",
+            "caption_prefix": "Figure",
             "title_above": True,
             "nota_prefix": "Nota.",
         }

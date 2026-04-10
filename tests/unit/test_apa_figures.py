@@ -135,7 +135,7 @@ class TestGetFigureConfig(unittest.TestCase):
         doc = Document()
         handler = APAFiguresHandler(doc)
         config = handler._get_figure_config()
-        self.assertEqual(config["caption_prefix"], "Figura")
+        self.assertEqual(config["caption_prefix"], "Figure")
         self.assertTrue(config["title_above"])
         self.assertEqual(config["nota_prefix"], "Nota.")
 
@@ -336,7 +336,7 @@ class TestAddFigureCaptions(unittest.TestCase):
         self.assertGreaterEqual(len(doc.paragraphs), initial_count)
 
     def test_add_figure_captions_with_image_and_title(self):
-        """Caption should be 'Figura N' when title is not in Nota or Figura format."""
+        """Caption should be 'Figure N' when title is not in Nota or Figure format."""
         doc = Document()
         _add_paragraph_with_drawing(doc, descr="Test image")
         doc.add_paragraph("My Figure Title")
@@ -345,7 +345,7 @@ class TestAddFigureCaptions(unittest.TestCase):
         handler.add_figure_captions()
 
         full_text = "\n".join(p.text for p in doc.paragraphs)
-        self.assertIn("Figura 1", full_text)
+        self.assertIn("Figure 1", full_text)
 
     def test_add_figure_captions_with_nota(self):
         """Title should be extracted correctly when Nota follows title."""
@@ -358,10 +358,10 @@ class TestAddFigureCaptions(unittest.TestCase):
         handler.add_figure_captions()
 
         full_text = "\n".join(p.text for p in doc.paragraphs)
-        self.assertIn("Figura 1. Title Before Nota", full_text)
+        self.assertIn("Figure 1. Title Before Nota", full_text)
 
     def test_add_figure_captions_without_title(self):
-        """Caption should be 'Figura N' when no title is found."""
+        """Caption should be 'Figure N' when no title is found."""
         doc = Document()
         _add_paragraph_with_drawing(doc, descr="Test image")
         doc.add_paragraph("Some unrelated text")
@@ -370,34 +370,34 @@ class TestAddFigureCaptions(unittest.TestCase):
         handler.add_figure_captions()
 
         full_text = "\n".join(p.text for p in doc.paragraphs)
-        self.assertIn("Figura 1", full_text)
+        self.assertIn("Figure 1", full_text)
 
     def test_add_figure_captions_with_figura_title(self):
-        """Caption should extract title from existing 'Figura N' paragraph."""
+        """Caption should extract title from existing 'Figure N' paragraph."""
         doc = Document()
         _add_paragraph_with_drawing(doc, descr="Test image")
-        doc.add_paragraph("Figura 1 Original Caption")
+        doc.add_paragraph("Figure 1 Original Caption")
 
         handler = APAFiguresHandler(doc)
         handler.add_figure_captions()
 
         full_text = "\n".join(p.text for p in doc.paragraphs)
-        self.assertIn("Figura 1. Original Caption", full_text)
+        self.assertIn("Figure 1. Original Caption", full_text)
 
     def test_add_figure_captions_multiple_images(self):
         """Multiple images should get sequential figure numbers."""
         doc = Document()
         _add_paragraph_with_drawing(doc, descr="Image 1")
-        doc.add_paragraph("Figura 1 First Title")
+        doc.add_paragraph("Figure 1 First Title")
         _add_paragraph_with_drawing(doc, descr="Image 2")
-        doc.add_paragraph("Figura 2 Second Title")
+        doc.add_paragraph("Figure 2 Second Title")
 
         handler = APAFiguresHandler(doc)
         handler.add_figure_captions()
 
         full_text = "\n".join(p.text for p in doc.paragraphs)
-        self.assertIn("Figura 1. First Title", full_text)
-        self.assertIn("Figura 2. Second Title", full_text)
+        self.assertIn("Figure 1. First Title", full_text)
+        self.assertIn("Figure 2. Second Title", full_text)
 
 
 class TestApplyFontStyle(unittest.TestCase):

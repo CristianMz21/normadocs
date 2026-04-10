@@ -26,7 +26,7 @@ class APAFiguresHandler:
     def _get_figure_config(self) -> dict[str, Any]:
         """Get figure configuration from config with defaults."""
         default_config: dict[str, Any] = {
-            "caption_prefix": "Figura",
+            "caption_prefix": "Figure",
             "title_above": True,
             "nota_prefix": "Nota.",
         }
@@ -183,6 +183,10 @@ class APAFiguresHandler:
             title_para_idx = None
             title_text = None
 
+            # Get caption prefix from config
+            fig_config = self._get_figure_config()
+            caption_prefix = fig_config.get("caption_prefix", "Figure")
+
             # Search forward from image for the title (paragraph after image)
             # Pandoc structure: image -> title (from ![Title](path)) -> Nota
             for j in range(img_pos + 1, len(children)):
@@ -206,7 +210,7 @@ class APAFiguresHandler:
                                     and not prev_text.startswith("•")
                                     and not prev_text.startswith("-")
                                     and not prev_text.startswith("#")
-                                    and not prev_text.startswith("Figura ")
+                                    and not prev_text.startswith(f"{caption_prefix} ")
                                 )
                                 if is_valid_title:
                                     title_text = prev_text
@@ -214,10 +218,11 @@ class APAFiguresHandler:
                                     title_para = self.doc.paragraphs[para_idx - 1]
                             break
 
-                        # Check if text starts with "Figura N" - original title from markdown
-                        if re.match(r"^Figura\s+\d+", text):
-                            # This is the original title - extract the actual title
-                            match = re.match(r"^Figura\s+\d+\s+(.+)$", text)
+                        # Check if text starts with caption_prefix + N
+                        # (original title from markdown)
+                        if re.match(rf"^{caption_prefix}\s+\d+", text):
+                            # Extract the actual title after the prefix
+                            match = re.match(rf"^{caption_prefix}\s+\d+\s+(.+)$", text)
                             if match:
                                 title_text = match.group(1).strip()
                                 title_para_idx = para_idx
@@ -231,8 +236,6 @@ class APAFiguresHandler:
                 body.remove(new_p._element)
                 body.insert(img_pos, new_p._element)
 
-                fig_config = self._get_figure_config()
-                caption_prefix = fig_config.get("caption_prefix", "Figura")
                 run1 = new_p.add_run(f"{caption_prefix} {img_idx}. ")
                 run1.bold = True
                 self._apply_font_style(run1, bold=True)
@@ -258,8 +261,6 @@ class APAFiguresHandler:
                 body.remove(new_p._element)
                 body.insert(img_pos, new_p._element)
 
-                fig_config = self._get_figure_config()
-                caption_prefix = fig_config.get("caption_prefix", "Figura")
                 run1 = new_p.add_run(f"{caption_prefix} {img_idx}")
                 run1.bold = True
                 self._apply_font_style(run1, bold=True)
