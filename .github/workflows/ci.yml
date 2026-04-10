@@ -144,6 +144,7 @@ jobs:
       - name: Check for annotations
         shell: bash
         run: |
+          set +e
           repo_full="${{ github.repository }}"
           run_id="${{ github.run_id }}"
           
@@ -152,14 +153,10 @@ jobs:
           annotations=$(gh api repos/$repo_full/actions/runs/$run_id/jobs --jq '.jobs[].annotations // [] | length' 2>&1 | awk '{s+=$1} END {print s+0}')
           exit_code=$?
           
-          if [ $exit_code -ne 0 ]; then
-            echo "gh api command failed with exit code $exit_code"
-            echo "annotations value: $annotations"
-          fi
+          echo "gh api exit code: $exit_code"
+          echo "annotations value: '$annotations'"
           
-          echo "Total annotations found: $annotations"
-          
-          if [ "$annotations" -gt 0 ]; then
+          if [ "$annotations" != "0" ] && [ -n "$annotations" ]; then
             echo "=== Annotations Details ==="
             gh api repos/$repo_full/actions/runs/$run_id/jobs --jq '.jobs[] | select(.annotations | length > 0) | .name as $job | .annotations[] | "\($job): \(.message) (\(.path):\(.start_line))"' 2>&1
             echo ""
