@@ -144,25 +144,19 @@ jobs:
       - name: Check for annotations
         shell: bash
         run: |
-          set +e
           repo_full="${{ github.repository }}"
           run_id="${{ github.run_id }}"
           
           echo "Checking run $run_id for annotations in $repo_full..."
           
-          annotations=$(gh api repos/$repo_full/actions/runs/$run_id/jobs --jq '.jobs[].annotations // [] | length' 2>&1 | awk '{s+=$1} END {print s+0}')
-          exit_code=$?
+          annotations=$(gh api repos/$repo_full/actions/runs/$run_id/jobs --jq '.jobs[].annotations // [] | length' 2>/dev/null | awk '{s+=$1} END {print s+0}')
           
-          echo "gh api exit code: $exit_code"
-          echo "annotations value: '$annotations'"
-          
-          if [ "$annotations" != "0" ] && [ -n "$annotations" ]; then
-            echo "=== Annotations Details ==="
-            gh api repos/$repo_full/actions/runs/$run_id/jobs --jq '.jobs[] | select(.annotations | length > 0) | .name as $job | .annotations[] | "\($job): \(.message) (\(.path):\(.start_line))"' 2>&1
+          if [ -n "$annotations" ] && [ "$annotations" -gt 0 ] 2>/dev/null; then
+            echo "Found $annotations annotation(s):"
+            gh api repos/$repo_full/actions/runs/$run_id/jobs --jq '.jobs[] | select(.annotations | length > 0) | .name as $job | .annotations[] | "\($job): \(.message) (\(.path):\(.start_line))"' 2>/dev/null
             echo ""
             echo "::error::CI failed: $annotations annotation(s) found. Fix all warnings before merging."
             exit 1
           else
             echo "No annotations found. CI passed with zero warnings!"
-            exit 0
           fi
