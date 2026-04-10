@@ -4,9 +4,9 @@ Unit Tests for APA Styles Handler.
 Tests create_styles, _neutralize_table_style, _apply_font_style methods.
 """
 
-import unittest
-import tempfile
 import os
+import tempfile
+import unittest
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
@@ -18,7 +18,9 @@ from normadocs.formatters.apa.apa_styles import APAStylesHandler
 class TestCreateStyles(unittest.TestCase):
     """Tests for create_styles method."""
 
-    def _create_doc_with_config(self, config: dict | None = None) -> tuple[Document, APAStylesHandler, str]:
+    def _create_doc_with_config(
+        self, config: dict | None = None
+    ) -> tuple[Document, APAStylesHandler, str]:
         """Create a document with optional config. Returns (doc, handler, temp_path)."""
         doc = Document()
         doc.add_paragraph("Introduction", style="Heading 1")
@@ -159,16 +161,17 @@ class TestCreateStyles(unittest.TestCase):
 
     def test_custom_spacing_config(self):
         """Custom spacing should be applied when specified in config."""
-        config = {
-            "spacing": {"line": "1.5"}
-        }
+        config = {"spacing": {"line": "1.5"}}
         doc, handler, temp_path = self._create_doc_with_config(config)
 
         try:
             handler.create_styles()
 
             normal = doc.styles["Normal"]
-            self.assertEqual(normal.paragraph_format.line_spacing_rule, WD_LINE_SPACING.ONE_POINT_FIVE)
+            self.assertEqual(
+                normal.paragraph_format.line_spacing_rule,
+                WD_LINE_SPACING.ONE_POINT_FIVE,
+            )
         finally:
             os.unlink(temp_path)
 
@@ -180,7 +183,7 @@ class TestNeutralizeTableStyle(unittest.TestCase):
         """Create a document with a table for table style testing."""
         doc = Document()
         # Add a table - this should trigger creation of Table style
-        table = doc.add_table(rows=2, cols=2)
+        _ = doc.add_table(rows=2, cols=2)
 
         with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as f:
             temp_path = f.name

@@ -316,8 +316,9 @@ class TestEndToEndAPA(unittest.TestCase):
             header_text = "".join(p.text for p in header.paragraphs)
             # Should have some content in header (short title or page number)
             self.assertGreater(
-                len(header_text.strip()), 0,
-                f"Section {i} should have running head content in header"
+                len(header_text.strip()),
+                0,
+                f"Section {i} should have running head content in header",
             )
 
     def test_cover_page_no_running_head(self):

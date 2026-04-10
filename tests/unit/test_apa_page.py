@@ -4,12 +4,12 @@ Unit Tests for APA Page Handler.
 Tests setup_page_layout, _add_page_number, add_section_page_breaks methods.
 """
 
-import unittest
-import tempfile
 import os
+import tempfile
+import unittest
 
 from docx import Document
-from docx.shared import Cm, Inches, Pt
+from docx.shared import Inches, Pt
 
 from normadocs.formatters.apa.apa_page import APAPageHandler
 
@@ -209,7 +209,9 @@ class TestMarginToInches(unittest.TestCase):
 class TestAddSectionPageBreaks(unittest.TestCase):
     """Tests for add_section_page_breaks method."""
 
-    def _create_doc_with_headings(self, headings: list[str]) -> tuple[Document, APAPageHandler, str]:
+    def _create_doc_with_headings(
+        self, headings: list[str]
+    ) -> tuple[Document, APAPageHandler, str]:
         """Create a document with specified headings."""
         doc = Document()
         for heading in headings:
@@ -248,7 +250,9 @@ class TestAddSectionPageBreaks(unittest.TestCase):
             has_page_break = False
             while prev_elem is not None:
                 if prev_elem.tag.endswith("}br"):
-                    br_type = prev_elem.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type")
+                    br_type = prev_elem.get(
+                        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type"
+                    )
                     if br_type == "page":
                         has_page_break = True
                         break
@@ -281,7 +285,9 @@ class TestAddSectionPageBreaks(unittest.TestCase):
             has_page_break = False
             while prev_elem is not None:
                 if prev_elem.tag.endswith("}br"):
-                    br_type = prev_elem.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type")
+                    br_type = prev_elem.get(
+                        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type"
+                    )
                     if br_type == "page":
                         has_page_break = True
                         break
@@ -314,7 +320,9 @@ class TestAddSectionPageBreaks(unittest.TestCase):
             has_page_break = False
             while prev_elem is not None:
                 if prev_elem.tag.endswith("}br"):
-                    br_type = prev_elem.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type")
+                    br_type = prev_elem.get(
+                        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type"
+                    )
                     if br_type == "page":
                         has_page_break = True
                         break
@@ -347,7 +355,9 @@ class TestAddSectionPageBreaks(unittest.TestCase):
             has_page_break = False
             while prev_elem is not None:
                 if prev_elem.tag.endswith("}br"):
-                    br_type = prev_elem.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type")
+                    br_type = prev_elem.get(
+                        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type"
+                    )
                     if br_type == "page":
                         has_page_break = True
                         break
