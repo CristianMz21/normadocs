@@ -15,23 +15,52 @@ if TYPE_CHECKING:
 
 
 class APAStylesHandler:
-    """Handles creation and application of APA 7th Edition styles."""
+    """Handles creation and application of APA 7th Edition styles.
+
+    Creates and applies styles for Normal, Heading 1-6, and other
+    paragraph styles with correct fonts, sizes, and spacing per APA 7.
+
+    Args:
+        doc: The python-docx Document object.
+        config: Optional configuration dictionary.
+    """
 
     def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
+        """Initialize APAStylesHandler.
+
+        Args:
+            doc: The python-docx Document object.
+            config: Optional configuration dictionary.
+        """
         self.doc = doc
         self.config = config if config is not None else {}
 
     def _get_font_name(self, key: str = "body") -> str:
+        """Get the body font name from config.
+
+        Returns:
+            Font name (APA default is Times New Roman).
+        """
         fonts: dict[str, Any] = {}
         return cast(
             str, self.config.get("fonts", fonts).get(key, {}).get("name", "Times New Roman")
         )
 
     def _get_font_size(self, key: str = "body") -> int:
+        """Get the body font size from config.
+
+        Returns:
+            Font size in half-points (APA default is 24 = 12pt).
+        """
         fonts: dict[str, Any] = {}
         return cast(int, self.config.get("fonts", fonts).get(key, {}).get("size", 12))
 
     def _get_spacing_line(self) -> str:
+        """Get line spacing from config.
+
+        Returns:
+            Line spacing value (APA default is double).
+        """
         spacing: dict[str, str] = {"line": "double"}
         return cast(str, self.config.get("spacing", spacing).get("line", "double"))
 
@@ -238,17 +267,28 @@ class APAStylesHandler:
     def _apply_font_style(
         self,
         style_or_run: Any,
-        font_name: str = "Times New Roman",
-        size: int = 12,
+        font_name: str | None = None,
+        size: int | None = None,
         bold: bool | None = None,
         italic: bool | None = None,
-        color_rgb: tuple[int, int, int] = (0, 0, 0),
+        color_rgb: tuple[int, int, int] | None = None,
     ) -> None:
-        """Helper to apply font settings."""
+        """Apply font style settings to a style or run element.
+
+        Args:
+            style_or_run: The style or run element to apply formatting to.
+            font_name: Font name to apply (optional).
+            size: Font size in half-points (optional).
+            bold: Whether to apply bold (optional).
+            italic: Whether to apply italic (optional).
+            color_rgb: RGB color tuple (optional).
+        """
         font = style_or_run.font
-        font.name = font_name
-        font.size = Pt(size)
-        if hasattr(font.color, "rgb"):
+        if font_name is not None:
+            font.name = font_name
+        if size is not None:
+            font.size = Pt(size)
+        if color_rgb is not None and hasattr(font.color, "rgb"):
             font.color.rgb = RGBColor(*color_rgb)
         if bold is not None:
             font.bold = bold
@@ -258,7 +298,12 @@ class APAStylesHandler:
     def _apply_font_to_paragraph(
         self, paragraph: ParagraphType, font_size: int | None = None
     ) -> None:
-        """Apply font style to all runs in a paragraph."""
+        """Apply font style to all runs in a paragraph.
+
+        Args:
+            paragraph: The paragraph to apply formatting to.
+            font_size: Font size to apply (optional).
+        """
         size = 12 if font_size is None else font_size
         for run in paragraph.runs:
             self._apply_font_style(run, size=size)

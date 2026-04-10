@@ -16,6 +16,12 @@ class APACoverHandler:
     """Handles creation of APA 7th Edition cover page."""
 
     def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
+        """Initialize APACoverHandler.
+
+        Args:
+            doc: The python-docx Document object.
+            config: Optional configuration dictionary.
+        """
         self.doc = doc
         self.config = config if config is not None else {}
 

@@ -25,6 +25,12 @@ class APAParagraphsHandler:
     """Handles paragraph processing, formatting, and cleanup per APA 7th Edition."""
 
     def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
+        """Initialize APAParagraphsHandler.
+
+        Args:
+            doc: The python-docx Document object.
+            config: Optional configuration dictionary.
+        """
         self.doc = doc
         self.config = config if config is not None else {}
 
@@ -231,7 +237,13 @@ class APAParagraphsHandler:
         pPr.append(keepNext)
 
     def _fix_citations(self, p: ParagraphType) -> None:
-        """Replace ' (Author y Author, YEAR)' with '&'."""
+        """Replace 'y' citations with '&' per APA 7.
+
+        Converts Spanish-style 'y' conjunctions in citations to '&'.
+
+        Args:
+            p: The paragraph to process.
+        """
         citation_re = re.compile(
             r"\(([A-ZÁ-Ú][a-záéíóúñ]+(?:\s+(?:et\s+al\.))?)\s+y\s+([A-ZÁ-Ú][a-záéíóúñ]+),\s*(\d{4})\)"
         )

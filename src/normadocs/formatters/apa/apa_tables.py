@@ -26,6 +26,12 @@ class APATablesHandler:
     """Handles table formatting, borders, captions, and notes per APA 7th Edition."""
 
     def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
+        """Initialize APATablesHandler.
+
+        Args:
+            doc: The python-docx Document object.
+            config: Optional configuration dictionary.
+        """
         self.doc = doc
         self.config = config if config is not None else {}
 
@@ -47,12 +53,27 @@ class APATablesHandler:
             str, self.config.get("fonts", fonts).get("body", {}).get("name", "Times New Roman")
         )
 
-    def _apply_font_style(self, run: object, size: int = 12) -> None:
-        """Apply font style to a run (helper for this handler)."""
+    def _apply_font_style(
+        self,
+        element: Any,
+        font_name: str | None = None,
+        size: int = 12,
+        bold: bool = False,
+        italic: bool = False,
+    ) -> None:
+        """Apply font style to table elements.
+
+        Args:
+            element: The table or cell element to apply formatting to.
+            font_name: Font name to apply (optional).
+            size: Font size to apply (optional).
+            bold: Whether to apply bold (default False).
+            italic: Whether to apply italic (default False).
+        """
         from .apa_styles import APAStylesHandler
 
         handler = APAStylesHandler(self.doc)
-        handler._apply_font_style(run, size=size)
+        handler._apply_font_style(element, font_name=font_name, size=size, bold=bold, italic=italic)
 
     def format_tables(self) -> None:
         """Apply APA borders and formatting to all tables."""

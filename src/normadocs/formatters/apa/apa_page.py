@@ -15,9 +15,23 @@ if TYPE_CHECKING:
 
 
 class APAPageHandler:
-    """Handles page layout, headers, footers, and section page breaks."""
+    """Handles page layout and page numbers per APA 7th Edition.
+
+    Sets up page margins, headers with page numbers, and section
+    page breaks according to APA 7th Edition requirements.
+
+    Args:
+        doc: The python-docx Document object.
+        config: Optional configuration dictionary.
+    """
 
     def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
+        """Initialize APAPageHandler.
+
+        Args:
+            doc: The python-docx Document object.
+            config: Optional configuration dictionary.
+        """
         self.doc = doc
         self.config = config if config is not None else {}
 
@@ -33,7 +47,15 @@ class APAPageHandler:
         }
 
     def _margin_to_inches(self, value: float, unit: str) -> Inches | Cm:
-        """Convert margin value to Inches based on unit."""
+        """Convert margin value to inches based on unit.
+
+        Args:
+            value: The margin value.
+            unit: The unit type ("inches", "cm", or "Emu").
+
+        Returns:
+            The value converted to inches.
+        """
         if unit == "cm":
             return Cm(value)
         return Inches(value)

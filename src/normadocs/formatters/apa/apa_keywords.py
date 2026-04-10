@@ -22,14 +22,32 @@ def _clear_paragraph(p: ParagraphType) -> ParagraphType:
 
 
 class APAKeywordsHandler:
-    """Handles formatting of keywords and foreign words per APA 7th Edition."""
+    """Handles keywords and foreign word formatting per APA 7th Edition.
+
+    Processes the keywords section and applies italics to foreign words
+    according to APA 7th Edition standards.
+
+    Args:
+        doc: The python-docx Document object.
+        config: Optional configuration dictionary.
+    """
 
     def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
+        """Initialize APAKeywordsHandler.
+
+        Args:
+            doc: The python-docx Document object.
+            config: Optional configuration dictionary.
+        """
         self.doc = doc
         self.config = config if config is not None else {}
 
-    def _get_figure_config(self) -> dict[str, Any]:
-        """Get figure configuration from config with defaults."""
+    def _get_keywords_config(self) -> dict[str, Any]:
+        """Get keywords configuration from config with defaults.
+
+        Returns:
+            Keywords configuration dictionary.
+        """
         default_config: dict[str, Any] = {
             "caption_prefix": "Figura",
             "title_above": True,

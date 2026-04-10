@@ -61,13 +61,25 @@ def get_formatter(
         raise ValueError(f"Unsupported style: {style}. Available: apa, icontec, ieee")
 
 
-def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> None:
-    """Recursively merge override into base dict (in-place)."""
+def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge override into base dictionary in-place.
+
+    Performs a deep recursive merge where override values take precedence.
+    Lists are replaced, not concatenated. Modifies base dictionary.
+
+    Args:
+        base: The base dictionary to merge into (modified in-place).
+        override: The override dictionary with values to merge.
+
+    Returns:
+        The merged base dictionary.
+    """
     for key, value in override.items():
         if key in base and isinstance(base[key], dict) and isinstance(value, dict):
             deep_merge(base[key], value)
         else:
             base[key] = value
+    return base
 
 
 def load_standard_config(style: str) -> dict[str, Any]:

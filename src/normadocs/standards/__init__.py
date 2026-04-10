@@ -33,7 +33,13 @@ IEEE_CONFIG = _load_yaml("ieee")
 class StandardLoader:
     """Loads and validates citation standard configurations from YAML files."""
 
-    def __init__(self, standards_dir: Path | None = None):
+    def __init__(self, standards_dir: Path | None = None) -> None:
+        """Initialize StandardLoader.
+
+        Args:
+            standards_dir: Optional directory containing YAML standard files.
+                     Defaults to the built-in standards directory.
+        """
         if standards_dir is None:
             standards_dir = Path(__file__).parent
         self.standards_dir = standards_dir

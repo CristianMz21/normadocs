@@ -29,7 +29,13 @@ class IEEEDocxFormatter(DocumentFormatter):
     - Figures: "Fig." caption prefix
     """
 
-    def __init__(self, doc_path: str, config: dict[str, Any] | None = None):
+    def __init__(self, doc_path: str, config: dict[str, Any] | None = None) -> None:
+        """Initialize IEEE formatter.
+
+        Args:
+            doc_path: Path to the DOCX file to format.
+            config: Optional configuration dictionary to override defaults.
+        """
         super().__init__(doc_path, config)
         self.doc: DocumentObject = Document(doc_path)
 

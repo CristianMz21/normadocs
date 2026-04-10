@@ -12,7 +12,12 @@ from .utils.subprocess import CommandFailedError, get_command_path, run_command
 class PandocRunner:
     """Encapsulates Pandoc execution logic."""
 
-    def __init__(self, pandoc_path: str = "pandoc"):
+    def __init__(self, pandoc_path: str = "pandoc") -> None:
+        """Initialize PandocRunner.
+
+        Args:
+            pandoc_path: Path to Pandoc executable. Defaults to "pandoc".
+        """
         self.pandoc_path = pandoc_path
 
     def run(
@@ -23,9 +28,21 @@ class PandocRunner:
         csl: str | None = None,
         resource_path: str | None = None,
     ) -> bool:
-        """
-        Run pandoc to convert Markdown to DOCX.
-        Returns True if successful, False otherwise.
+        """Convert Markdown to DOCX using Pandoc.
+
+        Args:
+            md_text: The Markdown content to convert.
+            output_path: Path for the output DOCX file.
+            bibliography: Optional BibTeX file for citations.
+            csl: Optional CSL style file for citation formatting.
+            resource_path: Optional path for image resources.
+
+        Returns:
+            True if conversion succeeded, False otherwise.
+
+        Raises:
+            FileNotFoundError: If Pandoc executable is not found.
+            CommandFailedError: If Pandoc returns a non-zero exit code.
         """
         if "/" in self.pandoc_path:
             resolved_path = self.pandoc_path

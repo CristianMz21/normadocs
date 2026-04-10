@@ -1,3 +1,9 @@
+"""Abstract base class for document formatters.
+
+All formatters (APA, ICONTEC, IEEE) inherit from this class and implement
+the process() and save() methods.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -10,7 +16,13 @@ from ..models import DocumentMetadata
 class DocumentFormatter(ABC):
     """Abstract base class for all document formatters (APA, ICONTEC, IEEE)."""
 
-    def __init__(self, doc_path: str, config: dict[str, Any] | None = None):
+    def __init__(self, doc_path: str, config: dict[str, Any] | None = None) -> None:
+        """Initialize DocumentFormatter.
+
+        Args:
+            doc_path: Path to the DOCX file to format.
+            config: Optional configuration dictionary.
+        """
         self.doc_path = doc_path
         self.doc = Document(doc_path)
         self.config = config if config is not None else {}

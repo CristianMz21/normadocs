@@ -4,7 +4,7 @@ Configuration schema for citation standards.
 Defines the structure and default values for all supported standards.
 """
 
-from typing import Any
+from typing import Any, cast
 
 DEFAULT_APA7_CONFIG: dict[str, Any] = {
     "name": "APA 7th Edition",
@@ -103,7 +103,17 @@ DEFAULT_IEEE_CONFIG: dict[str, Any] = {
 
 
 def get_default_config(style: str) -> dict[str, Any]:
-    """Get default configuration for a citation style."""
+    """Get the default configuration for a given style.
+
+    Args:
+        style: The style name (e.g., "apa", "icontec", "ieee").
+
+    Returns:
+        A dictionary containing the default configuration for that style.
+
+    Raises:
+        ValueError: If the style is not recognized.
+    """
     defaults = {
         "apa": DEFAULT_APA7_CONFIG,
         "apa7": DEFAULT_APA7_CONFIG,
@@ -114,17 +124,34 @@ def get_default_config(style: str) -> dict[str, Any]:
 
 
 def merge_with_defaults(config: dict[str, Any], style: str) -> dict[str, Any]:
-    """Merge a partial config with defaults for the given style."""
+    """Merge user configuration with defaults for the given style.
+
+    Args:
+        config: User-provided configuration dictionary.
+        style: The style name for defaults lookup.
+
+    Returns:
+        The merged configuration dictionary with user values overriding defaults.
+    """
     defaults = get_default_config(style)
-    result = deep_copy(defaults)
+    result = cast(dict[str, Any], deep_copy(defaults))
     deep_merge(result, config)
     return result
 
 
-def deep_copy(d: dict[str, Any]) -> dict[str, Any]:
-    """Create a deep copy of a dictionary."""
+def deep_copy(obj: Any) -> Any:
+    """Create a deep copy of an object.
+
+    Args:
+        obj: The object to copy.
+
+    Returns:
+        A deep copy of the object.
+    """
+    if not isinstance(obj, dict):
+        return obj
     result = {}
-    for key, value in d.items():
+    for key, value in obj.items():
         if isinstance(value, dict):
             result[key] = deep_copy(value)
         else:
@@ -132,10 +159,19 @@ def deep_copy(d: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> None:
-    """Recursively merge override into base dict (in-place)."""
+def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge override into base dictionary.
+
+    Args:
+        base: The base dictionary to merge into.
+        override: The override dictionary.
+
+    Returns:
+        The merged dictionary.
+    """
     for key, value in override.items():
         if key in base and isinstance(base[key], dict) and isinstance(value, dict):
             deep_merge(base[key], value)
         else:
             base[key] = value
+    return base

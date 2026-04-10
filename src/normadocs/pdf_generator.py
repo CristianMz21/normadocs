@@ -12,14 +12,39 @@ class PDFGenerator:
 
     @staticmethod
     def convert(docx_path: str, output_dir: str, md_content: str, output_path: str) -> bool:
-        """Try LibreOffice first, then fall back to WeasyPrint."""
+        """Convert DOCX to PDF with automatic backend selection.
+
+        Attempts conversion with LibreOffice first, falls back to WeasyPrint
+        if LibreOffice is unavailable.
+
+        Args:
+            docx_path: Path to the source DOCX file.
+            output_dir: Directory for the output PDF.
+            md_content: Markdown content for styling reference.
+            output_path: Path for the output PDF file.
+
+        Returns:
+            True if conversion succeeded, False otherwise.
+        """
         if PDFGenerator.convert_with_libreoffice(docx_path, output_dir):
             return True
         return PDFGenerator.convert_with_weasyprint(md_content, output_path)
 
     @staticmethod
     def convert_with_libreoffice(docx_path: str, output_dir: str) -> bool:
-        """Convert DOCX to PDF using LibreOffice."""
+        """Convert DOCX to PDF using LibreOffice.
+
+        Args:
+            docx_path: Path to the source DOCX file.
+            output_dir: Directory for the output PDF.
+
+        Returns:
+            True if conversion succeeded, False otherwise.
+
+        Raises:
+            CommandFailedError: If LibreOffice fails.
+            FileNotFoundError: If LibreOffice is not found.
+        """
         try:
             libreoffice_path = get_command_path("libreoffice")
         except FileNotFoundError:
@@ -50,7 +75,21 @@ class PDFGenerator:
 
     @staticmethod
     def convert_with_weasyprint(md_content: str, output_path: str) -> bool:
-        """Fallback: Convert Markdown -> HTML -> PDF using WeasyPrint."""
+        """Convert Markdown to PDF using WeasyPrint.
+
+        Converts Markdown to HTML first using Pandoc, then renders to PDF
+        using WeasyPrint.
+
+        Args:
+            md_content: Markdown content to convert.
+            output_path: Path for the output PDF file.
+
+        Returns:
+            True if conversion succeeded, False otherwise.
+
+        Raises:
+            WeasyPrintError: If WeasyPrint conversion fails.
+        """
         try:
             from weasyprint import CSS, HTML
         except ImportError:
