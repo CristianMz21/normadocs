@@ -1,6 +1,9 @@
 name: Publish to PyPI
 
 on:
+  push:
+    tags:
+      - "v*.*.*"
   release:
     types: [published]
 
@@ -40,5 +43,18 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Extract version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+            ghcr.io/${{ github.repository }}:latest

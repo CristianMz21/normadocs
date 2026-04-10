@@ -25,7 +25,7 @@ class MarkdownPreprocessor:
 
         # Find the closing ---
         end_line = -1
-        for i in range(1, min(len(lines), 100)):
+        for i in range(1, len(lines)):
             if lines[i].strip() == "---":
                 end_line = i
                 break

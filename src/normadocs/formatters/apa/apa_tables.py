@@ -790,9 +790,7 @@ class APATablesHandler:
             parent = table._tbl.getparent()
             if parent is None:
                 continue
-
             table_idx = parent.index(table._tbl)
-
             nota_p = OxmlElement("w:p")
             nota_pPr = OxmlElement("w:pPr")
             nota_spacing = OxmlElement("w:spacing")

@@ -62,8 +62,14 @@ def _setup_languagetool_client(
     if not language_tool:
         return None
 
-    enabled_rules = lt_enabled_rules.split(",") if lt_enabled_rules else None
-    disabled_rules = lt_disabled_rules.split(",") if lt_disabled_rules else None
+    enabled_rules = (
+        [r.strip() for r in lt_enabled_rules.split(",") if r.strip()] if lt_enabled_rules else None
+    )
+    disabled_rules = (
+        [r.strip() for r in lt_disabled_rules.split(",") if r.strip()]
+        if lt_disabled_rules
+        else None
+    )
 
     # Determine ignore words
     if lt_ignore_words == "":
@@ -260,7 +266,7 @@ def _apply_formatting(
         formatter = get_formatter(style, str(output_docx))
         formatter.process(meta)
         formatter.save(str(output_docx))
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         typer.echo(f"Error aplicando formato: {e}", err=True)
         traceback.print_exc()
         raise typer.Exit(code=1) from None
