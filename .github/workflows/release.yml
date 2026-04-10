@@ -206,9 +206,28 @@ jobs:
       - name: Build package
         run: python -m build
 
+      - name: Check if version already exists on PyPI
+        id: check-pypi
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Checking if version $VERSION exists on PyPI..."
+          if curl -s "https://pypi.org/pypi/normadocs/$VERSION/json" | python3 -c "import sys,json; d=json.load(sys.stdin); print('exists' if d.get('info',{}).get('version') == '$VERSION' else 'not_found')" 2>/dev/null | grep -q "exists"; then
+            echo "Version $VERSION already exists on PyPI. Skipping upload."
+            echo "already_published=true" >> $GITHUB_ENV
+          else
+            echo "Version $VERSION not found on PyPI. Proceeding with upload."
+            echo "already_published=false" >> $GITHUB_ENV
+          fi
+
       - name: Publish to PyPI
+        if: env.already_published != 'true'
         uses: pypa/gh-action-pypi-publish@v1.14.0
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip_existing: true
+
+      - name: Skip publish message
+        if: env.already_published == 'true'
+        run: echo "Skipping PyPI publish - version already exists"
