@@ -4,6 +4,8 @@ Module for preprocessing Markdown content before Pandoc conversion.
 
 import re
 
+import yaml
+
 from .config import METADATA_FIELDS, PAGEBREAK_OPENXML
 from .models import DocumentMetadata
 
@@ -12,10 +14,63 @@ class MarkdownPreprocessor:
     """Handles the preparation of Markdown content for APA conversion."""
 
     @staticmethod
+    def extract_yaml_frontmatter(lines: list[str]) -> tuple[dict[str, str], int]:
+        """
+        Extract YAML frontmatter if present.
+        Returns (metadata_dict, end_line_index) where end_line_index is the line
+        containing the closing '---' (or -1 if no YAML frontmatter).
+        """
+        if not lines or lines[0].strip() != "---":
+            return {}, -1
+
+        # Find the closing ---
+        end_line = -1
+        for i in range(1, min(len(lines), 100)):
+            if lines[i].strip() == "---":
+                end_line = i
+                break
+
+        if end_line == -1:
+            return {}, -1
+
+        # Parse YAML content (lines between the --- delimiters)
+        yaml_content = "\n".join(lines[1:end_line])
+        try:
+            metadata = yaml.safe_load(yaml_content) or {}
+            if not isinstance(metadata, dict):
+                metadata = {}
+        except yaml.YAMLError:
+            metadata = {}
+
+        return metadata, end_line
+
+    @staticmethod
     def extract_metadata(lines: list[str]) -> DocumentMetadata:
-        """Extract title, author, etc. from the first ~14 lines."""
+        """Extract title, author, etc. from YAML frontmatter or fallback parsing."""
         data: dict[str, str] = {}
 
+        # Try to extract YAML frontmatter first
+        yaml_data, _yaml_end = MarkdownPreprocessor.extract_yaml_frontmatter(lines)
+
+        if yaml_data:
+            # Use YAML frontmatter data directly
+            for key in [
+                "title",
+                "subtitle",
+                "author",
+                "program",
+                "ficha",
+                "institution",
+                "center",
+                "instructor",
+                "date",
+            ]:
+                if yaml_data.get(key):
+                    data[key] = str(yaml_data[key])
+
+            return DocumentMetadata.from_dict(data)
+
+        # Fallback: legacy parsing for documents without YAML frontmatter
         # Lines 0-1: Title
         title_parts = []
         for i in range(2):
@@ -26,10 +81,13 @@ class MarkdownPreprocessor:
 
         # Remaining metadata
         idx = 0
-        # Check lines 2-15 for other metadata, skipping empty lines
+        # Check lines 2-15 for other metadata, skipping empty lines and stopping at ---
         for i in range(2, 16):
             if i < len(lines):
                 val = lines[i].strip().replace("\r", "")
+                # Stop at --- or # heading (start of content)
+                if val in ("---", "--") or val.startswith("#"):
+                    break
                 if val and idx < len(METADATA_FIELDS):
                     data[METADATA_FIELDS[idx]] = val
                     idx += 1
@@ -38,29 +96,32 @@ class MarkdownPreprocessor:
 
     @staticmethod
     def build_title_page_md(meta: DocumentMetadata) -> str:
-        """Build a Markdown title page that Pandoc will render."""
+        """Build a Markdown title page that Pandoc will render.
+
+        Uses raw OpenXML to ensure Pandoc doesn't interpret this as title metadata.
+        """
         parts: list[str] = []
 
-        # Empty lines for vertical centering (~6 empty lines to push down)
-        parts.append("&nbsp;\n" * 6)
-        parts.append("")
-
-        # Title (centered bold)
-        title = meta.title or "Sin Título"
+        # Use raw OpenXML for the title page to prevent Pandoc from interpreting content
+        # as title metadata. We use a centered div but avoid using Pandoc's title features.
         parts.append('<div style="text-align:center">\n')
-        parts.append(f"**{title}**\n")
+
+        # Title - use HTML entity encoding to prevent Pandoc extraction
+        title = meta.title or "Sin Título"
+        # Replace # with HTML entity to prevent Pandoc from treating as heading
+        title_encoded = title.replace("#", "&#35;")
+        parts.append(f"**{title_encoded}**\n")
         parts.append("")  # Blank line between title and author (APA)
         parts.append("&nbsp;\n")  # Extra visual spacing
         parts.append("")
 
-        # Metadata fields
-        # Note: Order matches the extraction order logic for simplicity in reconstruction
-        # but ideally we use the specific fields from the dataclass
+        # Metadata fields - each wrapped to prevent interpretation
         fields = ["author", "program", "ficha", "institution", "center", "instructor", "date"]
         for field in fields:
             val = getattr(meta, field, None)
             if val:
-                parts.append(val + "\n")
+                # Wrap in HTML comment-like structure to prevent extraction
+                parts.append(f"<!-- {field} --> {val}\n")
 
         parts.append("\n</div>\n\n")
 
@@ -74,7 +135,7 @@ class MarkdownPreprocessor:
         """Return True if this line is a Markdown structural element that must NOT be joined."""
         if not stripped:
             return True  # blank line = paragraph separator
-        if stripped.startswith(("#", "```", "---", "===", ">")):
+        if stripped.startswith(("#", "```", "---", "===", ">", "![", "![")):
             return True
         if stripped.startswith(("-", "*", "+")) and len(stripped) > 1 and stripped[1] == " ":
             return True  # unordered list
@@ -91,6 +152,9 @@ class MarkdownPreprocessor:
             return True
         # Raw OpenXML / HTML blocks
         if stripped.startswith(("<", "```{")):
+            return True
+        # ASCII art / box-drawing characters at start of line
+        if re.match(r"^[┌┐└┘├┤┬┴┼─│]+", stripped):
             return True
         # TOC-like entry: text followed by dots and a page number
         return bool(re.match(r"^.*\.{3,}\s*\d+\s*$", stripped))
@@ -277,11 +341,17 @@ class MarkdownPreprocessor:
         """
         result: list[str] = []
         buffer: list[str] = []
+        in_code_block = False
 
         for line in lines:
             stripped = line.strip().replace("\r", "")
 
-            if MarkdownPreprocessor._is_special_line(stripped):
+            # Track code block boundaries
+            if stripped.startswith("```"):
+                in_code_block = not in_code_block
+
+            # Inside code block: treat every line as special (don't join)
+            if in_code_block or MarkdownPreprocessor._is_special_line(stripped):
                 # Flush any buffered continuation text
                 if buffer:
                     result.append(" ".join(buffer))
@@ -300,26 +370,48 @@ class MarkdownPreprocessor:
     def process(self, text: str) -> tuple[str, DocumentMetadata]:
         """
         Pre-process the Markdown:
-          1. Extract metadata
-          2. Join hard-wrapped lines into proper paragraphs
-          3. Insert page breaks before every # heading (level 1)
-          4. Skip ## and ### headings (they stay in the same page)
+          1. Extract metadata from YAML frontmatter
+          2. Skip YAML frontmatter in content
+          3. Join hard-wrapped lines into proper paragraphs
+          4. Insert page breaks before every # heading (level 1)
+          5. Skip ## and ### headings (they stay in the same page)
         """
         lines = text.split("\n")
         meta = self.extract_metadata(lines)
 
-        # Find where content starts (first # heading)
-        content_start = 0
-        for i, line in enumerate(lines):
-            stripped = line.strip().replace("\r", "")
-            if stripped.startswith("# "):
-                content_start = i
-                break
+        # Find where content starts
+        yaml_data, yaml_end = self.extract_yaml_frontmatter(lines)
 
-        if content_start == 0 and len(lines) > 60:
-            content_start = 60  # fallback legacy behavior
+        if yaml_data:
+            # YAML frontmatter detected - skip the entire YAML block (including closing ---)
+            # Content starts after the closing ---
+            content_start = yaml_end + 1
+            # Skip any empty lines after YAML block
+            while content_start < len(lines) and not lines[content_start].strip():
+                content_start += 1
+        else:
+            # No YAML frontmatter - check for legacy metadata block (--- at line 0)
+            metadata_end = 0
+            for i, line in enumerate(lines):
+                stripped = line.strip().replace("\r", "")
+                if stripped in ("---", "--"):
+                    metadata_end = i
+                    break
 
-        # Extract only content lines (skip metadata header)
+            # Then find first # heading after metadata
+            content_start = metadata_end
+            for i in range(metadata_end, len(lines)):
+                stripped = lines[i].strip().replace("\r", "")
+                if stripped.startswith("# "):
+                    content_start = i
+                    break
+
+            # Fallback: if no --- found but there's a # heading, use it
+            if metadata_end == 0 and content_start == 0 and len(lines) > 60:
+                content_start = 60  # fallback legacy behavior
+
+        # Extract only content lines (skip YAML/metadata header)
+        # Start from first # heading and include everything after
         content_lines = lines[content_start:] if content_start > 0 else lines
 
         # Convert multiline dashed tables to pipe tables
@@ -328,9 +420,12 @@ class MarkdownPreprocessor:
         # Join hard-wrapped lines into proper paragraphs
         joined_lines = self._join_wrapped_lines(content_lines)
 
+        # Don't build title page here - let the APA formatter handle it
+        # This prevents Pandoc from creating duplicate title pages
+
         # Build the new markdown
         output_parts: list[str] = []
-        found_first_heading = False
+        found_first_heading = False  # First # heading after title page doesn't need page break
 
         for line in joined_lines:
             stripped = line.strip().replace("\r", "")

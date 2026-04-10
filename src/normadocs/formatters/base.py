@@ -20,10 +20,10 @@ class DocumentFormatter(ABC):
         Example:
             self.get_config("fonts", "body", "name", default="Times New Roman")
         """
-        value = self.config
+        value: Any = self.config
         for key in keys:
             if isinstance(value, dict):
-                value = value.get(key)
+                value = value.get(key)  # type: ignore[no-any-return]
             else:
                 return default
             if value is None:

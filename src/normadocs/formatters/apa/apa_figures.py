@@ -7,6 +7,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
+from lxml.etree import Element
 
 
 class APAFiguresHandler:
@@ -40,7 +41,7 @@ class APAFiguresHandler:
 
     def _make_figure_paragraph(
         self, text: str, bold: bool = False, italic: bool = False, space_after: str = "0"
-    ) -> OxmlElement:
+    ) -> Element:
         """Helper: create a Times New Roman 12pt paragraph for figure captions."""
         p_el = OxmlElement("w:p")
         p_pr = OxmlElement("w:pPr")

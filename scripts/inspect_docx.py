@@ -1,4 +1,5 @@
 import sys
+
 from docx import Document
 
 doc = Document(sys.argv[1])

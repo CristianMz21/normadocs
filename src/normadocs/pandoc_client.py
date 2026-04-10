@@ -38,7 +38,7 @@ class PandocRunner:
             self.pandoc_path,
             tmp_path,
             "-f",
-            "markdown+raw_attribute-implicit_figures",
+            "markdown+raw_attribute",
             "-t",
             "docx",
             "-o",

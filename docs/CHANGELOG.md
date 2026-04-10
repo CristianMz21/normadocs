@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **IEEE 8th Edition formatter** - Full implementation with Times New Roman 10pt, single spacing, page numbers in headers
 - Multi-standard architecture with `DocumentFormatter` interface.
 - Factory pattern for formatter selection.
 - CLI support for multiple citation styles via `--style` flag.

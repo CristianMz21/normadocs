@@ -15,7 +15,7 @@
 | ---------------------- | --------------- | -------------------- | ---------- |
 | **APA 7ª Edición**     | ✅ Completo     | Times New Roman 12pt | Doble      |
 | **ICONTEC (NTC 1486)** | ✅ Completo     | Arial 12pt           | 1.5 líneas |
-| IEEE                   | 🔜 Próximamente | —                    | —          |
+| **IEEE 8ª Edición**    | ✅ Completo     | Times New Roman 10pt | Simple     |
 
 ## Características ✨
 
@@ -159,38 +159,51 @@ make build       # Construir paquete wheel + sdist
 ### Estructura del proyecto
 
 ```
-APAScript/
+normadocs/
 ├── src/normadocs/
 │   ├── __init__.py           # Versión del paquete
 │   ├── cli.py                # Interfaz de línea de comandos (Typer)
+│   ├── cli_helpers.py         # Helpers del CLI
 │   ├── config.py             # Constantes (márgenes, campos de metadatos)
+│   ├── config/               # Recursos de configuración
+│   │   └── lt_ignore_words.txt
 │   ├── models.py             # DocumentMetadata, ProcessOptions
 │   ├── pandoc_client.py      # Wrapper de Pandoc (MD → DOCX)
 │   ├── pdf_generator.py      # LibreOffice / WeasyPrint fallback
 │   ├── preprocessor.py       # Extracción de metadatos, portada, page breaks
+│   ├── languagetool_client.py # Cliente de LanguageTool
 │   ├── py.typed              # PEP 561 marker
+│   ├── standards/            # Esquemas YAML
+│   │   ├── __init__.py       # StandardLoader
+│   │   ├── schema.py         # Esquemas por defecto
+│   │   ├── apa7.yaml         # APA 7ª Edición
+│   │   ├── icontec.yaml      # ICONTEC NTC 1486
+│   │   └── ieee.yaml         # IEEE 8ª Edición
 │   └── formatters/
 │       ├── __init__.py       # Factory: get_formatter()
 │       ├── base.py           # DocumentFormatter (ABC)
-│       ├── apa.py            # APA 7ª Edición
-│       └── icontec.py        # ICONTEC NTC 1486
+│       ├── apa/              # APA 7ª Edición
+│       │   ├── apa_formatter.py
+│       │   ├── apa_cover.py
+│       │   ├── apa_figures.py
+│       │   ├── apa_keywords.py
+│       │   ├── apa_page.py
+│       │   ├── apa_paragraphs.py
+│       │   ├── apa_styles.py
+│       │   └── apa_tables.py
+│       ├── icontec.py        # ICONTEC NTC 1486
+│       └── ieee.py           # IEEE 8ª Edición
 ├── tests/
-│   ├── test_cli.py           # Tests unitarios del CLI
-│   ├── test_e2e.py           # Tests end-to-end (25 tests)
-│   ├── test_integration.py   # Tests de integración del pipeline
-│   ├── test_models.py        # Tests de DocumentMetadata
-│   ├── test_pandoc_client.py # Tests del cliente Pandoc
-│   ├── test_pdf_generator.py # Tests del generador PDF
-│   └── test_preprocessor.py  # Tests del preprocesador
-├── .github/workflows/
-│   ├── ci.yml                # CI: lint, security, tests, build
-│   ├── release.yml           # Publicación a PyPI (requiere CI ✅)
-│   └── docker-publish.yml    # Docker image (requiere CI ✅)
-├── pyproject.toml            # Configuración del proyecto y herramientas
+│   ├── unit/                 # Tests unitarios
+│   ├── test_cli.py           # Tests del CLI
+│   ├── test_e2e.py           # Tests end-to-end
+│   └── ...
+├── docs/                     # Documentación del proyecto
+├── examples/                 # Ejemplos
+├── scripts/                  # Utilidades
+├── pyproject.toml            # Configuración del proyecto
 ├── Makefile                  # Comandos de desarrollo
-├── CHANGELOG.md              # Historial de cambios
-├── CONTRIBUTING.md           # Guía de contribución
-└── example.md                # Documento Markdown de ejemplo
+└── README.md
 ```
 
 ## CI/CD 🔄

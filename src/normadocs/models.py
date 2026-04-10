@@ -10,7 +10,9 @@ class DocumentMetadata:
     """Holds metadata extracted from the source Markdown."""
 
     title: str = "Sin Título"
+    subtitle: str | None = None
     author: str | None = None
+    affiliation: str | None = None
     program: str | None = None
     ficha: str | None = None
     institution: str | None = None
@@ -24,7 +26,9 @@ class DocumentMetadata:
         """Create instance from a dictionary, handling known fields."""
         known_fields = {
             "title",
+            "subtitle",
             "author",
+            "affiliation",
             "program",
             "ficha",
             "institution",

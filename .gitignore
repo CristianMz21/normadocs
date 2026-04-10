@@ -1,13 +1,20 @@
-# Python
+# ─── Python ────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
-# Distribution / packaging
+# ─── Distribution / Packaging ─────────────────────────────────────────────
 .Python
 build/
-develop-eggs/
 dist/
+*.egg-info/
+*.egg
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+develop-eggs/
 downloads/
 eggs/
 .eggs/
@@ -15,13 +22,13 @@ lib/
 lib64/
 parts/
 sdist/
-var/
-wheels/
-*.egg-info/
 .installed.cfg
-*.egg
+ MANIFEST
 
-# Virtual Environments
+# ─── Hatch (build backend) ──────────────────────────────────────────────────
+.hatch/
+
+# ─── Virtual Environments ──────────────────────────────────────────────────
 .env
 .venv
 env/
@@ -30,19 +37,43 @@ ENV/
 env.bak/
 venv.bak/
 
-# IDEs
+# ─── IDEs ──────────────────────────────────────────────────────────────────
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
 
-# Testing
+# ─── Testing ───────────────────────────────────────────────────────────────
 .pytest_cache/
 .coverage
 htmlcov/
+coverage.xml
+*.cover
+.tox/
+.nox/
 
-# Project specific
-ExportDocs/*
+# ─── Type Checking ──────────────────────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+
+# ─── Playwright ────────────────────────────────────────────────────────────
+.playwright-mcp/
+
+# ─── Project Specific ───────────────────────────────────────────────────────
+# Temp test outputs (these are generated during testing)
+tests/temp_*.docx
+tests/temp_*.pdf
+tests/temp_debug*/
+tests/temp_icontec*/
+
+# Raw pandoc output (intermediate)
 _pandoc_raw.docx
-*_APA.docx
-*_APA.pdf
 
-IDocs/*
+# Example generated documents (user outputs)
+examples/ExportDocs/*.docx
+examples/ExportDocs/*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db

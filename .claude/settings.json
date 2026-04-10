@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -X POST http://localhost:8010/v2/check -d 'text=This is a test with Shoppipai and ADSO' -d language=es -d ignoreWords=Shoppipai,ADSO)",
+      "Bash(curl -s \"http://localhost:8010/v2/languages\")",
+      "Bash(python -m json.tool)",
+      "Bash(normadocs \"IDocs/DiagramasModeloDominio.md\" --language-tool es --lt-docker --lt-no-spelling --lt-strict --format all)",
+      "Bash(normadocs \"IDocs/DiagramasModeloDominio.md\" --format all)"
+    ]
+  }
+}

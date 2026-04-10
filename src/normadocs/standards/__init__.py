@@ -27,6 +27,7 @@ def _get_style_key(style: str) -> str:
 
 APA7_CONFIG = _load_yaml("apa7")
 ICONTEC_CONFIG = _load_yaml("icontec")
+IEEE_CONFIG = _load_yaml("ieee")
 
 
 class StandardLoader:
@@ -69,6 +70,7 @@ class StandardLoader:
 __all__ = [
     "APA7_CONFIG",
     "ICONTEC_CONFIG",
+    "IEEE_CONFIG",
     "StandardLoader",
     "get_default_config",
     "merge_with_defaults",

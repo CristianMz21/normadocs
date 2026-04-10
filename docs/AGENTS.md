@@ -317,10 +317,11 @@ src/normadocs/
 ├── pdf_generator.py         # PDFGenerator (LibreOffice/WeasyPrint fallback)
 ├── languagetool_client.py   # LanguageTool API client
 ├── standards/               # YAML configuration files
-│   ├── __init__.py          # StandardLoader + preloaded configs
+│   ├── __init__.py          # StandardLoader + preloaded configs (APA7_CONFIG, IEEE_CONFIG, ICONTEC_CONFIG)
 │   ├── schema.py            # Default configs + merge utilities
 │   ├── apa7.yaml            # APA 7th Edition configuration
-│   └── icontec.yaml         # ICONTEC (NTC 1486) configuration
+│   ├── icontec.yaml         # ICONTEC (NTC 1486) configuration
+│   └── ieee.yaml            # IEEE 8th Edition configuration
 └── formatters/
     ├── __init__.py          # get_formatter() factory + load_standard_config()
     ├── base.py              # Abstract DocumentFormatter (ABC)
@@ -335,7 +336,7 @@ src/normadocs/
     │   ├── apa_figures.py   # Figures + captions (reads config)
     │   └── apa_keywords.py  # Keywords + foreign words
     ├── icontec.py           # ICONTEC formatter
-    └── ieee.py              # IEEE formatter (placeholder, NotImplemented)
+    └── ieee.py              # IEEE 8th Edition formatter
 ```
 
 ---
