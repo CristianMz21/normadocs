@@ -1,6 +1,6 @@
 [project]
 name = "normadocs"
-version = "0.2.0"
+version = "0.2.1"
 description = "Convert Markdown to professionally formatted DOCX/PDF following academic standards (APA 7th, ICONTEC, IEEE)."
 readme = "README.md"
 requires-python = ">=3.10"
