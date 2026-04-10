@@ -2,11 +2,11 @@
 Tests for PDFGenerator - DOCX to PDF conversion.
 """
 
-import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 from docx import Document
 
 from normadocs.pdf_generator import PDFGenerator
