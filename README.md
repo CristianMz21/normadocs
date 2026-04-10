@@ -57,6 +57,21 @@ Write in Markdown. Output perfectly formatted documents.
 
 ---
 
+## Example Output
+
+Convert your Markdown to professionally formatted documents:
+
+### APA 7th Edition
+![APA Cover Page](examples/images/apa_page-1.png)
+
+### ICONTEC NTC 1486
+![ICONTEC Cover Page](examples/images/icontec_page-01.png)
+
+### IEEE 8th Edition
+![IEEE Cover Page](examples/images/ieee_page-1.png)
+
+---
+
 ## Quick Start
 
 ### Minimal Example
