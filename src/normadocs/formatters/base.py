@@ -23,7 +23,7 @@ class DocumentFormatter(ABC):
         value: Any = self.config
         for key in keys:
             if isinstance(value, dict):
-                value = value.get(key)  # type: ignore[no-any-return]
+                value = value.get(key)
             else:
                 return default
             if value is None:

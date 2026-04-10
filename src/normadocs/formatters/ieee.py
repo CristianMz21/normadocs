@@ -35,7 +35,7 @@ class IEEEDocxFormatter(DocumentFormatter):
 
     def _get_margins(self) -> dict[str, float | str]:
         """Get margins from config with IEEE defaults (1 inch all sides)."""
-        margins = self.config.get("margins", {})  # type: ignore[no-any-return]
+        margins = self.config.get("margins", {})
         return {
             "top": cast(float, margins.get("top", 1.0)),
             "bottom": cast(float, margins.get("bottom", 1.0)),
