@@ -59,16 +59,16 @@ Write in Markdown. Output perfectly formatted documents.
 
 ## Example Output
 
-Convert your Markdown to professionally formatted documents:
+APA 7th Edition formatted document (click to enlarge):
 
-### APA 7th Edition
-![APA Cover Page](examples/images/apa_page-1.png)
-
-### ICONTEC NTC 1486
-![ICONTEC Cover Page](examples/images/icontec_page-01.png)
-
-### IEEE 8th Edition
-![IEEE Cover Page](examples/images/ieee_page-1.png)
+<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+<img src="examples/exports/apa_page-1.png" alt="APA Cover Page" width="200"/>
+<img src="examples/exports/apa_page-2.png" alt="APA Abstract" width="200"/>
+<img src="examples/exports/apa_page-3.png" alt="APA Introduction" width="200"/>
+<img src="examples/exports/apa_page-4.png" alt="APA Body" width="200"/>
+<img src="examples/exports/apa_page-5.png" alt="APA References" width="200"/>
+<img src="examples/exports/apa_page-6.png" alt="APA Page 6" width="200"/>
+</div>
 
 ---
 
