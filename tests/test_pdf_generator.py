@@ -22,7 +22,11 @@ class TestPDFGeneratorLibreOffice(unittest.TestCase):
             Document().save(str(docx_path))
             output_dir = tmpdir
 
-            with patch("subprocess.run") as mock_run:
+            with (
+                patch("normadocs.pdf_generator.get_command_path") as mock_get_path,
+                patch("normadocs.pdf_generator.run_command") as mock_run,
+            ):
+                mock_get_path.return_value = "libreoffice"
                 mock_result = MagicMock()
                 mock_result.returncode = 0
                 mock_run.return_value = mock_result
@@ -32,16 +36,21 @@ class TestPDFGeneratorLibreOffice(unittest.TestCase):
 
     def test_libreoffice_failure(self):
         """LibreOffice should return False on non-zero returncode."""
+        from normadocs.utils.subprocess import CommandFailedError
+
         with tempfile.TemporaryDirectory() as tmpdir:
             docx_path = Path(tmpdir) / "test.docx"
             Document().save(str(docx_path))
             output_dir = tmpdir
 
-            with patch("subprocess.run") as mock_run:
-                mock_result = MagicMock()
-                mock_result.returncode = 1
-                mock_result.stderr = "Error message"
-                mock_run.return_value = mock_result
+            with (
+                patch("normadocs.pdf_generator.get_command_path") as mock_get_path,
+                patch("normadocs.pdf_generator.run_command") as mock_run,
+            ):
+                mock_get_path.return_value = "libreoffice"
+                mock_run.side_effect = CommandFailedError(
+                    returncode=1, cmd=["libreoffice"], stdout="", stderr="Error"
+                )
 
                 result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
                 self.assertFalse(result)
@@ -53,8 +62,8 @@ class TestPDFGeneratorLibreOffice(unittest.TestCase):
             Document().save(str(docx_path))
             output_dir = tmpdir
 
-            with patch("subprocess.run") as mock_run:
-                mock_run.side_effect = FileNotFoundError()
+            with patch("normadocs.pdf_generator.get_command_path") as mock_get_path:
+                mock_get_path.side_effect = FileNotFoundError()
 
                 result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
                 self.assertFalse(result)
