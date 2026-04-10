@@ -2,6 +2,7 @@
 LanguageTool client for grammar and spell checking.
 """
 
+import shutil
 import subprocess
 import time
 from dataclasses import dataclass
@@ -201,8 +202,11 @@ class LanguageToolClient:
             )
 
         # Start the server
+        java_path = shutil.which("java")
+        if not java_path:
+            raise RuntimeError("java not found in PATH. Please install Java.")
         self._server_process = subprocess.Popen(
-            ["java", "-jar", str(jar_file), "--port", str(self._get_port_from_url())],
+            [java_path, "-jar", str(jar_file), "--port", str(self._get_port_from_url())],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )

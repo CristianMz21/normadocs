@@ -118,4 +118,3 @@ exclude_lines = [
 # ── Bandit ────────────────────────────────────────────────────────────
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
-skips = ["B404", "B603", "B607"]

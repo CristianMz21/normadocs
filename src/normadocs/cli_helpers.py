@@ -6,6 +6,7 @@ keeping cli.py as a thin orchestrator.
 """
 
 import logging
+import shutil
 import subprocess
 import time
 import traceback
@@ -107,11 +108,15 @@ def _ensure_languagetool_server(
         return None
 
     if lt_docker:
+        docker_path = shutil.which("docker")
+        if not docker_path:
+            typer.echo("Error: docker no encontrado en el sistema.", err=True)
+            raise typer.Exit(code=1) from None
         logger.info("▸ Iniciando contenedor Docker de LanguageTool...")
         try:
             subprocess.run(
                 [
-                    "docker",
+                    docker_path,
                     "run",
                     "-d",
                     "--name",
@@ -324,7 +329,9 @@ def _cleanup_docker(
         logger.info("   Use 'docker stop normadocs-lt' para detenerlo manualmente")
     else:
         logger.info("▸ Limpiando contenedor Docker...")
-        subprocess.run(["docker", "rm", "-f", docker_container], capture_output=True)
+        docker_path = shutil.which("docker")
+        if docker_path:
+            subprocess.run([docker_path, "rm", "-f", docker_container], capture_output=True)
 
 
 def _write_lt_report(
