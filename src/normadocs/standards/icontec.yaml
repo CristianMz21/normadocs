@@ -1,0 +1,39 @@
+name: "ICONTEC (NTC 1486)"
+version: "1.0"
+citation_style: icontec
+
+fonts:
+  body:
+    name: "Arial"
+    size: 12
+  headings:
+    name: "Arial"
+    level1:
+      alignment: center
+      bold: true
+      uppercase: true
+
+margins:
+  unit: cm
+  top: 3
+  bottom: 2
+  left: 3
+  right: 2
+
+spacing:
+  line: 1.5
+  paragraph_before: 0
+  paragraph_after: 0
+
+page_setup:
+  page_numbers: true
+  header: false
+  first_page_number: 1
+
+tables:
+  borders: full
+  caption_prefix: "Tabla"
+  caption_above: true
+
+figures:
+  caption_prefix: "Figura"

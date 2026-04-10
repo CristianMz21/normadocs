@@ -1,7 +1,9 @@
+from typing import Any
+
 from docx import Document
 from docx.document import Document as DocumentObject
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
-from docx.shared import Cm, Pt, RGBColor
+from docx.shared import Cm, Inches, Pt, RGBColor
 
 from ..models import DocumentMetadata
 from .base import DocumentFormatter
@@ -12,9 +14,38 @@ class IcontecFormatter(DocumentFormatter):
     Applies ICONTEC (NTC 1486) formatting to a DOCX file.
     """
 
-    def __init__(self, doc_path: str):
-        super().__init__(doc_path)
+    def __init__(self, doc_path: str, config: dict[str, Any] | None = None):
+        super().__init__(doc_path, config)
         self.doc: DocumentObject = Document(doc_path)
+
+    def _get_margins(self) -> dict[str, float]:
+        """Get margins from config with defaults."""
+        margins = self.config.get("margins", {})
+        return {
+            "top": margins.get("top", 3.0),
+            "bottom": margins.get("bottom", 2.0),
+            "left": margins.get("left", 3.0),
+            "right": margins.get("right", 2.0),
+            "unit": margins.get("unit", "cm"),
+        }
+
+    def _get_font_name(self, key: str = "body") -> str:
+        """Get font name from config."""
+        return self.config.get("fonts", {}).get(key, {}).get("name", "Arial")
+
+    def _get_font_size(self, key: str = "body") -> int:
+        """Get font size from config."""
+        return self.config.get("fonts", {}).get(key, {}).get("size", 12)
+
+    def _get_spacing_line(self) -> float:
+        """Get line spacing from config with default."""
+        return self.config.get("spacing", {}).get("line", 1.5)
+
+    def _margin_to_unit(self, value: float, unit: str):
+        """Convert margin value based on unit."""
+        if unit == "inches":
+            return Inches(value)
+        return Cm(value)
 
     def process(self, meta: DocumentMetadata):
         """Run the ICONTEC formatting pipeline."""
@@ -30,44 +61,50 @@ class IcontecFormatter(DocumentFormatter):
 
     def _setup_page_layout(self):
         """
-        NTC 1486 Margins:
-        Top: 3 cm (4 cm if Title) - We'll use 3 cm generally
-        Left: 3 cm (4 cm if bound) - We'll use 3 cm
-        Right: 2 cm
-        Bottom: 2 cm
+        NTC 1486 Margins from config.
         """
+        margins = self._get_margins()
+        unit = str(margins["unit"])
+
         for section in self.doc.sections:
-            section.top_margin = Cm(3)
-            section.bottom_margin = Cm(2)
-            section.left_margin = Cm(3)
-            section.right_margin = Cm(2)
+            section.top_margin = self._margin_to_unit(float(margins["top"]), unit)
+            section.bottom_margin = self._margin_to_unit(float(margins["bottom"]), unit)
+            section.left_margin = self._margin_to_unit(float(margins["left"]), unit)
+            section.right_margin = self._margin_to_unit(float(margins["right"]), unit)
 
     def _create_styles(self):
         """
-        Font: Arial 12.
-        Spacing: 1.5 lines.
+        Font and spacing from config.
         """
         styles = self.doc.styles
+        body_font = self._get_font_name("body")
+        body_size = self._get_font_size("body")
+        spacing_line = self._get_spacing_line()
+        line_spacing = (
+            WD_LINE_SPACING.ONE_POINT_FIVE if spacing_line == 1.5 else WD_LINE_SPACING.SINGLE
+        )
 
         # Normal
         normal = styles["Normal"]
         font = normal.font
-        font.name = "Arial"
-        font.size = Pt(12)
+        font.name = body_font
+        font.size = Pt(body_size)
         font.color.rgb = RGBColor(0, 0, 0)
 
         pf = normal.paragraph_format
-        pf.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
+        pf.line_spacing_rule = line_spacing
         pf.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         pf.space_after = Pt(0)
         pf.space_before = Pt(0)
 
         # Headings
         # Heading 1: Centered, Bold, Uppercase (handled in text)
+        body_font = self._get_font_name("body")
+        body_size = self._get_font_size("body")
         if "Heading 1" in styles:
             h1 = styles["Heading 1"]
-            h1.font.name = "Arial"
-            h1.font.size = Pt(12)
+            h1.font.name = body_font
+            h1.font.size = Pt(body_size)
             h1.font.bold = True
             h1.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
             h1.paragraph_format.space_before = Pt(12)  # Space before title
@@ -123,7 +160,9 @@ class IcontecFormatter(DocumentFormatter):
         pb_p.add_run().add_break()
 
     def _process_paragraphs(self):
-        """Justify text and ensure Arial."""
+        """Justify text and ensure config font."""
+        body_font = self._get_font_name("body")
+        body_size = self._get_font_size("body")
         for p in self.doc.paragraphs:
             # Skip if cover page created just now...
             # Ideally we skip based on section or style
@@ -135,5 +174,5 @@ class IcontecFormatter(DocumentFormatter):
 
             # Ensure font
             for run in p.runs:
-                run.font.name = "Arial"
-                run.font.size = Pt(12)
+                run.font.name = body_font
+                run.font.size = Pt(body_size)
