@@ -12,119 +12,49 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ── Quality Gate: Run CI inline ─────────────────────────────────────
-  quality:
-    name: Lint & Type Check
+  validate-tag:
+    name: Validate Version Tag
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.extract.outputs.VERSION }}
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install dependencies
+      - name: Extract version from tag
+        id: extract
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          TAG="${GITHUB_REF#refs/tags/v}"
+          if [ -z "$TAG" ] || [ "$TAG" = "$GITHUB_REF" ]; then
+            echo "::error::Invalid tag format. Expected v*.*.*"
+            exit 1
+          fi
+          echo "TAG_VERSION=$TAG" >> $GITHUB_ENV
+          echo "VERSION=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Lint with Ruff (no noqa allowed)
-        run: ruff check src/ tests/ --output-format=github --no-cache
-        env:
-          RUFF_NOQA: "1"
-
-      - name: Format check with Ruff
-        run: ruff format --check src/ tests/ --output-format=github --no-cache
-
-      - name: Type check with MyPy
-        run: mypy --strict src/
-
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install dependencies
+      - name: Validate version matches pyproject.toml
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          PYPROJECT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "Tag version: $TAG_VERSION"
+          echo "pyproject.toml version: $PYPROJECT_VERSION"
+          if [ "$TAG_VERSION" != "$PYPROJECT_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match pyproject.toml ($PYPROJECT_VERSION)"
+            exit 1
+          fi
+          echo "Version validated successfully"
 
-      - name: Run Bandit
-        run: bandit -r src/ -c pyproject.toml
-
-  tests:
-    name: Tests (Python 3.12)
-    needs: [quality, security]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install system deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pandoc
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-
-      - name: Run tests with coverage (warnings as errors)
-        run: pytest tests/ -W error --cov=normadocs --cov-report=term-missing --cov-fail-under=78
-
-  build-check:
-    name: Build Distribution
-    needs: tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install build tools
-        run: pip install build twine
-
-      - name: Build sdist and wheel
-        run: python -m build
-
-      - name: Validate package metadata
-        run: twine check dist/*
-
-      - name: Upload dist artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: dist
-          path: dist/
+  ci:
+    name: CI
+    needs: validate-tag
+    uses: ./.github/workflows/ci.yml
 
   annotations-check:
     name: Ensure Zero Annotations
-    needs: [quality, security, tests, build-check]
+    needs: [validate-tag, ci]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -136,11 +66,11 @@ jobs:
         run: |
           repo_full="${{ github.repository }}"
           run_id="${{ github.run_id }}"
-          
+
           echo "Checking run $run_id for annotations in $repo_full..."
-          
+
           annotations=$(gh api repos/$repo_full/actions/runs/$run_id/jobs --jq '.jobs[].annotations // [] | length' 2>/dev/null | awk '{s+=$1} END {print s+0}' || echo "0")
-          
+
           if [ -n "$annotations" ] && [ "$annotations" -gt 0 ] 2>/dev/null; then
             echo "Found $annotations annotation(s):"
             gh api repos/$repo_full/actions/runs/$run_id/jobs --jq '.jobs[] | select(.annotations | length > 0) | .name as $job | .annotations[] | "\($job): \(.message) (\(.path):\(.start_line))"' 2>/dev/null
@@ -151,39 +81,21 @@ jobs:
             echo "No annotations found. CI passed with zero warnings!"
           fi
 
-  # ── Publish: Only runs if CI passes ──────────────────────────────────
   publish:
     name: Upload to PyPI
-    needs: annotations-check
+    needs: [validate-tag, annotations-check]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
+      contents: read
     environment:
       name: pypi
       url: https://pypi.org/p/normadocs
-
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Download dist artifact
+        uses: actions/download-artifact@v6
         with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install build tools
-        run: pip install build
-
-      - name: Extract version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "REPO_LOWER=$REPO" >> $GITHUB_ENV
-
-      - name: Build package
-        run: python -m build
+          name: dist
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
