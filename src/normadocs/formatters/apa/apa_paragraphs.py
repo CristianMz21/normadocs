@@ -102,14 +102,11 @@ class APAParagraphsHandler:
                         run.bold = True
 
                 # Strip numbering property from headings (APA 7 doesn't use numbered headings)
-                try:
-                    p_pr = p._element.find(qn("w:pPr"))
-                    if p_pr is not None:
-                        num_pr = p_pr.find(qn("w:numPr"))
-                        if num_pr is not None:
-                            p_pr.remove(num_pr)
-                except Exception:  # nosec: B110 - XML numPr removal is best-effort
-                    pass
+                p_pr = p._element.find(qn("w:pPr"))
+                if p_pr is not None:
+                    num_pr = p_pr.find(qn("w:numPr"))
+                    if num_pr is not None:
+                        p_pr.remove(num_pr)
                 p.paragraph_format.first_line_indent = Inches(0)
 
             # Line spacing

@@ -236,13 +236,14 @@ class APAFiguresHandler:
                 new_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
                 # Remove the original title paragraph if it exists
-                if title_para is not None and title_para_idx is not None:
-                    try:
-                        # Only remove if it's a different paragraph
-                        if title_para_idx != img_pos:
-                            title_para._element.getparent().remove(title_para._element)
-                    except Exception:  # nosec: B110 - XML element removal is best-effort
-                        pass
+                if (
+                    title_para is not None
+                    and title_para_idx is not None
+                    and title_para_idx != img_pos
+                ):
+                    parent = title_para._element.getparent()
+                    if parent is not None:
+                        parent.remove(title_para._element)
             else:
                 # No title found, just create "Figura N"
                 new_p = self.doc.add_paragraph()
