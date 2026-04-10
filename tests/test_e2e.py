@@ -197,10 +197,7 @@ class TestEndToEndAPA(unittest.TestCase):
         """Author/metadata fields from the document must appear in the output."""
         self.assertIsNotNone(self.doc, "DOCX not loaded")
         full_text = "\n".join(p.text for p in self.doc.paragraphs)
-        # The preprocessor extracts metadata by line position:
-        # Lines 0-1 → title, Lines 3+ → author/program/ficha/institution/center/date
-        # Verify that extracted metadata fields appear in the cover page
-        self.assertIn("Ingeniería de Software", full_text)
+        self.assertIn("Juan Pérez García", full_text)
 
     def test_cover_page_contains_institution(self):
         """Institution from metadata must appear in the document."""
