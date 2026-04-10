@@ -39,9 +39,9 @@ class APATablesHandler:
         """Get table configuration from config with defaults."""
         default_config: dict[str, Any] = {
             "borders": "horizontal_only",
-            "caption_prefix": "Tabla",
+            "caption_prefix": "Table",
             "caption_above": True,
-            "note_suffix": "Elaboración propia.",
+            "note_suffix": "Author's elaboration.",
             "vertical_align": "top",
         }
         return cast(dict[str, Any], self.config.get("tables", default_config))
@@ -660,7 +660,7 @@ class APATablesHandler:
         """Add table notes after each table (APA 7 requirement).
 
         Each table gets a specific descriptive note based on its actual content,
-        followed by 'Elaboración propia.' as the source attribution.
+        followed by the note_suffix as the source attribution.
         """
         tables_list = list(self.doc.tables)
         table_descriptions = []
@@ -834,7 +834,7 @@ class APATablesHandler:
             nota_r3.append(nota_rPr3)
             nota_t3 = OxmlElement("w:t")
             table_config = self._get_table_config()
-            note_suffix = table_config.get("note_suffix", " Elaboración propia.")
+            note_suffix = table_config.get("note_suffix", " Author's elaboration.")
             nota_t3.text = f" {note_suffix}"
             nota_r3.append(nota_t3)
             nota_p.append(nota_r3)

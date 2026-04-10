@@ -58,12 +58,14 @@ class MarkdownPreprocessor:
                 "title",
                 "subtitle",
                 "author",
+                "affiliation",
                 "program",
                 "ficha",
                 "institution",
                 "center",
                 "instructor",
                 "date",
+                "short_title",
             ]:
                 if yaml_data.get(key):
                     data[key] = str(yaml_data[key])

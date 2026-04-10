@@ -73,8 +73,10 @@ class APAPageHandler:
             section.top_margin = self._margin_to_inches(margins["top"], unit)
             section.bottom_margin = self._margin_to_inches(margins["bottom"], unit)
 
-            # Disable separate first-page header/footer
-            section.different_first_page_header_footer = False
+            # Enable separate first-page header/footer for APA running head support
+            # This allows the cover page (page 1) to have no running head
+            # while subsequent pages have the running head
+            section.different_first_page_header_footer = True
 
             # Clear footers completely to prevent Pandoc page numbers at bottom
             footer = section.footer
@@ -167,3 +169,131 @@ class APAPageHandler:
                         br.set(qn("w:type"), "page")
                         p._element.addprevious(br)
                         break
+
+    def setup_running_head(self, short_title: str | None = None) -> None:
+        """Add running head to headers on pages after the cover page.
+
+        The running head consists of:
+        - Left side: Short title in ALL CAPS (Times New Roman 12pt)
+        - Right side: Page number
+
+        APA 7th Edition requires the running head only on pages after
+        the cover page (not on the cover page itself).
+
+        This is implemented using different_first_page_header_footer = True:
+        - first_page_header (cover page): empty (no running head)
+        - header (pages 2+): running head with short title and page number
+
+        Args:
+            short_title: The short title to display. If None or empty,
+                        the running head is not added.
+        """
+        if not short_title:
+            return
+
+        # Get max length from config, default to 50
+        max_length = int(self.config.get("running_head", {}).get("max_length", 50))
+
+        # Truncate if necessary
+        display_title = short_title.upper()
+        if len(display_title) > max_length:
+            display_title = display_title[:max_length]
+
+        # Apply running head to ALL sections
+        # With different_first_page_header_footer=True:
+        # - first_page_header is for page 1 (cover page) - we leave it empty
+        # - header is for pages 2+ - we put the running head here
+        for section in self.doc.sections:
+            # Clear the first page header (cover page should have NO running head)
+            first_page_header = section.first_page_header
+            first_page_header.is_linked_to_previous = False
+            for p in first_page_header.paragraphs:
+                p.clear()
+                for child in list(p._element):
+                    p._element.remove(child)
+
+            # Set up the default header with running head (for pages 2+)
+            header = section.header
+            header.is_linked_to_previous = False
+
+            # Clear existing header content
+            for p in header.paragraphs:
+                p.clear()
+
+            # Get or create the header paragraph
+            hp = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
+
+            # Set tab stops for left and right content
+            pPr = hp._p.find(qn("w:pPr"))
+            if pPr is None:
+                pPr = OxmlElement("w:pPr")
+                hp._p.insert(0, pPr)
+
+            # Add tab stop at center for left/right separation
+            tabs = OxmlElement("w:tabs")
+            # Tab at 3.25 inches (center of 6.5 inch text width) - right-aligned
+            tab1 = OxmlElement("w:tab")
+            tab1.set(qn("w:val"), "center")
+            tab1.set(qn("w:pos"), "4680")  # 3.25 inches in twips (4680)
+            tabs.append(tab1)
+            # Tab at right margin for page number
+            tab2 = OxmlElement("w:tab")
+            tab2.set(qn("w:val"), "right")
+            tab2.set(qn("w:pos"), "9360")  # 6.5 inches in twips
+            tabs.append(tab2)
+
+            # Remove existing tabs if any
+            existing_tabs = pPr.find(qn("w:tabs"))
+            if existing_tabs is not None:
+                pPr.remove(existing_tabs)
+            pPr.append(tabs)
+
+            # Add the short title (left-aligned, uppercase)
+            title_run = hp.add_run(display_title)
+            title_run.font.name = "Times New Roman"
+            title_run.font.size = Pt(12)
+
+            # Add tab to center
+            hp.add_run("\t")
+
+            # Add another tab to right (for page number alignment)
+            hp.add_run("\t")
+
+            # Build PAGE field with begin/separate/end sequence
+            run_begin = hp.add_run()
+            fld_begin = OxmlElement("w:fldChar")
+            fld_begin.set(qn("w:fldCharType"), "begin")
+            run_begin._r.append(fld_begin)
+            run_begin.font.name = "Times New Roman"
+            run_begin.font.size = Pt(12)
+
+            run_instr = hp.add_run()
+            instr = OxmlElement("w:instrText")
+            instr.set(qn("xml:space"), "preserve")
+            instr.text = " PAGE "
+            run_instr._r.append(instr)
+            run_instr.font.name = "Times New Roman"
+            run_instr.font.size = Pt(12)
+
+            run_sep = hp.add_run()
+            fld_sep = OxmlElement("w:fldChar")
+            fld_sep.set(qn("w:fldCharType"), "separate")
+            run_sep._r.append(fld_sep)
+            run_sep.font.name = "Times New Roman"
+            run_sep.font.size = Pt(12)
+
+            run_num = hp.add_run("1")
+            run_num.font.name = "Times New Roman"
+            run_num.font.size = Pt(12)
+
+            run_end = hp.add_run()
+            fld_end = OxmlElement("w:fldChar")
+            fld_end.set(qn("w:fldCharType"), "end")
+            run_end._r.append(fld_end)
+            run_end.font.name = "Times New Roman"
+            run_end.font.size = Pt(12)
+
+            # Strip excessive paragraphs
+            while len(header.paragraphs) > 1:
+                p_elem = header.paragraphs[-1]._element
+                p_elem.getparent().remove(p_elem)

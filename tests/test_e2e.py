@@ -27,14 +27,15 @@ PANDOC_AVAILABLE = shutil.which("pandoc") is not None
 #  Helper: realistic Markdown that exercises the entire pipeline
 # ──────────────────────────────────────────────────────────────────────
 SAMPLE_MARKDOWN = textwrap.dedent("""\
-    **Efectos del Aprendizaje Automático en la Educación Superior**
-
-    Juan Pérez García
-    Ingeniería de Software
-    2694731
-    SENA
-    Centro de Tecnologías
-    2026-02-18
+    ---
+    title: "Efectos del Aprendizaje Automático en la Educación Superior"
+    short_title: "Machine Learning Effects on Education"
+    author: "Juan Pérez García"
+    program: "Ingeniería de Software"
+    institution: "SENA"
+    center: "Centro de Tecnologías"
+    date: "2026-02-18"
+    ---
 
     # Resumen
 
@@ -287,6 +288,53 @@ class TestEndToEndAPA(unittest.TestCase):
                 len(header.paragraphs) > 0,
                 "No header paragraphs found (APA requires page numbers)",
             )
+
+    # ── Running head ─────────────────────────────────────────────────
+
+    def test_running_head_short_title_uppercase(self):
+        """Running head should contain short title in uppercase."""
+        self.assertIsNotNone(self.doc, "DOCX not loaded")
+        # The running head should appear in the default header (for pages 2+)
+        # With different_first_page_header_footer=True, header is for pages 2+
+        found_running_head = False
+        for section in self.doc.sections:
+            header_text = "".join(p.text for p in section.header.paragraphs)
+            if "MACHINE LEARNING EFFECTS ON EDUCATION" in header_text:
+                found_running_head = True
+                break
+        self.assertTrue(
+            found_running_head,
+            "Running head with short title in uppercase not found in header",
+        )
+
+    def test_running_head_appears_after_cover(self):
+        """Running head should appear on pages after the cover page."""
+        self.assertIsNotNone(self.doc, "DOCX not loaded")
+        # Check that sections have running head content in the default header
+        for i, section in enumerate(self.doc.sections):
+            header = section.header
+            header_text = "".join(p.text for p in header.paragraphs)
+            # Should have some content in header (short title or page number)
+            self.assertGreater(
+                len(header_text.strip()), 0,
+                f"Section {i} should have running head content in header"
+            )
+
+    def test_cover_page_no_running_head(self):
+        """Cover page (first section) should not have running head with short title."""
+        self.assertIsNotNone(self.doc, "DOCX not loaded")
+        # With different_first_page_header_footer=True:
+        # - first_page_header is for page 1 (cover page)
+        # - header is for pages 2+
+        cover_header = self.doc.sections[0].first_page_header
+        cover_header_text = "".join(p.text for p in cover_header.paragraphs)
+        # Cover page should NOT contain the short title in the header
+        # (it may have a page number, but not the running head text)
+        self.assertNotIn(
+            "MACHINE LEARNING EFFECTS ON EDUCATION",
+            cover_header_text,
+            "Cover page should not have running head with short title",
+        )
 
 
 @unittest.skipUnless(PANDOC_AVAILABLE, "Pandoc not installed — skipping E2E")

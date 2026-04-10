@@ -19,6 +19,7 @@ class DocumentMetadata:
     center: str | None = None
     instructor: str | None = None
     date: str | None = None
+    short_title: str | None = None
     extra: dict[str, str] = field(default_factory=dict)
 
     @classmethod
@@ -35,6 +36,7 @@ class DocumentMetadata:
             "center",
             "instructor",
             "date",
+            "short_title",
         }
         known_data = {k: v for k, v in data.items() if k in known_fields}
         extra_data = {k: v for k, v in data.items() if k not in known_fields}

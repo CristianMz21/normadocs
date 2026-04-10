@@ -193,11 +193,11 @@ class TestAddTableCaptions(unittest.TestCase):
 
         full_text = "\n".join(p.text for p in doc.paragraphs)
 
-        # Should contain "Tabla 1" (bold label)
-        self.assertIn("Tabla 1", full_text)
+        # Should contain "Table 1" (bold label)
+        self.assertIn("Table 1", full_text)
 
     def test_table_number_increments_correctly(self):
-        """Table numbers should increment: Tabla 1, Tabla 2, etc."""
+        """Table numbers should increment: Table 1, Table 2, etc."""
         doc, _ = _make_doc_with_tables(num_tables=3, cols=3)
         formatter = APADocxFormatter.__new__(APADocxFormatter)
         formatter.doc = doc
@@ -206,9 +206,9 @@ class TestAddTableCaptions(unittest.TestCase):
 
         full_text = "\n".join(p.text for p in doc.paragraphs)
 
-        self.assertIn("Tabla 1", full_text)
-        self.assertIn("Tabla 2", full_text)
-        self.assertIn("Tabla 3", full_text)
+        self.assertIn("Table 1", full_text)
+        self.assertIn("Table 2", full_text)
+        self.assertIn("Table 3", full_text)
 
 
 class TestAddTableNotes(unittest.TestCase):

@@ -62,6 +62,7 @@ class APADocxFormatter:
             meta: DocumentMetadata containing title, author, institution, etc.
         """
         self._page.setup_page_layout()
+        self._page.setup_running_head(getattr(meta, "short_title", None))
         self._styles.create_styles()
         self._cover.add_cover_page(meta)
         self._paragraphs.process()

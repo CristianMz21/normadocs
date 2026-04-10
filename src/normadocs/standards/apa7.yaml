@@ -38,12 +38,16 @@ page_setup:
 
 tables:
   borders: horizontal_only
-  caption_prefix: "Tabla"
+  caption_prefix: "Table"
   caption_above: true
-  note_suffix: "Elaboración propia."
+  note_suffix: "Author's elaboration."
   vertical_align: top
 
 figures:
-  caption_prefix: "Figura"
+  caption_prefix: "Figure"
   title_above: true
   nota_prefix: "Nota."
+
+running_head:
+  enabled: true
+  max_length: 50
