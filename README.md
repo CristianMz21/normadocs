@@ -1,270 +1,263 @@
 # NormaDocs
 
-[![PyPI](https://img.shields.io/pypi/v/normadocs.svg)](https://pypi.org/project/normadocs/)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![PyPI Version](https://img.shields.io/pypi/v/normadocs.svg)](https://pypi.org/project/normadocs/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![CI](https://github.com/CristianMz21/normadocs/actions/workflows/ci.yml/badge.svg)](https://github.com/CristianMz21/normadocs/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Type Checked](https://img.shields.io/badge/typed-PEP%20561-brightgreen)](https://peps.python.org/pep-0561/)
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Typed](https://img.shields.io/badge/typed-PEP%20561-brightgreen)](https://peps.python.org/pep-0561/)
 
-**NormaDocs** es una herramienta profesional de código abierto que convierte documentos Markdown a formatos académicos estándar (**DOCX**, **PDF**), con soporte para múltiples normas de citación.
+**NormaDocs** is a professional open-source tool that converts Markdown documents to academically-formatted DOCX and PDF files, with full support for major citation standards.
 
-## Normas Soportadas
+## Features
 
-| Norma                  | Estado          | Fuente               | Espacio    |
-| ---------------------- | --------------- | -------------------- | ---------- |
-| **APA 7ª Edición**     | ✅ Completo     | Times New Roman 12pt | Doble      |
-| **ICONTEC (NTC 1486)** | ✅ Completo     | Arial 12pt           | 1.5 líneas |
-| **IEEE 8ª Edición**    | ✅ Completo     | Times New Roman 10pt | Simple     |
+- **Multiple Citation Standards**: APA 7th Edition, ICONTEC (NTC 1486), IEEE 8th Edition
+- **Automatic Cover Pages**: Title, author, institution, program, date extraction
+- **Complete Formatting**: Margins, typography, and spacing per selected standard
+- **Table of Contents**: Automatic detection and formatting of `# Heading` sections
+- **APA Tables**: Horizontal borders, no vertical lines, captions with _Table X_ format
+- **Bibliography Support**: BibTeX (`.bib`) files and CSL styles via Pandoc
+- **Dual Output**: DOCX always, PDF optionally (LibreOffice or WeasyPrint)
+- **Two Interfaces**: CLI (`normadocs`) or Python library import
+- **PEP 561 Typed**: Package includes `py.typed` marker for static type checkers
+- **Quality Gates**: CI blocks publication if linting, tests, or security scans fail
 
-## Características ✨
+## Supported Standards
 
-- **Portada automática**: Genera título, autor, institución, programa, fecha.
-- **Formato completo**: Márgenes, tipografía, espaciado según la norma seleccionada.
-- **Tabla de contenido**: Detecta secciones `# Heading` y las formatea.
-- **Tablas APA**: Bordes horizontales, sin líneas verticales, caption con _Tabla X_.
-- **Bibliografía**: Soporte para archivos `.bib` (BibTeX) y estilos CSL vía Pandoc.
-- **Salida múltiple**: DOCX siempre, PDF opcional (LibreOffice o WeasyPrint).
-- **Uso dual**: CLI (`normadocs`) o librería Python importable.
-- **Tipado**: Paquete PEP 561 con `py.typed` marker.
-- **Quality gates**: CI bloquea publicación si lint, tests o seguridad fallan.
+| Standard | Status | Font | Spacing | Typical Use |
+|----------|--------|------|---------|-------------|
+| **APA 7th Edition** | ✅ Complete | Times New Roman 12pt | Double | Social Sciences |
+| **ICONTEC (NTC 1486)** | ✅ Complete | Arial 12pt | 1.5 lines | Colombian Academic |
+| **IEEE 8th Edition** | ✅ Complete | Times New Roman 10pt | Single | Engineering/Technical |
 
-## Instalación 📦
+## Installation
 
-### Requisitos previos
+### Prerequisites
 
-- **Python** 3.10 o superior
-- **[Pandoc](https://pandoc.org/installing.html)** (requerido para la conversión)
+- **Python** 3.10 or higher
+- **[Pandoc](https://pandoc.org/installing.html)** — required for Markdown to DOCX conversion
 
-### Desde PyPI
+### From PyPI
 
 ```bash
 pip install normadocs
 ```
 
-#### Extras opcionales
+#### Optional Extras
 
 ```bash
-# Para generación de PDF con WeasyPrint
+# PDF generation with WeasyPrint
 pip install normadocs[pdf]
 
-# Para desarrollo (linting, tests, seguridad)
+# Development dependencies (linting, testing, security)
 pip install normadocs[dev]
 ```
 
-### Desde el repositorio
+### From Source
 
 ```bash
 git clone https://github.com/CristianMz21/normadocs.git
 cd normadocs
-make install    # pip install -e ".[dev]"
+pip install -e ".[dev]"
 ```
 
-### Dependencia del sistema (PDF)
+### PDF Dependencies
 
-Para generar PDFs se necesita **uno** de estos:
+For PDF output, install **one** of the following:
 
-- **LibreOffice** (recomendado): `sudo apt install libreoffice`
+- **LibreOffice** (recommended): `sudo apt install libreoffice`
 - **WeasyPrint**: `pip install normadocs[pdf]`
 
-## Uso 🚀
+## Quick Start
 
-### CLI (Línea de Comandos)
+### CLI
 
 ```bash
-# Ayuda completa
+# Full help
 normadocs --help
 
-# Conversión básica (APA por defecto)
-normadocs mi_documento.md
+# Basic conversion (APA by default)
+normadocs my_document.md
 
-# Especificar norma ICONTEC
-normadocs mi_documento.md --style icontec
+# Specify ICONTEC standard
+normadocs my_document.md --style icontec
 
-# Con bibliografía BibTeX + estilo CSL personalizado
-normadocs mi_documento.md --bibliography refs.bib --csl apa.csl
+# With BibTeX bibliography + custom CSL style
+normadocs my_document.md --bibliography refs.bib --csl apa.csl
 
-# Generar PDF además de DOCX
-normadocs mi_documento.md --format pdf
+# Generate PDF in addition to DOCX
+normadocs my_document.md --format pdf
 
-# Directorio de salida personalizado
-normadocs mi_documento.md -o ./Entregas -s apa -f all
+# Custom output directory
+normadocs my_document.md -o ./Submissions -s apa -f all
 ```
 
-### Como librería Python
+### Python Library
 
 ```python
+from pathlib import Path
 from normadocs.preprocessor import MarkdownPreprocessor
 from normadocs.pandoc_client import PandocRunner
 from normadocs.formatters import get_formatter
 
-# 1. Pre-procesar Markdown
-md_text = open("paper.md").read()
+# 1. Pre-process Markdown
+input_md = Path("paper.md").read_text(encoding="utf-8")
 processor = MarkdownPreprocessor()
-clean_md, meta = processor.process(md_text)
+clean_md, metadata = processor.process(input_md)
 
-# 2. Convertir a DOCX con Pandoc
+# 2. Convert to DOCX via Pandoc
 PandocRunner().run(clean_md, "output.docx")
 
-# 3. Aplicar formato académico
-formatter = get_formatter("apa", "output.docx")  # o "icontec"
-formatter.process(meta)
+# 3. Apply academic formatting
+formatter = get_formatter("apa", "output.docx")
+formatter.process(metadata)
 formatter.save("output_final.docx")
 ```
 
-### Formato del Markdown de entrada
+## Input Markdown Format
 
-NormaDocs extrae los metadatos de las primeras líneas del archivo:
+NormaDocs extracts metadata from the first lines of your Markdown file:
 
 ```markdown
-**Título del Documento**
+**Document Title**
 
-Nombre del Autor
-Nombre del Programa
-Número de Ficha
-Nombre de la Institución
-Nombre del Centro
-Fecha
+Author Name
+Program Name
+Course Number
+Institution Name
+Faculty
+2026-04-10
 
-# Resumen
+# Abstract
 
-Texto del resumen...
+This is the abstract text...
 
-**Palabras clave:** palabra1, palabra2, palabra3
+**Keywords:** keyword1, keyword2, keyword3
 
-# Introducción
+# Introduction
 
-Contenido del documento...
+Document content goes here...
 
-# Referencias
+# References
 
-Autor, A. A. (2024). Título. _Revista_, 1(2), 3-4.
+Author, A. A. (2024). Title. _Journal_, 1(2), 3-4.
 ```
 
-> **Nota**: Las primeras 2 líneas se usan como título. Las líneas 3-13 se mapean
-> a los campos: `author`, `program`, `ficha`, `institution`, `center`, `date`.
+> **Note**: The first 2 lines form the title. Lines 3–13 map to: `author`, `program`, `course`, `institution`, `faculty`, `date`.
 
-## Desarrollo 🛠️
+## Development
 
 ```bash
-make install     # Instalar en modo editable con deps de desarrollo
-make lint        # Ruff check + Ruff format check + MyPy
-make test        # Ejecutar tests con pytest
-make test-cov    # Tests con reporte de cobertura (mínimo 60%)
-make security    # Escaneo de seguridad con Bandit
-make check       # Todo: lint + test-cov + security
-make build       # Construir paquete wheel + sdist
+make install      # Install in editable mode with dev dependencies
+make lint         # Ruff check + format check + MyPy type check
+make test         # Run all tests with pytest
+make test-cov     # Run tests with coverage report (minimum 78%)
+make security     # Security scan with Bandit
+make check        # Full quality gate: lint + test-cov + security
+make build        # Build wheel + sdist packages
+make clean        # Remove build artifacts and caches
 ```
 
-### Estructura del proyecto
+## Project Structure
 
-```
-normadocs/
-├── src/normadocs/           # Paquete principal
-│   ├── __init__.py           # Versión del paquete
-│   ├── cli.py                # Interfaz de línea de comandos (Typer)
-│   ├── cli_helpers.py        # Helpers del CLI
-│   ├── config.py            # Constantes (márgenes, campos de metadatos)
-│   ├── config/               # Recursos de configuración
-│   │   └── lt_ignore_words.txt
-│   ├── models.py             # DocumentMetadata, ProcessOptions
-│   ├── pandoc_client.py     # Wrapper de Pandoc (MD → DOCX)
-│   ├── pdf_generator.py      # LibreOffice / WeasyPrint fallback
-│   ├── preprocessor.py      # Extracción de metadatos, portada, page breaks
-│   ├── languagetool_client.py # Cliente de LanguageTool
-│   ├── py.typed             # PEP 561 marker
-│   ├── standards/           # Esquemas YAML
-│   │   ├── __init__.py      # StandardLoader
-│   │   ├── schema.py        # Esquemas por defecto
-│   │   ├── apa7.yaml       # APA 7ª Edición
-│   │   ├── icontec.yaml    # ICONTEC NTC 1486
-│   │   └── ieee.yaml        # IEEE 8ª Edición
-│   └── formatters/
-│       ├── __init__.py       # Factory: get_formatter()
-│       ├── base.py           # DocumentFormatter (ABC)
-│       ├── apa/              # APA 7ª Edición
-│       │   ├── apa_formatter.py
-│       │   ├── apa_cover.py
-│       │   ├── apa_figures.py
-│       │   ├── apa_keywords.py
-│       │   ├── apa_page.py
-│       │   ├── apa_paragraphs.py
-│       │   ├── apa_styles.py
-│       │   └── apa_tables.py
-│       ├── icontec.py        # ICONTEC NTC 1486
-│       └── ieee.py           # IEEE 8ª Edición
-├── tests/                    # Tests del proyecto
-├── docs/                     # Documentación (MkDocs)
-├── examples/                  # Ejemplos de uso
-├── scripts/                  # Utilidades
-├── .github/workflows/        # CI/CD pipelines
-├── pyproject.toml            # Configuración del proyecto
-├── Makefile                  # Comandos de desarrollo
-├── Dockerfile                # Imagen Docker
-├── .dockerignore             # Archivos excluidos de Docker
-└── README.md
 ```
 normadocs/
-├── src/normadocs/
-│   ├── __init__.py           # Versión del paquete
-│   ├── cli.py                # Interfaz de línea de comandos (Typer)
-│   ├── cli_helpers.py         # Helpers del CLI
-│   ├── config.py             # Constantes (márgenes, campos de metadatos)
-│   ├── config/               # Recursos de configuración
-│   │   └── lt_ignore_words.txt
-│   ├── models.py             # DocumentMetadata, ProcessOptions
-│   ├── pandoc_client.py      # Wrapper de Pandoc (MD → DOCX)
-│   ├── pdf_generator.py      # LibreOffice / WeasyPrint fallback
-│   ├── preprocessor.py       # Extracción de metadatos, portada, page breaks
-│   ├── languagetool_client.py # Cliente de LanguageTool
-│   ├── py.typed              # PEP 561 marker
-│   ├── standards/            # Esquemas YAML
-│   │   ├── __init__.py       # StandardLoader
-│   │   ├── schema.py         # Esquemas por defecto
-│   │   ├── apa7.yaml         # APA 7ª Edición
-│   │   ├── icontec.yaml      # ICONTEC NTC 1486
-│   │   └── ieee.yaml         # IEEE 8ª Edición
-│   └── formatters/
-│       ├── __init__.py       # Factory: get_formatter()
-│       ├── base.py           # DocumentFormatter (ABC)
-│       ├── apa/              # APA 7ª Edición
-│       │   ├── apa_formatter.py
-│       │   ├── apa_cover.py
-│       │   ├── apa_figures.py
-│       │   ├── apa_keywords.py
-│       │   ├── apa_page.py
-│       │   ├── apa_paragraphs.py
-│       │   ├── apa_styles.py
-│       │   └── apa_tables.py
-│       ├── icontec.py        # ICONTEC NTC 1486
-│       └── ieee.py           # IEEE 8ª Edición
-├── tests/
-│   ├── unit/                 # Tests unitarios
-│   ├── test_cli.py           # Tests del CLI
-│   ├── test_e2e.py           # Tests end-to-end
-│   └── ...
-├── docs/                     # Documentación del proyecto
-├── examples/                 # Ejemplos
-├── scripts/                  # Utilidades
-├── pyproject.toml            # Configuración del proyecto
-├── Makefile                  # Comandos de desarrollo
-└── README.md
+├── src/normadocs/              # Main package
+│   ├── __init__.py              # Version and exports
+│   ├── cli.py                   # Typer CLI entry point
+│   ├── cli_helpers.py           # CLI orchestration helpers
+│   ├── config.py                # Constants and defaults
+│   ├── models.py                # DocumentMetadata, ProcessOptions
+│   ├── preprocessor.py          # Stage 1: Markdown preprocessing
+│   ├── pandoc_client.py         # Stage 2: Pandoc conversion
+│   ├── pdf_generator.py         # PDF generation (LibreOffice/WeasyPrint)
+│   ├── languagetool_client.py   # LanguageTool grammar checking
+│   ├── py.typed                 # PEP 561 type marker
+│   ├── standards/               # YAML configuration files
+│   │   ├── apa7.yaml            # APA 7th Edition config
+│   │   ├── icontec.yaml         # ICONTEC NTC 1486 config
+│   │   └── ieee.yaml            # IEEE 8th Edition config
+│   └── formatters/              # Stage 3: Document formatting
+│       ├── base.py              # Abstract base formatter
+│       ├── apa/                 # APA 7th Edition formatter
+│       ├── icontec.py           # ICONTEC formatter
+│       └── ieee.py              # IEEE formatter
+├── tests/                       # Test suite (pytest + unittest)
+├── docs/                        # Documentation site (MkDocs)
+├── examples/                    # Example documents
+├── scripts/                     # Utility scripts
+├── .github/
+│   └── workflows/               # CI/CD pipelines
+│       ├── ci.yml               # Lint, type check, security, tests
+│       ├── release.yml          # PyPI publication
+│       ├── docker-publish.yml   # Docker image publication
+│       └── docs.yml             # Documentation deployment
+├── pyproject.toml               # Project configuration
+├── Makefile                     # Development commands
+├── Dockerfile                   # Docker image definition
+└── README.md                    # This file
 ```
 
-## CI/CD 🔄
+## CI/CD Pipeline
 
-La publicación a **PyPI** y **Docker Hub** está bloqueada si cualquiera de estas comprobaciones falla:
+Publication to **PyPI** and **Docker Hub** is blocked if any quality gate fails:
 
 ```
-Ruff Lint → MyPy → Bandit → Tests (3.10/3.11/3.12 + cobertura) → Build
+Ruff Lint → MyPy → Bandit → Tests (Python 3.10/3.11/3.12) → Build Check → Annotations Check
 ```
 
-| Pipeline             | Acción                                     |
-| -------------------- | ------------------------------------------ |
-| `ci.yml`             | Lint + tipos + seguridad + tests + build   |
-| `release.yml`        | Publicar a PyPI **solo si CI pasa**        |
-| `docker-publish.yml` | Publicar imagen Docker **solo si CI pasa** |
+| Workflow | Trigger | Action |
+|----------|---------|--------|
+| `ci.yml` | Push to `main`, PR | Lint, type check, security scan, tests, build validation |
+| `release.yml` | Tag `v*.*.*` | Publish to PyPI (only if CI passes) |
+| `docker-publish.yml` | Push to `main`, tag | Build and publish Docker image to GHCR |
+| `docs.yml` | Push to `main` | Deploy MkDocs documentation to GitHub Pages |
 
-## Licencia 📄
+## Architecture
 
-Este proyecto está bajo la **Licencia MIT**. Ver [LICENSE](LICENSE) para más detalles.
+NormaDocs uses a three-stage pipeline:
+
+```
+Markdown Input
+     │
+     ▼
+┌─────────────────────┐
+│  Stage 1: Preprocess │  MarkdownPreprocessor
+│  - Extract metadata  │  - Title, author, keywords
+│  - Generate cover    │  - Cover page assembly
+│  - Join lines        │  - Hard-wrap removal
+└─────────────────────┘
+     │
+     ▼
+┌─────────────────────┐
+│  Stage 2: Convert    │  PandocRunner
+│  - Markdown → DOCX   │  - BibTeX processing
+│  - Bibliography     │  - CSL style application
+└─────────────────────┘
+     │
+     ▼
+┌─────────────────────┐
+│  Stage 3: Format     │  DocumentFormatter (ABC)
+│  - Apply styles      │  - Fonts, margins, spacing
+│  - Format tables     │  - APA/IEEE/ICONTEC rules
+│  - Add page numbers  │  - Table of contents
+└─────────────────────┘
+     │
+     ▼
+DOCX/PDF Output
+```
+
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](docs/src/contributing.md) for guidelines.
+
+## License
+
+This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+## Links
+
+- [Documentation](https://cristianmz21.github.io/normadocs/)
+- [PyPI Package](https://pypi.org/project/normadocs/)
+- [Issue Tracker](https://github.com/CristianMz21/normadocs/issues)
+- [Source Code](https://github.com/CristianMz21/normadocs)
