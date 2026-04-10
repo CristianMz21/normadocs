@@ -59,15 +59,15 @@ Write in Markdown. Output perfectly formatted documents.
 
 ## Example Output
 
-APA 7th Edition formatted document (click to enlarge):
+APA 7th Edition formatted document:
 
-<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-<img src="examples/exports/apa_page-1.png" alt="APA Cover Page" width="200"/>
-<img src="examples/exports/apa_page-2.png" alt="APA Abstract" width="200"/>
-<img src="examples/exports/apa_page-3.png" alt="APA Introduction" width="200"/>
-<img src="examples/exports/apa_page-4.png" alt="APA Body" width="200"/>
-<img src="examples/exports/apa_page-5.png" alt="APA References" width="200"/>
-<img src="examples/exports/apa_page-6.png" alt="APA Page 6" width="200"/>
+<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+<img src="examples/images/apa_page-1.png" alt="Cover Page" width="180"/>
+<img src="examples/images/apa_page-2.png" alt="Abstract" width="180"/>
+<img src="examples/images/apa_page-3.png" alt="Introduction" width="180"/>
+<img src="examples/images/apa_page-4.png" alt="Body" width="180"/>
+<img src="examples/images/apa_page-5.png" alt="References" width="180"/>
+<img src="examples/images/apa_page-6.png" alt="End" width="180"/>
 </div>
 
 ---
