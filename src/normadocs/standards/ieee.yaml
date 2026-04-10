@@ -1,0 +1,43 @@
+name: "IEEE 8th Edition"
+version: "8.0"
+citation_style: ieee
+
+fonts:
+  body:
+    name: "Times New Roman"
+    size: 10
+  headings:
+    name: "Times New Roman"
+    level1:
+      alignment: center
+      bold: true
+
+margins:
+  unit: inches
+  top: 1.0
+  bottom: 1.0
+  left: 1.0
+  right: 1.0
+
+spacing:
+  line: single
+  paragraph_before: 0
+  paragraph_after: 0
+
+page_setup:
+  page_numbers: true
+  header: false
+  first_page_number: 1
+
+tables:
+  borders: full
+  caption_prefix: "Table"
+  caption_above: true
+
+figures:
+  caption_prefix: "Fig"
+  title_above: true
+
+cover:
+  title_align: center
+  author_align: left

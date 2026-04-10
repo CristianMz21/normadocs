@@ -307,37 +307,35 @@ body_font = self.config.get("fonts", {}).get("body", {}).get("name", "Times New 
 ### File Structure
 ```
 src/normadocs/
-├── __init__.py
-├── cli.py              # Typer CLI entry point
-├── cli_helpers.py      # CLI helper functions
-├── config.py           # Constants (PAGEBREAK_OPENXML, OUTPUT_DIR)
-├── models.py           # Dataclasses (DocumentMetadata, ProcessOptions)
-├── preprocessor.py     # Markdown preprocessing
-├── pandoc_client.py    # Pandoc subprocess wrapper
-├── pdf_generator.py    # LibreOffice PDF generation
-├── languagetool_client.py  # LanguageTool API client
-├── standards/           # YAML configuration files
-│   ├── __init__.py     # StandardLoader + preloaded configs
-│   ├── loader.py       # StandardLoader class
-│   ├── schema.py       # Default configs (DEFAULT_APA7_CONFIG, etc.)
-│   ├── apa7.yaml       # APA 7th Edition config
-│   ├── icontec.yaml    # ICONTEC config
-│   └── ieee.yaml       # IEEE config (placeholder)
+├── __init__.py              # Package init (version, exports)
+├── cli.py                   # Typer CLI entry point
+├── cli_helpers.py           # CLI helper functions (orchestration)
+├── config.py                # Constants (PAGEBREAK_OPENXML, OUTPUT_DIR)
+├── models.py                # Dataclasses (DocumentMetadata, ProcessOptions)
+├── preprocessor.py          # MarkdownPreprocessor (Stage 1)
+├── pandoc_client.py         # PandocRunner (Stage 2)
+├── pdf_generator.py         # PDFGenerator (LibreOffice/WeasyPrint fallback)
+├── languagetool_client.py   # LanguageTool API client
+├── standards/               # YAML configuration files
+│   ├── __init__.py          # StandardLoader + preloaded configs
+│   ├── schema.py            # Default configs + merge utilities
+│   ├── apa7.yaml            # APA 7th Edition configuration
+│   └── icontec.yaml         # ICONTEC (NTC 1486) configuration
 └── formatters/
-    ├── __init__.py     # get_formatter() factory + load_standard_config()
-    ├── base.py         # Abstract DocumentFormatter (receives config)
+    ├── __init__.py          # get_formatter() factory + load_standard_config()
+    ├── base.py              # Abstract DocumentFormatter (ABC)
     ├── apa/
     │   ├── __init__.py
-    │   ├── apa_formatter.py   # Main formatter (receives config, passes to handlers)
-    │   ├── apa_styles.py      # Styles + fonts (reads config)
-    │   ├── apa_page.py        # Margins + page numbers (reads config)
-    │   ├── apa_cover.py       # Cover page (reads config)
-    │   ├── apa_paragraphs.py  # Paragraph formatting (reads config)
-    │   ├── apa_tables.py      # Tables + captions (reads config)
-    │   ├── apa_figures.py     # Figures + captions (reads config)
-    │   └── apa_keywords.py    # Keywords + foreign words
-    ├── icontec.py       # ICONTEC formatter (reads config)
-    └── ieee.py          # IEEE placeholder (reads config)
+    │   ├── apa_formatter.py # Main APA formatter orchestrator
+    │   ├── apa_styles.py    # Styles + fonts (reads config)
+    │   ├── apa_page.py      # Margins + page numbers (reads config)
+    │   ├── apa_cover.py     # Cover page (reads config)
+    │   ├── apa_paragraphs.py # Paragraph formatting (reads config)
+    │   ├── apa_tables.py    # Tables + captions (reads config)
+    │   ├── apa_figures.py   # Figures + captions (reads config)
+    │   └── apa_keywords.py  # Keywords + foreign words
+    ├── icontec.py           # ICONTEC formatter
+    └── ieee.py              # IEEE formatter (placeholder, NotImplemented)
 ```
 
 ---
