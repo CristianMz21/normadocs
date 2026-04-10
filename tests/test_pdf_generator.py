@@ -10,74 +10,83 @@ from unittest.mock import MagicMock, patch
 from docx import Document
 
 from normadocs.pdf_generator import PDFGenerator
+from normadocs.utils.subprocess import CommandFailedError
 
 
 class TestPDFGeneratorLibreOffice(unittest.TestCase):
     """Tests for convert_with_libreoffice method."""
 
     @patch("builtins.print")
-    @patch("subprocess.run")
-    def test_libreoffice_success(self, mock_run, mock_print):
+    @patch("normadocs.pdf_generator.get_command_path")
+    @patch("normadocs.pdf_generator.run_command")
+    def test_libreoffice_success(self, mock_run_cmd, mock_get_path, mock_print):
         """LibreOffice conversion should return True on success."""
         with tempfile.TemporaryDirectory() as tmpdir:
             docx_path = Path(tmpdir) / "test.docx"
             Document().save(str(docx_path))
             output_dir = tmpdir
 
+            mock_get_path.return_value = "libreoffice"
             mock_result = MagicMock()
             mock_result.returncode = 0
-            mock_run.return_value = mock_result
+            mock_run_cmd.return_value = mock_result
 
             result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
             self.assertTrue(result)
 
     @patch("builtins.print")
-    @patch("subprocess.run")
-    def test_libreoffice_failure(self, mock_run, mock_print):
+    @patch("normadocs.pdf_generator.get_command_path")
+    @patch("normadocs.pdf_generator.run_command")
+    def test_libreoffice_failure(self, mock_run_cmd, mock_get_path, mock_print):
         """LibreOffice should return False on non-zero returncode."""
         with tempfile.TemporaryDirectory() as tmpdir:
             docx_path = Path(tmpdir) / "test.docx"
             Document().save(str(docx_path))
             output_dir = tmpdir
 
+            mock_get_path.return_value = "libreoffice"
             mock_result = MagicMock()
             mock_result.returncode = 1
             mock_result.stderr = "Error message"
-            mock_run.return_value = mock_result
+            mock_run_cmd.side_effect = CommandFailedError(
+                returncode=1, cmd=["libreoffice"], stdout="", stderr="Error"
+            )
 
             result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
             self.assertFalse(result)
 
     @patch("builtins.print")
-    @patch("subprocess.run")
-    def test_libreoffice_not_found(self, mock_run, mock_print):
+    @patch("normadocs.pdf_generator.get_command_path")
+    def test_libreoffice_not_found(self, mock_get_path, mock_print):
         """LibreOffice FileNotFoundError should return False."""
         with tempfile.TemporaryDirectory() as tmpdir:
             docx_path = Path(tmpdir) / "test.docx"
             Document().save(str(docx_path))
             output_dir = tmpdir
 
-            mock_run.side_effect = FileNotFoundError()
+            mock_get_path.side_effect = FileNotFoundError()
 
             result = PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
             self.assertFalse(result)
 
     @patch("builtins.print")
-    @patch("subprocess.run")
-    def test_libreoffice_cmd_structure(self, mock_run, mock_print):
+    @patch("normadocs.pdf_generator.get_command_path")
+    @patch("normadocs.pdf_generator.run_command")
+    def test_libreoffice_cmd_structure(self, mock_run_cmd, mock_get_path, mock_print):
         """LibreOffice command should have correct structure."""
         with tempfile.TemporaryDirectory() as tmpdir:
             docx_path = Path(tmpdir) / "test.docx"
             Document().save(str(docx_path))
             output_dir = tmpdir
 
+            mock_get_path.return_value = "libreoffice"
             mock_result = MagicMock()
             mock_result.returncode = 0
-            mock_run.return_value = mock_result
+            mock_run_cmd.return_value = mock_result
 
             PDFGenerator.convert_with_libreoffice(str(docx_path), output_dir)
 
-            call_args = mock_run.call_args
+            call_args = mock_run_cmd.call_args
             cmd = call_args[0][0]
             self.assertTrue(cmd[0].endswith("libreoffice") or cmd[0] == "libreoffice")
             self.assertIn("--headless", cmd)
