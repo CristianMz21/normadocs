@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ── Quality Gate: Run full CI first ──────────────────────────────────
   ci:
@@ -21,6 +25,7 @@ jobs:
     name: Upload to PyPI
     needs: ci # ← BLOCKED unless ALL CI jobs pass
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment:
       name: pypi
       url: https://pypi.org/p/normadocs
@@ -32,6 +37,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
 
       - name: Install build tools
         run: pip install build
