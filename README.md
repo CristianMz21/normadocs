@@ -160,6 +160,51 @@ make build       # Construir paquete wheel + sdist
 
 ```
 normadocs/
+├── src/normadocs/           # Paquete principal
+│   ├── __init__.py           # Versión del paquete
+│   ├── cli.py                # Interfaz de línea de comandos (Typer)
+│   ├── cli_helpers.py        # Helpers del CLI
+│   ├── config.py            # Constantes (márgenes, campos de metadatos)
+│   ├── config/               # Recursos de configuración
+│   │   └── lt_ignore_words.txt
+│   ├── models.py             # DocumentMetadata, ProcessOptions
+│   ├── pandoc_client.py     # Wrapper de Pandoc (MD → DOCX)
+│   ├── pdf_generator.py      # LibreOffice / WeasyPrint fallback
+│   ├── preprocessor.py      # Extracción de metadatos, portada, page breaks
+│   ├── languagetool_client.py # Cliente de LanguageTool
+│   ├── py.typed             # PEP 561 marker
+│   ├── standards/           # Esquemas YAML
+│   │   ├── __init__.py      # StandardLoader
+│   │   ├── schema.py        # Esquemas por defecto
+│   │   ├── apa7.yaml       # APA 7ª Edición
+│   │   ├── icontec.yaml    # ICONTEC NTC 1486
+│   │   └── ieee.yaml        # IEEE 8ª Edición
+│   └── formatters/
+│       ├── __init__.py       # Factory: get_formatter()
+│       ├── base.py           # DocumentFormatter (ABC)
+│       ├── apa/              # APA 7ª Edición
+│       │   ├── apa_formatter.py
+│       │   ├── apa_cover.py
+│       │   ├── apa_figures.py
+│       │   ├── apa_keywords.py
+│       │   ├── apa_page.py
+│       │   ├── apa_paragraphs.py
+│       │   ├── apa_styles.py
+│       │   └── apa_tables.py
+│       ├── icontec.py        # ICONTEC NTC 1486
+│       └── ieee.py           # IEEE 8ª Edición
+├── tests/                    # Tests del proyecto
+├── docs/                     # Documentación (MkDocs)
+├── examples/                  # Ejemplos de uso
+├── scripts/                  # Utilidades
+├── .github/workflows/        # CI/CD pipelines
+├── pyproject.toml            # Configuración del proyecto
+├── Makefile                  # Comandos de desarrollo
+├── Dockerfile                # Imagen Docker
+├── .dockerignore             # Archivos excluidos de Docker
+└── README.md
+```
+normadocs/
 ├── src/normadocs/
 │   ├── __init__.py           # Versión del paquete
 │   ├── cli.py                # Interfaz de línea de comandos (Typer)

@@ -1,8 +1,12 @@
 FROM python:3.12-slim-bookworm
 
+ARG VERSION=0.2.0
+ARG BUILD_DATE=$(date -u +'%Y-%m-%d')
+
 LABEL maintainer="Cristian Muñoz <cristianmz21@users.noreply.github.com>"
 LABEL description="Markdown to academic DOCX/PDF converter (APA 7th, ICONTEC, IEEE)"
-LABEL version="0.2.0"
+LABEL version="${VERSION}"
+LABEL build-date="${BUILD_DATE}"
 
 # Install System dependencies
 # Pandoc (Core), LibreOffice (PDF), and WeasyPrint deps

@@ -6,6 +6,7 @@ on:
       - "v*.*.*"
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -68,6 +69,7 @@ jobs:
 
   tests:
     name: Tests (Python 3.12)
+    needs: [quality, security]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -92,9 +94,37 @@ jobs:
       - name: Run tests with coverage (warnings as errors)
         run: pytest tests/ -W error --cov=normadocs --cov-report=term-missing --cov-fail-under=78
 
+  build-check:
+    name: Build Distribution
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Validate package metadata
+        run: twine check dist/*
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist/
+
   annotations-check:
     name: Ensure Zero Annotations
-    needs: [quality, security, tests]
+    needs: [quality, security, tests, build-check]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -127,6 +157,8 @@ jobs:
     needs: annotations-check
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write
     environment:
       name: pypi
       url: https://pypi.org/p/normadocs
