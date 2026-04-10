@@ -1,13 +1,21 @@
 """APA table formatting, borders, captions, and notes."""
 
+from __future__ import annotations
+
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches
+
+if TYPE_CHECKING:
+    from docx.document import Document as DocType
+    from docx.table import Table as TableType
+    from docx.table import _Cell as CellType
+
 
 PAGE_CONTENT_WIDTH = 6.5
 
@@ -17,28 +25,29 @@ COMPANY_KEYWORDS = frozenset(["mackroph", "tecnoshop", "devsoft"])
 class APATablesHandler:
     """Handles table formatting, borders, captions, and notes per APA 7th Edition."""
 
-    def __init__(self, doc, config: dict[str, Any] | None = None):
+    def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
         self.doc = doc
         self.config = config if config is not None else {}
 
     def _get_table_config(self) -> dict[str, Any]:
         """Get table configuration from config with defaults."""
-        return self.config.get(
-            "tables",
-            {
-                "borders": "horizontal_only",
-                "caption_prefix": "Tabla",
-                "caption_above": True,
-                "note_suffix": "Elaboración propia.",
-                "vertical_align": "top",
-            },
-        )
+        default_config: dict[str, Any] = {
+            "borders": "horizontal_only",
+            "caption_prefix": "Tabla",
+            "caption_above": True,
+            "note_suffix": "Elaboración propia.",
+            "vertical_align": "top",
+        }
+        return cast(dict[str, Any], self.config.get("tables", default_config))
 
     def _get_body_font(self) -> str:
         """Get body font name from config."""
-        return self.config.get("fonts", {}).get("body", {}).get("name", "Times New Roman")
+        fonts: dict[str, Any] = {}
+        return cast(
+            str, self.config.get("fonts", fonts).get("body", {}).get("name", "Times New Roman")
+        )
 
-    def _apply_font_style(self, run, size: int = 12) -> None:
+    def _apply_font_style(self, run: object, size: int = 12) -> None:
         """Apply font style to a run (helper for this handler)."""
         from .apa_styles import APAStylesHandler
 
@@ -347,7 +356,7 @@ class APATablesHandler:
             spacing_p.append(spacing_pPr)
             table_element.addnext(spacing_p)
 
-    def _apply_apa_table_borders(self, table) -> None:
+    def _apply_apa_table_borders(self, table: TableType) -> None:
         """
         Apply APA-style borders:
         - Top/Bottom of table: single line
@@ -385,7 +394,7 @@ class APATablesHandler:
                 # Apply
                 self._set_cell_border(cell, **borders)
 
-    def _set_cell_border(self, cell, **kwargs) -> None:
+    def _set_cell_border(self, cell: CellType, **kwargs: Any) -> None:
         """Set border on a table cell (OpenXML). Clears existing first."""
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
@@ -531,7 +540,7 @@ class APATablesHandler:
                 body.insert(current_pos + 1, title_p)
                 offset += 1
 
-    def _extract_table_title(self, table) -> str:
+    def _extract_table_title(self, table: TableType) -> str:
         """Extract a descriptive title from the table content.
 
         APA 7: The title should describe the table content concisely.

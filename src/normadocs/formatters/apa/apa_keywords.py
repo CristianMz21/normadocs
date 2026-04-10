@@ -1,32 +1,43 @@
 """APA keywords and foreign word formatting."""
 
+from __future__ import annotations
+
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from docx.shared import Inches
 
 from ...models import DocumentMetadata
 
+if TYPE_CHECKING:
+    from docx.document import Document as DocType
+    from docx.text.paragraph import Paragraph as ParagraphType
+    from docx.text.run import Run as RunType
+
+
+def _clear_paragraph(p: ParagraphType) -> ParagraphType:
+    """Clear a paragraph's content while preserving formatting."""
+    cast(Any, p._p).clear_content()
+    return p
+
 
 class APAKeywordsHandler:
     """Handles formatting of keywords and foreign words per APA 7th Edition."""
 
-    def __init__(self, doc, config: dict[str, Any] | None = None):
+    def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
         self.doc = doc
         self.config = config if config is not None else {}
 
     def _get_figure_config(self) -> dict[str, Any]:
         """Get figure configuration from config with defaults."""
-        return self.config.get(
-            "figures",
-            {
-                "caption_prefix": "Figura",
-                "title_above": True,
-                "nota_prefix": "Nota.",
-            },
-        )
+        default_config: dict[str, Any] = {
+            "caption_prefix": "Figura",
+            "title_above": True,
+            "nota_prefix": "Nota.",
+        }
+        return cast(dict[str, Any], self.config.get("figures", default_config))
 
-    def _apply_font_style(self, run, italic: bool | None = None) -> None:
+    def _apply_font_style(self, run: RunType, italic: bool | None = None) -> None:
         """Apply font style to a run (helper for this handler)."""
         from .apa_styles import APAStylesHandler
 
@@ -52,7 +63,7 @@ class APAKeywordsHandler:
                 match = re.search(r"((?:Palabras\s+clave|Keywords):)(.*)", full, re.IGNORECASE)
                 if match:
                     label, content = match.groups()
-                    p.clear()
+                    _clear_paragraph(p)
                     p.paragraph_format.left_indent = Inches(0.5)
                     p.paragraph_format.first_line_indent = Inches(0)
                     r1 = p.add_run(label + " ")

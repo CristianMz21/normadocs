@@ -12,9 +12,119 @@ import unittest
 from pathlib import Path
 
 from docx import Document
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 from normadocs.formatters.apa.apa_figures import APAFiguresHandler
+
+
+def _create_drawing_element(cx: int = 9144000, cy: int = 6858000, descr: str = "") -> OxmlElement:
+    """Create a w:drawing element with inline image for testing.
+
+    Args:
+        cx: Width in EMUs (9144000 = 1 inch)
+        cy: Height in EMUs
+        descr: Alt text / description for the image
+    """
+    ns_pic = "http://schemas.openxmlformats.org/drawingml/2006/picture"
+
+    drawing = OxmlElement("w:drawing")
+    inline = OxmlElement("wp:inline")
+    inline.set("distT", "0")
+    inline.set("distB", "0")
+    inline.set("distL", "0")
+    inline.set("distR", "0")
+
+    extent = OxmlElement("wp:extent")
+    extent.set("cx", str(cx))
+    extent.set("cy", str(cy))
+    inline.append(extent)
+
+    effect_extent = OxmlElement("wp:effectExtent")
+    effect_extent.set("l", "0")
+    effect_extent.set("t", "0")
+    effect_extent.set("r", "0")
+    effect_extent.set("b", "0")
+    inline.append(effect_extent)
+
+    doc_pr = OxmlElement("wp:docPr")
+    doc_pr.set("id", "1")
+    doc_pr.set("name", "Image 1")
+    if descr:
+        doc_pr.set("descr", descr)
+    inline.append(doc_pr)
+
+    c_nv_graphic_frame_locks = OxmlElement("wp:c_nvGraphicFrameLocks")
+    no_change_aspect = OxmlElement("wp:noChangeAspect")
+    c_nv_graphic_frame_locks.append(no_change_aspect)
+    inline.append(c_nv_graphic_frame_locks)
+
+    graphic = OxmlElement("a:graphic")
+    graphic.set("uri", "")
+
+    graphic_data = OxmlElement("a:graphicData")
+    graphic_data.set("uri", f"{{{ns_pic}}}")
+
+    pic = OxmlElement("pic:pic")
+    c_nv_pic_properties = OxmlElement("pic:c_nvPicPr")
+
+    c_nv_document_properties = OxmlElement("pic:cNvPr")
+    c_nv_document_properties.set("id", "1")
+    c_nv_document_properties.set("name", "Image 1")
+    if descr:
+        c_nv_document_properties.set("descr", descr)
+    c_nv_pic_properties.append(c_nv_document_properties)
+
+    c_nv_fill = OxmlElement("pic:cNvC")
+    c_nv_pic_properties.append(c_nv_fill)
+
+    blip_fill = OxmlElement("pic:blipFill")
+    blip = OxmlElement("pic:blip")
+    blip.set(qn("r:embed"), "rId1")
+    blip_fill.append(blip)
+
+    stretch = OxmlElement("pic:stretch")
+    fill_rect = OxmlElement("pic:fillRect")
+    stretch.append(fill_rect)
+    blip_fill.append(stretch)
+    pic.append(blip_fill)
+
+    sp_pr = OxmlElement("pic:spPr")
+    xfrm = OxmlElement("a:xfrm")
+    off = OxmlElement("a:off")
+    off.set("x", "0")
+    off.set("y", "0")
+    xfrm.append(off)
+    ext = OxmlElement("a:ext")
+    ext.set("cx", str(cx))
+    ext.set("cy", str(cy))
+    xfrm.append(ext)
+    sp_pr.append(xfrm)
+
+    prst_geom = OxmlElement("a:prstGeom")
+    prst_geom.set("prst", "rect")
+    av_lst = OxmlElement("a:avLst")
+    prst_geom.append(av_lst)
+    sp_pr.append(prst_geom)
+
+    pic.append(sp_pr)
+    graphic_data.append(pic)
+    graphic.append(graphic_data)
+    inline.append(graphic)
+    drawing.append(inline)
+
+    return drawing
+
+
+def _add_paragraph_with_drawing(
+    doc: Document, text: str = "", cx: int = 9144000, cy: int = 6858000, descr: str = ""
+) -> None:
+    """Add a paragraph with a drawing element to the document."""
+    p = doc.add_paragraph()
+    if text:
+        p.add_run(text)
+    drawing = _create_drawing_element(cx=cx, cy=cy, descr=descr)
+    p._element.append(drawing)
 
 
 class TestGetFigureConfig(unittest.TestCase):
@@ -139,6 +249,61 @@ class TestFormatFigures(unittest.TestCase):
         handler.format_figures()
         self.assertEqual(len(doc.paragraphs), 1)
 
+    def test_format_figures_scaling(self):
+        """format_figures should scale oversized images to fit page area."""
+        doc = Document()
+        _add_paragraph_with_drawing(doc, cx=12000000, cy=12000000, descr="Oversized image")
+
+        handler = APAFiguresHandler(doc)
+        handler.format_figures()
+
+        paragraphs = doc.paragraphs
+        drawings = paragraphs[0]._element.findall(f".//{qn('w:drawing')}")
+        self.assertEqual(len(drawings), 1)
+
+        inline = drawings[0].find(f".//{qn('wp:inline')}")
+        self.assertIsNotNone(inline)
+
+        extent = inline.find(qn("wp:extent"))
+        self.assertIsNotNone(extent)
+        new_cx = int(extent.get("cx", 0))
+        new_cy = int(extent.get("cy", 0))
+
+        self.assertLess(new_cx, 12000000, "Width should be scaled down")
+        self.assertLess(new_cy, 12000000, "Height should be scaled down")
+
+    def test_format_figures_small_image_not_scaled(self):
+        """format_figures should not scale images that fit within limits."""
+        doc = Document()
+        _add_paragraph_with_drawing(doc, cx=5000000, cy=5000000, descr="Small image")
+
+        handler = APAFiguresHandler(doc)
+        handler.format_figures()
+
+        paragraphs = doc.paragraphs
+        drawings = paragraphs[0]._element.findall(f".//{qn('w:drawing')}")
+        self.assertEqual(len(drawings), 1)
+
+        inline = drawings[0].find(f".//{qn('wp:inline')}")
+        extent = inline.find(qn("wp:extent"))
+        final_cx = int(extent.get("cx", 0))
+        final_cy = int(extent.get("cy", 0))
+
+        self.assertEqual(final_cx, 5000000, "Small image width should not be scaled")
+        self.assertEqual(final_cy, 5000000, "Small image height should not be scaled")
+
+    def test_format_figures_centers_image(self):
+        """format_figures should center the image paragraph."""
+        doc = Document()
+        _add_paragraph_with_drawing(doc, descr="Test image")
+
+        handler = APAFiguresHandler(doc)
+        handler.format_figures()
+
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+        self.assertEqual(doc.paragraphs[0].alignment, WD_ALIGN_PARAGRAPH.CENTER)
+
 
 class TestAddFigureCaptions(unittest.TestCase):
     """Tests for add_figure_captions method."""
@@ -169,6 +334,70 @@ class TestAddFigureCaptions(unittest.TestCase):
         handler.add_figure_captions()
 
         self.assertGreaterEqual(len(doc.paragraphs), initial_count)
+
+    def test_add_figure_captions_with_image_and_title(self):
+        """Caption should be 'Figura N' when title is not in Nota or Figura format."""
+        doc = Document()
+        _add_paragraph_with_drawing(doc, descr="Test image")
+        doc.add_paragraph("My Figure Title")
+
+        handler = APAFiguresHandler(doc)
+        handler.add_figure_captions()
+
+        full_text = "\n".join(p.text for p in doc.paragraphs)
+        self.assertIn("Figura 1", full_text)
+
+    def test_add_figure_captions_with_nota(self):
+        """Title should be extracted correctly when Nota follows title."""
+        doc = Document()
+        _add_paragraph_with_drawing(doc, descr="Test image")
+        doc.add_paragraph("Title Before Nota")
+        doc.add_paragraph("Nota. This is the note context")
+
+        handler = APAFiguresHandler(doc)
+        handler.add_figure_captions()
+
+        full_text = "\n".join(p.text for p in doc.paragraphs)
+        self.assertIn("Figura 1. Title Before Nota", full_text)
+
+    def test_add_figure_captions_without_title(self):
+        """Caption should be 'Figura N' when no title is found."""
+        doc = Document()
+        _add_paragraph_with_drawing(doc, descr="Test image")
+        doc.add_paragraph("Some unrelated text")
+
+        handler = APAFiguresHandler(doc)
+        handler.add_figure_captions()
+
+        full_text = "\n".join(p.text for p in doc.paragraphs)
+        self.assertIn("Figura 1", full_text)
+
+    def test_add_figure_captions_with_figura_title(self):
+        """Caption should extract title from existing 'Figura N' paragraph."""
+        doc = Document()
+        _add_paragraph_with_drawing(doc, descr="Test image")
+        doc.add_paragraph("Figura 1 Original Caption")
+
+        handler = APAFiguresHandler(doc)
+        handler.add_figure_captions()
+
+        full_text = "\n".join(p.text for p in doc.paragraphs)
+        self.assertIn("Figura 1. Original Caption", full_text)
+
+    def test_add_figure_captions_multiple_images(self):
+        """Multiple images should get sequential figure numbers."""
+        doc = Document()
+        _add_paragraph_with_drawing(doc, descr="Image 1")
+        doc.add_paragraph("Figura 1 First Title")
+        _add_paragraph_with_drawing(doc, descr="Image 2")
+        doc.add_paragraph("Figura 2 Second Title")
+
+        handler = APAFiguresHandler(doc)
+        handler.add_figure_captions()
+
+        full_text = "\n".join(p.text for p in doc.paragraphs)
+        self.assertIn("Figura 1. First Title", full_text)
+        self.assertIn("Figura 2. Second Title", full_text)
 
 
 class TestApplyFontStyle(unittest.TestCase):

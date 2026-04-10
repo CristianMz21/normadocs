@@ -1,28 +1,39 @@
 """APA styles creation and font handling."""
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
+if TYPE_CHECKING:
+    from docx.document import Document as DocType
+    from docx.text.paragraph import Paragraph as ParagraphType
+
 
 class APAStylesHandler:
     """Handles creation and application of APA 7th Edition styles."""
 
-    def __init__(self, doc, config: dict[str, Any] | None = None):
+    def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
         self.doc = doc
         self.config = config if config is not None else {}
 
     def _get_font_name(self, key: str = "body") -> str:
-        return self.config.get("fonts", {}).get(key, {}).get("name", "Times New Roman")
+        fonts: dict[str, Any] = {}
+        return cast(
+            str, self.config.get("fonts", fonts).get(key, {}).get("name", "Times New Roman")
+        )
 
     def _get_font_size(self, key: str = "body") -> int:
-        return self.config.get("fonts", {}).get(key, {}).get("size", 12)
+        fonts: dict[str, Any] = {}
+        return cast(int, self.config.get("fonts", fonts).get(key, {}).get("size", 12))
 
     def _get_spacing_line(self) -> str:
-        return self.config.get("spacing", {}).get("line", "double")
+        spacing: dict[str, str] = {"line": "double"}
+        return cast(str, self.config.get("spacing", spacing).get("line", "double"))
 
     def create_styles(self) -> None:
         """
@@ -226,7 +237,7 @@ class APAStylesHandler:
 
     def _apply_font_style(
         self,
-        style_or_run,
+        style_or_run: Any,
         font_name: str = "Times New Roman",
         size: int = 12,
         bold: bool | None = None,
@@ -244,7 +255,9 @@ class APAStylesHandler:
         if italic is not None:
             font.italic = italic
 
-    def _apply_font_to_paragraph(self, paragraph, font_size: int | None = None) -> None:
+    def _apply_font_to_paragraph(
+        self, paragraph: ParagraphType, font_size: int | None = None
+    ) -> None:
         """Apply font style to all runs in a paragraph."""
         size = 12 if font_size is None else font_size
         for run in paragraph.runs:

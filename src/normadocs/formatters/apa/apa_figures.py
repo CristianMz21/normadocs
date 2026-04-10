@@ -1,7 +1,9 @@
 """APA figure formatting and captions."""
 
+from __future__ import annotations
+
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
@@ -9,30 +11,35 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 from lxml.etree import Element
 
+if TYPE_CHECKING:
+    from docx.document import Document as DocType
+    from docx.text.run import Run as RunType
+
 
 class APAFiguresHandler:
     """Handles figure formatting and captions per APA 7th Edition."""
 
-    def __init__(self, doc, config: dict[str, Any] | None = None):
+    def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
         self.doc = doc
         self.config = config if config is not None else {}
 
     def _get_figure_config(self) -> dict[str, Any]:
         """Get figure configuration from config with defaults."""
-        return self.config.get(
-            "figures",
-            {
-                "caption_prefix": "Figura",
-                "title_above": True,
-                "nota_prefix": "Nota.",
-            },
-        )
+        default_config: dict[str, Any] = {
+            "caption_prefix": "Figura",
+            "title_above": True,
+            "nota_prefix": "Nota.",
+        }
+        return cast(dict[str, Any], self.config.get("figures", default_config))
 
     def _get_body_font(self) -> str:
         """Get body font name from config."""
-        return self.config.get("fonts", {}).get("body", {}).get("name", "Times New Roman")
+        fonts: dict[str, Any] = {}
+        return cast(
+            str, self.config.get("fonts", fonts).get("body", {}).get("name", "Times New Roman")
+        )
 
-    def _apply_font_style(self, run, bold: bool = False, italic: bool = False) -> None:
+    def _apply_font_style(self, run: RunType, bold: bool = False, italic: bool = False) -> None:
         """Apply font style to a run (helper for this handler)."""
         from .apa_styles import APAStylesHandler
 

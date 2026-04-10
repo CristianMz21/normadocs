@@ -82,7 +82,7 @@ class TestApplyAPATableBorders(unittest.TestCase):
         last_row = table.rows[-1]
         last_cell = last_row.cells[0]
         tc_pr = last_cell._element.find(qn("w:tcPr"))
-        tc_borders = tc_pr.find(qn("w:tcBorders")) if tc_pr else None
+        tc_borders = tc_pr.find(qn("w:tcBorders")) if tc_pr is not None else None
         self.assertIsNotNone(tc_borders)
 
         found_bottom = False

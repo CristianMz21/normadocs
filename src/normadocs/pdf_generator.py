@@ -2,8 +2,9 @@
 Module for generating PDFs from DOCX or Markdown.
 """
 
-import subprocess
 import sys
+
+from .utils.subprocess import CommandFailedError, get_command_path, run_command
 
 
 class PDFGenerator:
@@ -20,22 +21,28 @@ class PDFGenerator:
     def convert_with_libreoffice(docx_path: str, output_dir: str) -> bool:
         """Convert DOCX to PDF using LibreOffice."""
         try:
-            cmd = [
-                "libreoffice",
-                "--headless",
-                "--convert-to",
-                "pdf",
-                "--outdir",
-                str(output_dir),
-                str(docx_path),
-            ]
-            print("  ▸ Generando PDF con LibreOffice...")
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            libreoffice_path = get_command_path("libreoffice")
+        except FileNotFoundError:
+            print("  ✗ LibreOffice no encontrado.", file=sys.stderr)
+            return False
 
-            if result.returncode != 0:
-                print(f"  ✗ Error de LibreOffice:\n{result.stderr}", file=sys.stderr)
-                return False
+        cmd = [
+            libreoffice_path,
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            str(output_dir),
+            str(docx_path),
+        ]
+        print("  ▸ Generando PDF con LibreOffice...")
+        try:
+            run_command(cmd)
             return True
+
+        except CommandFailedError as e:
+            print(f"  ✗ Error de LibreOffice:\n{e.stderr}", file=sys.stderr)
+            return False
 
         except FileNotFoundError:
             print("  ✗ LibreOffice no encontrado.", file=sys.stderr)
@@ -50,18 +57,16 @@ class PDFGenerator:
             print("  ✗ WeasyPrint no instalado.")
             return False
 
-        # Pandoc MD -> HTML
-        cmd = ["pandoc", "-f", "markdown", "-t", "html5", "--standalone"]
+        pandoc_path = get_command_path("pandoc")
+        cmd = [pandoc_path, "-f", "markdown", "-t", "html5", "--standalone"]
         try:
-            result = subprocess.run(
-                cmd, input=md_content, capture_output=True, text=True, encoding="utf-8"
+            result = run_command(
+                cmd,
+                input_data=md_content,
+                encoding="utf-8",
             )
-            if result.returncode != 0:
-                return False
-
             html_content = result.stdout
 
-            # Simple APA CSS
             css = CSS(
                 string="""
                 @page { size: Letter; margin: 1in; }
@@ -71,6 +76,13 @@ class PDFGenerator:
 
             HTML(string=html_content).write_pdf(target=output_path, stylesheets=[css])
             return True
+
+        except CommandFailedError:
+            return False
+
+        except FileNotFoundError:
+            print("  ✗ Pandoc no encontrado para WeasyPrint.", file=sys.stderr)
+            return False
 
         except Exception as e:
             print(f"  ✗ Error en WeasyPrint: {e}")

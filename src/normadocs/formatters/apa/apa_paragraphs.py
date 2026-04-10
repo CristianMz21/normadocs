@@ -1,28 +1,44 @@
 """APA paragraph processing, formatting, and cleanup."""
 
+from __future__ import annotations
+
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 
+if TYPE_CHECKING:
+    from docx.document import Document as DocType
+    from docx.text.paragraph import Paragraph as ParagraphType
+
+
+def _clear_paragraph(p: ParagraphType) -> ParagraphType:
+    """Clear a paragraph's content while preserving formatting."""
+    cast(Any, p._p).clear_content()
+    return p
+
 
 class APAParagraphsHandler:
     """Handles paragraph processing, formatting, and cleanup per APA 7th Edition."""
 
-    def __init__(self, doc, config: dict[str, Any] | None = None):
+    def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
         self.doc = doc
         self.config = config if config is not None else {}
 
     def _get_spacing_line(self) -> str:
         """Get line spacing from config with default."""
-        return self.config.get("spacing", {}).get("line", "double")
+        spacing: dict[str, str] = {"line": "double"}
+        return cast(str, self.config.get("spacing", spacing).get("line", "double"))
 
     def _get_body_font(self) -> str:
         """Get body font name from config."""
-        return self.config.get("fonts", {}).get("body", {}).get("name", "Times New Roman")
+        fonts: dict[str, Any] = {}
+        return cast(
+            str, self.config.get("fonts", fonts).get("body", {}).get("name", "Times New Roman")
+        )
 
     def process(self) -> None:
         """Iterate through paragraphs to apply APA 7 formatting.
@@ -113,7 +129,7 @@ class APAParagraphsHandler:
             spacing_line = self._get_spacing_line()
             if spacing_line == "double":
                 p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
-            elif spacing_line == 1.5:
+            elif spacing_line == "1.5":
                 p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
             else:
                 p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
@@ -190,7 +206,7 @@ class APAParagraphsHandler:
             # Fix citations (y -> &)
             self._fix_citations(p)
 
-    def _apply_paragraph_spacing_control(self, p) -> None:
+    def _apply_paragraph_spacing_control(self, p: ParagraphType) -> None:
         """Apply widow/orphan control per APA 7.
 
         APA 7 requires widow/orphan control to prevent single lines
@@ -205,7 +221,7 @@ class APAParagraphsHandler:
         docGrid.set(qn("w:linePitch"), "360")
         pPr.append(docGrid)
 
-    def _apply_keep_with_next(self, p) -> None:
+    def _apply_keep_with_next(self, p: ParagraphType) -> None:
         """Apply keep-with-next to heading paragraphs per APA 7.
 
         Headings should stay on the same page as the following paragraph.
@@ -214,7 +230,7 @@ class APAParagraphsHandler:
         keepNext = OxmlElement("w:keepNext")
         pPr.append(keepNext)
 
-    def _fix_citations(self, p) -> None:
+    def _fix_citations(self, p: ParagraphType) -> None:
         """Replace ' (Author y Author, YEAR)' with '&'."""
         citation_re = re.compile(
             r"\(([A-ZÁ-Ú][a-záéíóúñ]+(?:\s+(?:et\s+al\.))?)\s+y\s+([A-ZÁ-Ú][a-záéíóúñ]+),\s*(\d{4})\)"
@@ -223,7 +239,7 @@ class APAParagraphsHandler:
             if " y " in run.text and "(" in run.text:
                 run.text = citation_re.sub(r"(\1 & \2, \3)", run.text)
 
-    def _format_toc_entry(self, p, heading_levels) -> None:
+    def _format_toc_entry(self, p: ParagraphType, heading_levels: dict[str, int]) -> None:
         """Format Table of Contents entries with correct indentation."""
         from .apa_styles import APAStylesHandler
 
@@ -270,7 +286,7 @@ class APAParagraphsHandler:
         indent_map = {1: 0, 2: 0.5, 3: 1.0}
         left_indent = indent_map.get(level, 0)
 
-        p.clear()
+        _clear_paragraph(p)
         p.paragraph_format.first_line_indent = Inches(0)
         p.paragraph_format.left_indent = Inches(left_indent)
 
@@ -450,7 +466,7 @@ class APAParagraphsHandler:
                 if p.paragraph_format.alignment != WD_ALIGN_PARAGRAPH.CENTER:
                     p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-    def _merge_and_clean_paragraph(self, p) -> None:
+    def _merge_and_clean_paragraph(self, p: ParagraphType) -> None:
         """Consolidate runs while preserving inline formatting boundaries.
 
         Groups consecutive runs by their (bold, italic) attributes and merges
@@ -476,7 +492,7 @@ class APAParagraphsHandler:
             return
 
         # Build groups of consecutive runs with the same formatting
-        groups: list[tuple[bool, bool, str, str | None, object | None]] = []
+        groups: list[tuple[bool, bool, str, str | None, Any]] = []
         for run in p.runs:
             t = run.text or ""
             t = t.replace("\r", " ")

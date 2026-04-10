@@ -3,7 +3,6 @@ Command Line Interface for APA Engine.
 """
 
 import logging
-import subprocess
 from pathlib import Path
 from typing import Annotated
 
@@ -13,12 +12,11 @@ from docx import Document
 from . import cli_helpers
 from .config import DEFAULT_OUTPUT_DIR
 from .formatters import get_formatter
-from .languagetool_client import LanguageToolClient, format_errors
+from .languagetool_client import LanguageToolClient, LanguageToolError, format_errors
 from .pandoc_client import PandocRunner
 from .pdf_generator import PDFGenerator
 from .preprocessor import MarkdownPreprocessor
 
-# Re-export for backward compatibility with existing tests that patch these
 __all__ = [
     "Document",
     "LanguageToolClient",
@@ -27,7 +25,6 @@ __all__ = [
     "PandocRunner",
     "format_errors",
     "get_formatter",
-    "subprocess",
 ]
 
 logger = logging.getLogger("normadocs")
@@ -155,7 +152,7 @@ def convert(
             ),
         ),
     ] = False,
-):
+) -> None:
     """
     Convert a Markdown file to DOCX/PDF with specific citation style.
     """
@@ -180,7 +177,7 @@ def convert(
     clean_md, meta = cli_helpers.process_markdown(input_path)
 
     # Trackers for errors and docker container
-    all_errors: list[tuple[str, list]] = []
+    all_errors: list[tuple[str, list[LanguageToolError]]] = []
     docker_container: str | None = None
 
     # 2. LanguageTool pre-check

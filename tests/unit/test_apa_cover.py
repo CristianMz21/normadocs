@@ -315,5 +315,56 @@ class TestAddCoverPage(unittest.TestCase):
             os.unlink(temp_path)
 
 
+class TestBackwardCompatibilityModule(unittest.TestCase):
+    """Tests for the backward compatibility apa.py module."""
+
+    def _load_apa_module_directly(self):
+        """Load the apa.py module file directly, bypassing package import.
+
+        The apa.py module is shadowed by the apa/ package in normal imports.
+        This method pre-loads the package first, then loads apa.py which can
+        then import from the already-loaded package.
+        """
+        import importlib.util
+        import sys
+
+        # Clear apa-related modules from cache to allow re-import
+        modules_to_clear = [k for k in list(sys.modules.keys()) if "apa" in k.lower()]
+        for mod in modules_to_clear:
+            del sys.modules[mod]
+
+        # First load the actual apa subpackage so it's in sys.modules
+        # This allows apa.py's import statement to find it
+
+        # Now load apa.py with a distinct name to avoid sys.modules conflict
+        spec = importlib.util.spec_from_file_location(
+            "apa_compat_module", "src/normadocs/formatters/apa.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["apa_compat_module"] = module
+        spec.loader.exec_module(module)
+        return module
+
+    def test_apa_module_exports_apadocxformatter(self):
+        """Test backward compatibility import from apa.py module.
+
+        The apa.py module exists for backward compatibility and re-exports
+        APADocxFormatter from the apa/ subpackage. This test forces the
+        module to be loaded via importlib to ensure coverage.
+        """
+
+        module = self._load_apa_module_directly()
+
+        self.assertTrue(hasattr(module, "APADocxFormatter"))
+        self.assertEqual(module.APADocxFormatter.__name__, "APADocxFormatter")
+        self.assertTrue(callable(module.APADocxFormatter))
+
+    def test_apa_module_in_apa_all(self):
+        """Test that APADocxFormatter is in __all__ of backward compat module."""
+        module = self._load_apa_module_directly()
+
+        self.assertIn("APADocxFormatter", module.__all__)
+
+
 if __name__ == "__main__":
     unittest.main()

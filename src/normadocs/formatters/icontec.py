@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, cast
 
 from docx import Document
 from docx.document import Document as DocumentObject
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Cm, Inches, Pt, RGBColor
+from docx.text.paragraph import Paragraph
 
 from ..models import DocumentMetadata
 from .base import DocumentFormatter
@@ -31,23 +32,26 @@ class IcontecFormatter(DocumentFormatter):
 
     def _get_font_name(self, key: str = "body") -> str:
         """Get font name from config."""
-        return self.config.get("fonts", {}).get(key, {}).get("name", "Arial")
+        result: str = cast(str, self.config.get("fonts", {}).get(key, {}).get("name", "Arial"))
+        return result
 
     def _get_font_size(self, key: str = "body") -> int:
         """Get font size from config."""
-        return self.config.get("fonts", {}).get(key, {}).get("size", 12)
+        result: int = cast(int, self.config.get("fonts", {}).get(key, {}).get("size", 12))
+        return result
 
     def _get_spacing_line(self) -> float:
         """Get line spacing from config with default."""
-        return self.config.get("spacing", {}).get("line", 1.5)
+        result: float = self.config.get("spacing", {}).get("line", 1.5)
+        return result
 
-    def _margin_to_unit(self, value: float, unit: str):
+    def _margin_to_unit(self, value: float, unit: str) -> Cm | Inches:
         """Convert margin value based on unit."""
         if unit == "inches":
             return Inches(value)
         return Cm(value)
 
-    def process(self, meta: DocumentMetadata):
+    def process(self, meta: DocumentMetadata) -> None:
         """Run the ICONTEC formatting pipeline."""
         self._setup_page_layout()
         self._create_styles()
@@ -56,10 +60,10 @@ class IcontecFormatter(DocumentFormatter):
         # Tables and Citations logic can be added later/adapted
         # For now, we focus on layout and text style.
 
-    def save(self, output_path: str):
+    def save(self, output_path: str) -> None:
         self.doc.save(str(output_path))
 
-    def _setup_page_layout(self):
+    def _setup_page_layout(self) -> None:
         """
         NTC 1486 Margins from config.
         """
@@ -72,7 +76,7 @@ class IcontecFormatter(DocumentFormatter):
             section.left_margin = self._margin_to_unit(float(margins["left"]), unit)
             section.right_margin = self._margin_to_unit(float(margins["right"]), unit)
 
-    def _create_styles(self):
+    def _create_styles(self) -> None:
         """
         Font and spacing from config.
         """
@@ -110,7 +114,7 @@ class IcontecFormatter(DocumentFormatter):
             h1.paragraph_format.space_before = Pt(12)  # Space before title
             h1.paragraph_format.space_after = Pt(12)
 
-    def _add_cover_page(self, meta: DocumentMetadata):
+    def _add_cover_page(self, meta: DocumentMetadata) -> None:
         """
         ICONTEC Cover Page:
         - Title (Centered, Vertical align top approx)
@@ -126,7 +130,7 @@ class IcontecFormatter(DocumentFormatter):
         ref_p = self.doc.paragraphs[0]
 
         # Helper to add centered line
-        def add_line(text, bold=False, space_after=0):
+        def add_line(text: str, bold: bool = False, space_after: int = 0) -> Paragraph:
             p = ref_p.insert_paragraph_before(text)
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             p.style = self.doc.styles["Normal"]
@@ -159,7 +163,7 @@ class IcontecFormatter(DocumentFormatter):
         pb_p = ref_p.insert_paragraph_before()
         pb_p.add_run().add_break()
 
-    def _process_paragraphs(self):
+    def _process_paragraphs(self) -> None:
         """Justify text and ensure config font."""
         body_font = self._get_font_name("body")
         body_size = self._get_font_size("body")

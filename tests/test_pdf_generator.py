@@ -66,7 +66,11 @@ class TestPDFGeneratorLibreOffice(unittest.TestCase):
             Document().save(str(docx_path))
             output_dir = tmpdir
 
-            with patch("subprocess.run") as mock_run:
+            with (
+                patch("normadocs.pdf_generator.get_command_path") as mock_get_path,
+                patch("normadocs.pdf_generator.run_command") as mock_run,
+            ):
+                mock_get_path.return_value = "libreoffice"
                 mock_result = MagicMock()
                 mock_result.returncode = 0
                 mock_run.return_value = mock_result

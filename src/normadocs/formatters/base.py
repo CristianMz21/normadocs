@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from docx import Document
+from docx.table import Table
 
 from ..models import DocumentMetadata
 
@@ -40,6 +41,6 @@ class DocumentFormatter(ABC):
         """Save the formatted document."""
         pass
 
-    def _format_table_caption(self, table, number: int, title: str) -> None:
+    def _format_table_caption(self, table: Table, number: int, title: str) -> None:
         """Format table caption (Table X + Title). Optional override for subclasses."""
         raise NotImplementedError(f"Caption formatting not implemented for {type(self).__name__}")

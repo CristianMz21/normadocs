@@ -2,10 +2,11 @@
 Module for running Pandoc conversions.
 """
 
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+from .utils.subprocess import CommandFailedError, get_command_path, run_command
 
 
 class PandocRunner:
@@ -26,6 +27,15 @@ class PandocRunner:
         Run pandoc to convert Markdown to DOCX.
         Returns True if successful, False otherwise.
         """
+        if "/" in self.pandoc_path:
+            resolved_path = self.pandoc_path
+        else:
+            try:
+                resolved_path = get_command_path(self.pandoc_path)
+            except FileNotFoundError:
+                print("  ✗ Error: Pandoc no encontrado en el sistema.", file=sys.stderr)
+                return False
+
         path_obj = Path(output_path)
 
         with tempfile.NamedTemporaryFile(
@@ -35,7 +45,7 @@ class PandocRunner:
             tmp_path = tmp.name
 
         cmd = [
-            self.pandoc_path,
+            resolved_path,
             tmp_path,
             "-f",
             "markdown+raw_attribute",
@@ -58,14 +68,14 @@ class PandocRunner:
         print(f"  ▸ Ejecutando Pandoc -> {path_obj.name}")
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            run_command(cmd)
             Path(tmp_path).unlink(missing_ok=True)
-
-            if result.returncode != 0:
-                print(f"  ✗ Error de Pandoc:\n{result.stderr}", file=sys.stderr)
-                return False
-
             return True
+
+        except CommandFailedError as e:
+            print(f"  ✗ Error de Pandoc:\n{e.stderr}", file=sys.stderr)
+            Path(tmp_path).unlink(missing_ok=True)
+            return False
 
         except FileNotFoundError:
             print("  ✗ Error: Pandoc no encontrado en el sistema.", file=sys.stderr)

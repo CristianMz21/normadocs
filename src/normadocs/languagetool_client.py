@@ -2,14 +2,14 @@
 LanguageTool client for grammar and spell checking.
 """
 
-import shutil
-import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import requests
+
+from .utils.subprocess import get_command_path, run_background_command
 
 
 @dataclass
@@ -82,7 +82,7 @@ class LanguageToolClient:
         self.ignore_words = ignore_words or []
         self.prefer_comma = prefer_comma
         self.disable_spelling = disable_spelling
-        self._server_process: subprocess.Popen[bytes] | None = None
+        self._server_process: Any = None
 
         # Combine default disabled rules with user-provided ones
         self.disabled_rules = list(self.DEFAULT_DISABLED_RULES) if disable_spelling else []
@@ -202,13 +202,9 @@ class LanguageToolClient:
             )
 
         # Start the server
-        java_path = shutil.which("java")
-        if not java_path:
-            raise RuntimeError("java not found in PATH. Please install Java.")
-        self._server_process = subprocess.Popen(
+        java_path = get_command_path("java")
+        self._server_process = run_background_command(
             [java_path, "-jar", str(jar_file), "--port", str(self._get_port_from_url())],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
         )
 
         # Wait for server to be ready

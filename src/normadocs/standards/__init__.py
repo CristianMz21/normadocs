@@ -1,7 +1,7 @@
 """Citation standards configuration module with YAML-based standards."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -14,7 +14,7 @@ def _load_yaml(name: str) -> dict[str, Any]:
     """Load a YAML standard configuration file."""
     path = _STANDARDS_DIR / f"{name}.yaml"
     with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        return cast(dict[str, Any], yaml.safe_load(f))
 
 
 def _get_style_key(style: str) -> str:
@@ -45,7 +45,7 @@ class StandardLoader:
         if not path.exists():
             raise FileNotFoundError(f"Standard '{name}' not found at {path}")
         with open(path, encoding="utf-8") as f:
-            yaml_config = yaml.safe_load(f)
+            yaml_config = cast(dict[str, Any], yaml.safe_load(f))
         return merge_with_defaults(yaml_config, key)
 
     def load_raw(self, name: str) -> dict[str, Any]:
@@ -55,7 +55,7 @@ class StandardLoader:
         if not path.exists():
             raise FileNotFoundError(f"Standard '{name}' not found at {path}")
         with open(path, encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            return cast(dict[str, Any], yaml.safe_load(f))
 
     def list_available(self) -> list[str]:
         """List all available standard names."""

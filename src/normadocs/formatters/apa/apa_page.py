@@ -1,17 +1,23 @@
 """APA page layout and page number handling."""
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Inches, Pt
 
+if TYPE_CHECKING:
+    from docx.document import Document as DocType
+    from docx.section import Section as SectionType
+
 
 class APAPageHandler:
     """Handles page layout, headers, footers, and section page breaks."""
 
-    def __init__(self, doc, config: dict[str, Any] | None = None):
+    def __init__(self, doc: DocType, config: dict[str, Any] | None = None) -> None:
         self.doc = doc
         self.config = config if config is not None else {}
 
@@ -69,7 +75,7 @@ class APAPageHandler:
 
             self._add_page_number(section)
 
-    def _add_page_number(self, section) -> None:
+    def _add_page_number(self, section: SectionType) -> None:
         """Add page number top-right in header."""
         header = section.header
         header.is_linked_to_previous = False

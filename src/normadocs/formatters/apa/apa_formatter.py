@@ -1,9 +1,14 @@
 """APA 7th Edition formatter - main class that delegates to handlers."""
 
-from typing import Any
+from typing import Any, cast
 
 from docx import Document
 from docx.document import Document as DocumentObject
+from docx.oxml.table import CT_Tc
+from docx.section import Section
+from docx.table import Table as TableObject
+from docx.text.paragraph import Paragraph
+from docx.text.run import Run
 
 from ...models import DocumentMetadata
 from .apa_cover import APACoverHandler
@@ -86,7 +91,7 @@ class APADocxFormatter:
     def _setup_page_layout(self) -> None:
         self._page.setup_page_layout()
 
-    def _add_page_number(self, section) -> None:
+    def _add_page_number(self, section: Section) -> None:
         self._page._add_page_number(section)
 
     def _add_section_page_breaks(self) -> None:
@@ -98,16 +103,16 @@ class APADocxFormatter:
 
     def _apply_font_style(
         self,
-        style_or_run,
+        style_or_run: Paragraph | Run,
         font_name: str = "Times New Roman",
         size: int = 12,
-        bold=None,
-        italic=None,
-        color_rgb=(0, 0, 0),
-    ):
+        bold: bool | None = None,
+        italic: bool | None = None,
+        color_rgb: tuple[int, int, int] = (0, 0, 0),
+    ) -> None:
         self._styles._apply_font_style(style_or_run, font_name, size, bold, italic, color_rgb)
 
-    def _apply_font_to_paragraph(self, paragraph, font_size=None) -> None:
+    def _apply_font_to_paragraph(self, paragraph: Paragraph, font_size: int | None = None) -> None:
         self._styles._apply_font_to_paragraph(paragraph, font_size)
 
     def _neutralize_table_style(self) -> None:
@@ -117,19 +122,19 @@ class APADocxFormatter:
     def _process_paragraphs(self) -> None:
         self._paragraphs.process()
 
-    def _apply_paragraph_spacing_control(self, p) -> None:
+    def _apply_paragraph_spacing_control(self, p: Paragraph) -> None:
         self._paragraphs._apply_paragraph_spacing_control(p)
 
-    def _apply_keep_with_next(self, p) -> None:
+    def _apply_keep_with_next(self, p: Paragraph) -> None:
         self._paragraphs._apply_keep_with_next(p)
 
-    def _fix_citations(self, p) -> None:
+    def _fix_citations(self, p: Paragraph) -> None:
         self._paragraphs._fix_citations(p)
 
-    def _format_toc_entry(self, p, heading_levels) -> None:
+    def _format_toc_entry(self, p: Paragraph, heading_levels: dict[str, int]) -> None:
         self._paragraphs._format_toc_entry(p, heading_levels)
 
-    def _build_heading_level_map(self) -> dict:
+    def _build_heading_level_map(self) -> dict[str, Any]:
         return self._paragraphs._build_heading_level_map()
 
     def _format_lists(self) -> None:
@@ -141,23 +146,23 @@ class APADocxFormatter:
     def _fix_text_spacing_global(self) -> None:
         self._paragraphs.fix_text_spacing_global()
 
-    def _merge_and_clean_paragraph(self, p) -> None:
+    def _merge_and_clean_paragraph(self, p: Paragraph) -> None:
         self._paragraphs._merge_and_clean_paragraph(p)
 
     # Tables handler delegation
     def _format_tables(self) -> None:
         self._tables.format_tables()
 
-    def _apply_apa_table_borders(self, table) -> None:
+    def _apply_apa_table_borders(self, table: TableObject) -> None:
         self._tables._apply_apa_table_borders(table)
 
-    def _set_cell_border(self, cell, **kwargs) -> None:
+    def _set_cell_border(self, cell: CT_Tc, **kwargs: Any) -> None:
         self._tables._set_cell_border(cell, **kwargs)
 
     def _add_table_captions(self) -> None:
         self._tables.add_table_captions()
 
-    def _extract_table_title(self, table) -> str:
+    def _extract_table_title(self, table: TableObject) -> str:
         return self._tables._extract_table_title(table)
 
     def _get_nearest_section_heading(self, table_pos: int) -> str:
@@ -172,8 +177,9 @@ class APADocxFormatter:
     # Figures handler delegation
     def _make_figure_paragraph(
         self, text: str, bold: bool = False, italic: bool = False, space_after: str = "0"
-    ):
-        return self._figures._make_figure_paragraph(text, bold, italic, space_after)
+    ) -> Paragraph:
+        result = self._figures._make_figure_paragraph(text, bold, italic, space_after)
+        return cast(Paragraph, result)
 
     def _format_figures(self) -> None:
         self._figures.format_figures()

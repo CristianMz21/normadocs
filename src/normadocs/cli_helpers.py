@@ -6,8 +6,6 @@ keeping cli.py as a thin orchestrator.
 """
 
 import logging
-import shutil
-import subprocess
 import time
 import traceback
 from datetime import datetime
@@ -18,11 +16,12 @@ import typer
 from docx import Document
 
 from .formatters import get_formatter
-from .languagetool_client import LanguageToolClient, format_errors
+from .languagetool_client import LanguageToolClient, LanguageToolError, format_errors
 from .models import DocumentMetadata
 from .pandoc_client import PandocRunner
 from .pdf_generator import PDFGenerator
 from .preprocessor import MarkdownPreprocessor
+from .utils.subprocess import CommandFailedError, get_command_path, run_command
 
 logger = logging.getLogger("normadocs")
 
@@ -30,8 +29,8 @@ logger = logging.getLogger("normadocs")
 class LanguageToolResult(NamedTuple):
     """Result from LanguageTool check."""
 
-    errors: list
-    all_errors: list[tuple[str, list]]
+    errors: list[LanguageToolError]
+    all_errors: list[tuple[str, list[LanguageToolError]]]
 
 
 def _setup_languagetool_client(
@@ -108,13 +107,10 @@ def _ensure_languagetool_server(
         return None
 
     if lt_docker:
-        docker_path = shutil.which("docker")
-        if not docker_path:
-            typer.echo("Error: docker no encontrado en el sistema.", err=True)
-            raise typer.Exit(code=1) from None
+        docker_path = get_command_path("docker")
         logger.info("▸ Iniciando contenedor Docker de LanguageTool...")
         try:
-            subprocess.run(
+            run_command(
                 [
                     docker_path,
                     "run",
@@ -125,11 +121,9 @@ def _ensure_languagetool_server(
                     f"{lt_port}:8010",
                     "erikvl87/languagetool",
                 ],
-                check=True,
-                capture_output=True,
             )
-        except subprocess.CalledProcessError as e:
-            typer.echo(f"Error iniciando contenedor Docker: {e.stderr.decode()}", err=True)
+        except CommandFailedError as e:
+            typer.echo(f"Error iniciando contenedor Docker: {e.stderr}", err=True)
             raise typer.Exit(code=1) from None
 
         logger.info("▸ Esperando que LanguageTool esté listo...")
@@ -156,7 +150,7 @@ def _run_languagetool_precheck(
     lt_client: LanguageToolClient,
     content: str,
     lt_stop_on_error: bool,
-    all_errors: list[tuple[str, list]],
+    all_errors: list[tuple[str, list[LanguageToolError]]],
 ) -> bool:
     """
     Run LanguageTool check on markdown content before conversion.
@@ -186,7 +180,7 @@ def _run_languagetool_postcheck(
     lt_client: LanguageToolClient,
     output_docx: Path,
     lt_stop_on_error: bool,
-    all_errors: list[tuple[str, list]],
+    all_errors: list[tuple[str, list[LanguageToolError]]],
 ) -> bool:
     """
     Run LanguageTool check on DOCX content after conversion.
@@ -329,14 +323,16 @@ def _cleanup_docker(
         logger.info("   Use 'docker stop normadocs-lt' para detenerlo manualmente")
     else:
         logger.info("▸ Limpiando contenedor Docker...")
-        docker_path = shutil.which("docker")
-        if docker_path:
-            subprocess.run([docker_path, "rm", "-f", docker_container], capture_output=True)
+        docker_path = get_command_path("docker")
+        run_command(
+            [docker_path, "rm", "-f", docker_container],
+            check=False,
+        )
 
 
 def _write_lt_report(
     lt_report: Path | None,
-    all_errors: list[tuple[str, list]],
+    all_errors: list[tuple[str, list[LanguageToolError]]],
     input_path: Path,
     language_tool: str | None,
 ) -> None:
