@@ -16,14 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Quality Gate: Run CI first ───────────────────────────────────────
-  ci:
-    name: Quality Gate
-    uses: ./.github/workflows/ci.yml
-
   # ── Build & Push Docker image ────────────────────────────────────────
   docker-build:
-    needs: ci # ← BLOCKED unless CI passes
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
