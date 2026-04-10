@@ -191,6 +191,11 @@ class APAPageHandler:
         if not short_title:
             return
 
+        # Check if running head is enabled in config (default True)
+        enabled = self.config.get("running_head", {}).get("enabled", True)
+        if not enabled:
+            return
+
         # Get max length from config, default to 50
         max_length = int(self.config.get("running_head", {}).get("max_length", 50))
 

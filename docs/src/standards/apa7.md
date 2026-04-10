@@ -114,6 +114,13 @@ formatter = get_formatter("apa", "document.docx", config={
 
 The short title is extracted from the `short_title` field in YAML frontmatter metadata. If not provided, the running head is not added.
 
+**Configuration**: To disable the running head, set `running_head.enabled: false` in the config:
+
+```yaml
+running_head:
+  enabled: false
+```
+
 ---
 
 ## Heading Levels (APA 7th Edition)
