@@ -73,6 +73,7 @@ _pandoc_raw.docx
 # Example generated documents (user outputs)
 examples/ExportDocs/*.docx
 examples/ExportDocs/*.pdf
+examples/exports/
 
 # OS files
 .DS_Store
