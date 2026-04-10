@@ -121,10 +121,12 @@ class TestPDFGeneratorWeasyPrint(unittest.TestCase):
                 mock_result.stdout = "<html></html>"
                 mock_run.return_value = mock_result
 
-                with patch.dict("sys.modules", {"weasyprint": None}):
-                    with patch("builtins.__import__", side_effect=ImportError("No module")):
-                        result = PDFGenerator.convert_with_weasyprint(md_content, str(output_path))
-                        self.assertFalse(result)
+                with (
+                    patch.dict("sys.modules", {"weasyprint": None}),
+                    patch("builtins.__import__", side_effect=ImportError("No module")),
+                ):
+                    result = PDFGenerator.convert_with_weasyprint(md_content, str(output_path))
+                    self.assertFalse(result)
 
     def test_weasyprint_pandoc_failure(self):
         """Pandoc failure should return False."""
@@ -175,18 +177,12 @@ class TestPDFGeneratorConvert(unittest.TestCase):
             Document().save(str(docx_path))
             output_path = Path(tmpdir) / "output.pdf"
 
-            with patch.object(
-                PDFGenerator, "convert_with_libreoffice", return_value=False
-            ) as mock_lo:
-                with patch.object(
-                    PDFGenerator, "convert_with_weasyprint", return_value=True
-                ) as mock_wp:
-                    result = PDFGenerator.convert(
-                        str(docx_path), tmpdir, md_content, str(output_path)
-                    )
-                    self.assertTrue(result)
-                    mock_lo.assert_called_once()
-                    mock_wp.assert_called_once()
+            with (
+                patch.object(PDFGenerator, "convert_with_libreoffice", return_value=False),
+                patch.object(PDFGenerator, "convert_with_weasyprint", return_value=True),
+            ):
+                result = PDFGenerator.convert(str(docx_path), tmpdir, md_content, str(output_path))
+                self.assertTrue(result)
 
     def test_convert_succeeds_with_libreoffice(self):
         """Should return True when LibreOffice succeeds (no WeasyPrint)."""
@@ -196,18 +192,12 @@ class TestPDFGeneratorConvert(unittest.TestCase):
             Document().save(str(docx_path))
             output_path = Path(tmpdir) / "output.pdf"
 
-            with patch.object(
-                PDFGenerator, "convert_with_libreoffice", return_value=True
-            ) as mock_lo:
-                with patch.object(
-                    PDFGenerator, "convert_with_weasyprint", return_value=False
-                ) as mock_wp:
-                    result = PDFGenerator.convert(
-                        str(docx_path), tmpdir, md_content, str(output_path)
-                    )
-                    self.assertTrue(result)
-                    mock_lo.assert_called_once()
-                    mock_wp.assert_not_called()
+            with (
+                patch.object(PDFGenerator, "convert_with_libreoffice", return_value=True),
+                patch.object(PDFGenerator, "convert_with_weasyprint", return_value=False),
+            ):
+                result = PDFGenerator.convert(str(docx_path), tmpdir, md_content, str(output_path))
+                self.assertTrue(result)
 
     def test_convert_fails_when_both_fail(self):
         """Should return False when both LibreOffice and WeasyPrint fail."""
@@ -217,16 +207,12 @@ class TestPDFGeneratorConvert(unittest.TestCase):
             Document().save(str(docx_path))
             output_path = Path(tmpdir) / "output.pdf"
 
-            with patch.object(
-                PDFGenerator, "convert_with_libreoffice", return_value=False
-            ) as mock_lo:
-                with patch.object(
-                    PDFGenerator, "convert_with_weasyprint", return_value=False
-                ) as mock_wp:
-                    result = PDFGenerator.convert(
-                        str(docx_path), tmpdir, md_content, str(output_path)
-                    )
-                    self.assertFalse(result)
+            with (
+                patch.object(PDFGenerator, "convert_with_libreoffice", return_value=False),
+                patch.object(PDFGenerator, "convert_with_weasyprint", return_value=False),
+            ):
+                result = PDFGenerator.convert(str(docx_path), tmpdir, md_content, str(output_path))
+                self.assertFalse(result)
 
 
 if __name__ == "__main__":

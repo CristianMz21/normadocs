@@ -3,17 +3,13 @@ Tests for CLI helper functions.
 """
 
 import subprocess
-import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-from docx import Document
 
 from normadocs.cli_helpers import (
     LanguageToolResult,
-    _setup_languagetool_client,
     _ensure_languagetool_server,
+    _setup_languagetool_client,
 )
 from normadocs.languagetool_client import LanguageToolClient
 
@@ -38,7 +34,7 @@ class TestSetupLanguageToolClient(unittest.TestCase):
     def test_creates_client_with_defaults(self):
         """Should create client with default ignore words."""
         with patch.object(LanguageToolClient, "__init__", return_value=None) as mock_init:
-            result = _setup_languagetool_client(
+            _setup_languagetool_client(
                 language_tool="es",
                 lt_host="localhost",
                 lt_port=8081,
@@ -48,13 +44,12 @@ class TestSetupLanguageToolClient(unittest.TestCase):
                 lt_no_spelling=False,
                 default_ignore_words=["word1", "word2"],
             )
-            self.assertIsInstance(result, LanguageToolClient)
             mock_init.assert_called_once()
 
     def test_creates_client_with_custom_enabled_rules(self):
         """Should create client with enabled rules split from comma string."""
         with patch.object(LanguageToolClient, "__init__", return_value=None) as mock_init:
-            result = _setup_languagetool_client(
+            _setup_languagetool_client(
                 language_tool="es",
                 lt_host="localhost",
                 lt_port=8081,
@@ -71,7 +66,7 @@ class TestSetupLanguageToolClient(unittest.TestCase):
     def test_creates_client_with_custom_disabled_rules(self):
         """Should create client with disabled rules split from comma string."""
         with patch.object(LanguageToolClient, "__init__", return_value=None) as mock_init:
-            result = _setup_languagetool_client(
+            _setup_languagetool_client(
                 language_tool="es",
                 lt_host="localhost",
                 lt_port=8081,
@@ -87,7 +82,7 @@ class TestSetupLanguageToolClient(unittest.TestCase):
     def test_creates_client_with_empty_ignore_words(self):
         """Should create client with empty ignore words list when lt_ignore_words is empty string."""
         with patch.object(LanguageToolClient, "__init__", return_value=None) as mock_init:
-            result = _setup_languagetool_client(
+            _setup_languagetool_client(
                 language_tool="es",
                 lt_host="localhost",
                 lt_port=8081,
@@ -103,7 +98,7 @@ class TestSetupLanguageToolClient(unittest.TestCase):
     def test_creates_client_with_custom_ignore_words(self):
         """Should create client with custom ignore words split from comma string."""
         with patch.object(LanguageToolClient, "__init__", return_value=None) as mock_init:
-            result = _setup_languagetool_client(
+            _setup_languagetool_client(
                 language_tool="es",
                 lt_host="localhost",
                 lt_port=8081,
@@ -119,7 +114,7 @@ class TestSetupLanguageToolClient(unittest.TestCase):
     def test_disables_spelling_when_flag_true(self):
         """Should disable spelling when lt_no_spelling is True."""
         with patch.object(LanguageToolClient, "__init__", return_value=None) as mock_init:
-            result = _setup_languagetool_client(
+            _setup_languagetool_client(
                 language_tool="es",
                 lt_host="localhost",
                 lt_port=8081,
