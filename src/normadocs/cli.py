@@ -176,6 +176,9 @@ def convert(
     # 1. Preprocess markdown
     clean_md, meta = cli_helpers.process_markdown(input_path)
 
+    # 1.5. Code image processing (if {code} blocks present)
+    clean_md, _ = cli_helpers._run_codeimage(clean_md, output_dir)
+
     # Trackers for errors and docker container
     all_errors: list[tuple[str, list[LanguageToolError]]] = []
     docker_container: str | None = None

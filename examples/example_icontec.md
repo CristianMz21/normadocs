@@ -1,72 +1,69 @@
 ---
-title: Título del Proyecto de Investigación
-subtitle: Subtítulo si aplica
-author: Nombre del Autor
-author_id: Código de estudiante
-program: Nombre del Programa Académico
-center: Nombre del Centro Regional
-institution: Nombre de la Universidad
-location: Ciudad, País
+title: Research Project Title
+subtitle: Subtitle if applicable
+author: Author Name
+author_id: Student Code
+program: Academic Program Name
+center: Regional Center Name
+institution: University Name
+location: City, Country
 date: 2024
 ---
 
-# Resumen
+# Abstract
 
-El resumen debe ser de 150 a 250 palabras, presentado en un solo párrafo,
-sin sangría. Debe sintetizar los puntos principales del documento incluyendo
-propósito, metodología, resultados y conclusiones.
+The abstract should be 150 to 250 words, presented in a single paragraph with no indentation. It must synthesize the main points of the document including purpose, methodology, results, and conclusions.
 
-**Palabras clave:** metodología, resultados, conclusiones, investigación
+**Keywords:** methodology, results, conclusions, research
 
-# Introducción
+# Introduction
 
-La introducción presenta el tema de investigación, el contexto y la justificación
-del estudio. No debe tener título de heading.
+The introduction presents the research topic, context, and justification for the study. It should not have a heading title.
 
-# Marco Teórico
+# Theoretical Framework
 
-## Antecedentes
+## Background
 
-Se presentan los estudios previos relacionados con el tema.
+Previous studies related to the topic are presented.
 
-## Planteamiento del Problema
+## Problem Statement
 
-Se formula claramente el problema de investigación.
+The research problem is clearly formulated.
 
-# Metodología
+# Methodology
 
-## Diseño de Investigación
+## Research Design
 
-Se describe el tipo de investigación utilizada.
+The type of research used is described.
 
-## Población y Muestra
+## Population and Sample
 
-Se define la población y la muestra del estudio.
+The population and sample of the study are defined.
 
-## Instrumentos de Recolección de Datos
+## Data Collection Instruments
 
-Se describen los instrumentos utilizados.
+The instruments used are described.
 
-# Resultados
+# Results
 
-Se presentan los hallazgos encontrados.
+The findings are presented.
 
-# Discusión
+# Discussion
 
-Se analizan e interpretan los resultados.
+The results are analyzed and interpreted.
 
-# Conclusiones
+# Conclusions
 
-Las conclusiones responden a los objetivos del estudio.
+The conclusions respond to the objectives of the study.
 
-# Recomendaciones
+# Recommendations
 
-Se formulan propuestas basadas en los hallazgos.
+Proposals based on the findings are formulated.
 
-# Referencias
+# References
 
-Autor, A. A., & Autor, B. B. (2024). Título del artículo. *Nombre de la Revista*, Volumen(Número), páginas. https://doi.org/xxxxx
+Author, A. A., & Author, B. B. (2024). Article title. *Journal Name*, Volume(Number), pages. https://doi.org/xxxxx
 
-# Anexos
+# Annexes
 
-Incluir tablas, figuras u otros materiales complementarios.
+Include tables, figures, or other supplementary materials.

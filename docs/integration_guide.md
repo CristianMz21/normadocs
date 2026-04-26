@@ -1,17 +1,17 @@
-# Guía de Integración con Frameworks Web
+# Web Framework Integration Guide
 
-**NormaDocs** puede integrarse fácilmente en aplicaciones web como **Django**, **FastAPI** o **Flask** para generar documentos académicos on-demand.
+**NormaDocs** can be easily integrated into web applications such as **Django**, **FastAPI**, or **Flask** to generate academic documents on-demand.
 
-## Instalación
+## Installation
 
 ```bash
 pip install normadocs
 
-# Con soporte PDF (WeasyPrint)
+# With PDF support (WeasyPrint)
 pip install normadocs[pdf]
 ```
 
-> **Requisito del servidor**: Pandoc debe estar instalado en el sistema.
+> **Server requirement**: Pandoc must be installed on the system.
 >
 > ```bash
 > sudo apt install pandoc              # Debian/Ubuntu
@@ -19,7 +19,7 @@ pip install normadocs[pdf]
 > brew install pandoc                  # macOS
 > ```
 
-## API Básica
+## Basic API
 
 ```python
 from normadocs.preprocessor import MarkdownPreprocessor
@@ -27,34 +27,35 @@ from normadocs.pandoc_client import PandocRunner
 from normadocs.formatters import get_formatter
 from normadocs.pdf_generator import PDFGenerator
 
-# 1. Pre-procesar Markdown → extraer metadatos + portada
+# 1. Pre-process Markdown → extract metadata + cover page
 processor = MarkdownPreprocessor()
 clean_md, meta = processor.process(raw_markdown)
 
-# 2. Convertir a DOCX con Pandoc
+# 2. Convert to DOCX with Pandoc
 runner = PandocRunner()
 runner.run(clean_md, "output.docx")
 
-# 3. Aplicar formato académico (APA, ICONTEC)
+# 3. Apply academic format (APA, ICONTEC)
 formatter = get_formatter("apa", "output.docx")
 formatter.process(meta)
 formatter.save("output.docx")
 
-# 4. (Opcional) Generar PDF
+# 4. (Optional) Generate PDF
 PDFGenerator.convert("output.docx", "/tmp/output/", clean_md, "output.pdf")
 ```
 
-### Estilos disponibles
+### Available Styles
 
-| Estilo           | Valor       | Descripción                                      |
-| ---------------- | ----------- | ------------------------------------------------ |
-| APA 7ª Edición   | `"apa"`     | Times New Roman 12pt, doble espacio, márgenes 1" |
-| ICONTEC NTC 1486 | `"icontec"` | Arial 12pt, espaciado 1.5, márgenes 3/2 cm       |
+| Style           | Value       | Description                                      |
+| --------------- | ----------- | ------------------------------------------------ |
+| APA 7th Edition | `"apa"`     | Times New Roman 12pt, double spacing, 1" margins |
+| ICONTEC NTC 1486 | `"icontec"` | Arial 12pt, 1.5 spacing, 3/2 cm margins        |
+| IEEE 8th Edition | `"ieee"`    | Times New Roman 10pt, single spacing, 1" margins |
 
-### Parámetros opcionales de Pandoc
+### Optional Pandoc Parameters
 
 ```python
-# Con bibliografía BibTeX y estilo CSL
+# With BibTeX bibliography and CSL style
 runner.run(
     clean_md,
     "output.docx",
@@ -63,7 +64,7 @@ runner.run(
 )
 ```
 
-## Ejemplo: Django View
+## Example: Django View
 
 ```python
 import tempfile
@@ -84,21 +85,21 @@ def export_document(request, document_id):
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = Path(tmpdir) / f"doc_{document_id}.docx"
 
-        # 1. Pre-procesar
+        # 1. Pre-process
         processor = MarkdownPreprocessor()
         clean_md, meta = processor.process(doc.markdown_content)
 
-        # 2. Convertir con Pandoc
+        # 2. Convert with Pandoc
         runner = PandocRunner()
         if not runner.run(clean_md, str(output_path)):
-            return HttpResponseServerError("Error Pandoc")
+            return HttpResponseServerError("Pandoc error")
 
-        # 3. Aplicar formato
+        # 3. Apply format
         formatter = get_formatter(style, str(output_path))
         formatter.process(meta)
         formatter.save(str(output_path))
 
-        # 4. Devolver archivo
+        # 4. Return file
         response = FileResponse(
             open(output_path, "rb"),
             content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -107,7 +108,7 @@ def export_document(request, document_id):
         return response
 ```
 
-## Ejemplo: FastAPI Endpoint
+## Example: FastAPI Endpoint
 
 ```python
 import tempfile
@@ -154,7 +155,7 @@ async def convert_document(req: ConvertRequest):
         )
 ```
 
-## Ejemplo: Flask
+## Example: Flask
 
 ```python
 import tempfile
@@ -196,20 +197,20 @@ def convert():
         )
 ```
 
-## Consideraciones de Despliegue
+## Deployment Considerations
 
-| Requisito          | Detalle                                                                   |
-| ------------------ | ------------------------------------------------------------------------- |
-| **Pandoc**         | El servidor debe tener `pandoc` instalado en el `PATH`                    |
-| **Fuentes**        | Para PDF: instalar `ttf-mscorefonts-installer` (Times New Roman) en Linux |
-| **LibreOffice**    | `sudo apt install libreoffice` (opción preferida para PDF)                |
-| **WeasyPrint**     | Alternativa para PDF: `pip install normadocs[pdf]`                        |
-| **Almacenamiento** | Usar `tempfile.TemporaryDirectory()` para archivos transitorios           |
-| **Concurrencia**   | Cada petición debe usar su propio directorio temporal                     |
+| Requirement       | Details                                                                  |
+| ---------------- | ------------------------------------------------------------------------ |
+| **Pandoc**       | Server must have `pandoc` installed in PATH                               |
+| **Fonts**        | For PDF: install `ttf-mscorefonts-installer` (Times New Roman) on Linux |
+| **LibreOffice**  | `sudo apt install libreoffice` (preferred option for PDF)                |
+| **WeasyPrint**   | Alternative for PDF: `pip install normadocs[pdf]`                        |
+| **Storage**      | Use `tempfile.TemporaryDirectory()` for transient files                  |
+| **Concurrency**  | Each request should use its own temporary directory                       |
 
 ## Docker
 
-Si despliega con Docker, asegúrese de incluir Pandoc en la imagen:
+If deploying with Docker, include Pandoc in the image:
 
 ```dockerfile
 FROM python:3.12-slim
@@ -217,5 +218,5 @@ FROM python:3.12-slim
 RUN apt-get update && apt-get install -y pandoc && rm -rf /var/lib/apt/lists/*
 RUN pip install normadocs[pdf]
 
-# ... su aplicación
+# ... your application
 ```

@@ -39,6 +39,10 @@ dependencies = [
 pdf = [
   "weasyprint>=60.0.0",
 ]
+codeimage = [
+  "pygments>=2.17.0",
+  "imgkit>=1.0.0",
+]
 dev = [
   "ruff",
   "mypy",

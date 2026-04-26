@@ -28,13 +28,13 @@ DEFAULT_APA7_CONFIG: dict[str, Any] = {
         "borders": "horizontal_only",
         "caption_prefix": "Table",
         "caption_above": True,
-        "note_suffix": "Elaboración propia.",
+        "note_suffix": "Author's elaboration.",
         "vertical_align": "top",
     },
     "figures": {
-        "caption_prefix": "Figura",
+        "caption_prefix": "Figure",
         "title_above": True,
-        "nota_prefix": "Nota.",
+        "nota_prefix": "Note.",
     },
     "cover": {
         "title_align": "center",

@@ -47,7 +47,7 @@ Thank you for your interest in contributing to **NormaDocs**! We welcome contrib
    ```bash
    make lint       # Ruff check + Ruff format + MyPy
    make test       # pytest
-   make test-cov   # pytest + coverage (min 60%)
+   make test-cov   # pytest + coverage (min 78%)
    make security   # Bandit security scan
    ```
 
@@ -70,15 +70,15 @@ Thank you for your interest in contributing to **NormaDocs**! We welcome contrib
 
 ## Adding a New Citation Standard
 
-To implement support for a new standard (e.g., IEEE, Vancouver):
+To implement support for a new standard (e.g., Vancouver, Chicago):
 
-1. **Create the formatter** in `src/normadocs/formatters/` (e.g., `ieee.py`):
+1. **Create the formatter** in `src/normadocs/formatters/` (e.g., `vancouver.py`):
 
    ```python
    from .base import DocumentFormatter
    from ..models import DocumentMetadata
 
-   class IEEEFormatter(DocumentFormatter):
+   class VancouverFormatter(DocumentFormatter):
        def process(self, meta: DocumentMetadata) -> None:
            self._setup_page_layout()
            self._create_styles()
@@ -92,19 +92,21 @@ To implement support for a new standard (e.g., IEEE, Vancouver):
 2. **Register it** in `src/normadocs/formatters/__init__.py`:
 
    ```python
-   from .ieee import IEEEFormatter
+   from .vancouver import VancouverFormatter
 
    def get_formatter(style: str = "apa", doc_path: str = "") -> DocumentFormatter:
        # ... existing code ...
-       elif style == "ieee":
-           return IEEEFormatter(doc_path)
+       elif style == "vancouver":
+           return VancouverFormatter(doc_path)
    ```
 
-3. **Add tests**:
-   - Unit test in `tests/test_formatters.py`
-   - E2E test in `tests/test_e2e.py` (follow the `TestEndToEndICONTEC` pattern)
+3. **Create YAML config** in `src/normadocs/standards/vancouver.yaml`
 
-4. **Update documentation**:
+4. **Add tests**:
+   - Unit test in `tests/test_formatters.py`
+   - E2E test in `tests/test_e2e.py`
+
+5. **Update documentation**:
    - Add the standard to the table in `README.md`
    - Update `CLI --help` if needed
 
@@ -116,8 +118,7 @@ To implement support for a new standard (e.g., IEEE, Vancouver):
 - Add tests for new features or bug fixes.
 - Update documentation if behavior changes.
 
-> ⚠️ **Important**: CI must pass before any PR can be merged. The pipeline runs
-> lint, type checking, security scan, and tests with coverage.
+> **Important**: CI must pass before any PR can be merged. The pipeline runs lint, type checking, security scan, and tests with coverage.
 
 ## Reporting Issues
 
@@ -129,4 +130,4 @@ When reporting a bug, please include:
 - The Markdown file content (or a minimal reproducer)
 - Full error output
 
-Thank you for contributing! 🎉
+Thank you for contributing!

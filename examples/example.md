@@ -1,73 +1,73 @@
-**Título del Proyecto ERS**
+**ERS Project Title**
 
-Nombre del Autor
+Author Name
 
-Nombre del Programa
+Program Name
 
-Número de Ficha
+Course Number
 
-Nombre de la Institución
+Institution Name
 
-Nombre del Centro
+Regional Center Name
 
-Fecha
+Date
 
-# Contenido
+# Contents
 
-Resumen ..................................................... 3
+Abstract ..................................................... 3
 
-Objetivos ................................................... 4
+Objectives ................................................... 4
 
-# Resumen
+# Abstract
 
-Este es un resumen de ejemplo. El documento debe seguir esta estructura para que el script de conversión funcione correctamente.
-Los metadatos del inicio (primeras 14 líneas) son capturados para crear la portada.
+This is an example abstract. The document must follow this structure for the conversion script to work correctly.
+The metadata at the beginning (first 14 lines) is captured to generate the cover page.
 
-*Palabras clave:* ejemplo, plantilla, ers
+*Keywords:* example, template, ers
 
-# Objetivos
+# Objectives
 
-## Objetivo General
+## General Objective
 
-Describir el objetivo general del sistema.
+Describe the general objective of the system.
 
-## Objetivos Específicos
+## Specific Objectives
 
-1.  Objetivo específico 1.
-2.  Objetivo específico 2.
+1.  Specific objective 1.
+2.  Specific objective 2.
 
-# Descripción General del Sistema
+# General System Description
 
-## Propósito
+## Purpose
 
-El propósito del sistema es...
+The purpose of the system is...
 
-## Alcance
+## Scope
 
-El alcance del proyecto abarca...
+The project scope covers...
 
-# Stakeholders o Interesados
+# Stakeholders
 
-| ID    | Interesado | Rol      | Poder | Interés | Estrategia           |
-| ----- | ---------- | -------- | ----- | ------- | -------------------- |
-| SH-01 | Gerente    | Dueño    | Alto  | Alto    | Gestionar Atentamente|
+| ID    | Stakeholder | Role      | Power | Interest | Strategy              |
+| ----- | ----------- | --------- | ----- | -------- | --------------------- |
+| SH-01 | Manager     | Owner     | High  | High     | Manage Closely        |
 
-# Requisitos Funcionales
+# Functional Requirements
 
-| **ID**                            | RF-001                            |
+| **ID**                            | FR-001                            |
 | --------------------------------- | --------------------------------- |
-| **Nombre**                        | Nombre del Requisito              |
-| **Descripción**                   | Descripción detallada...          |
-| **Criterios de Aceptación**       | 1. Criterio uno.                  |
-| **Prioridad**                     | Must (Debe tener)                 |
+| **Name**                          | Requirement Name                  |
+| **Description**                   | Detailed description...           |
+| **Acceptance Criteria**           | 1. Criterion one.                 |
+| **Priority**                      | Must                              |
 
-# Requisitos No Funcionales
+# Non-Functional Requirements
 
-| **ID**                            | RNF-001                           |
+| **ID**                            | NFR-001                           |
 | --------------------------------- | --------------------------------- |
-| **Atributo de Calidad**           | Usabilidad                        |
-| **Descripción**                   | Descripción...                    |
+| **Quality Attribute**              | Usability                         |
+| **Description**                   | Description...                    |
 
-# Referencias
+# References
 
-Autor, A. A. (Fecha). Título de la fuente. Editorial.
+Author, A. A. (Year). Title of source. Publisher.

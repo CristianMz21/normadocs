@@ -246,6 +246,36 @@ def _run_pandoc(
     return True
 
 
+def _run_codeimage(
+    clean_md: str,
+    output_dir: Path,
+) -> tuple[str, bool]:
+    """
+    Process code blocks marked with {code} to generate images.
+
+    Args:
+        clean_md: Processed markdown content
+        output_dir: Output directory for generated images
+
+    Returns:
+        Tuple of (modified markdown, whether any code images were generated)
+    """
+    try:
+        from .codeimage_processor import CodeImageProcessor
+
+        processor = CodeImageProcessor(output_dir=str(output_dir / "code_images"))
+        if not processor.is_available():
+            return clean_md, False
+
+        modified_md, results = processor.process(clean_md)
+        generated_count = sum(1 for r in results if r.success)
+        if generated_count > 0:
+            logger.info("▸ Generated %d code image(s)", generated_count)
+        return modified_md, generated_count > 0
+    except ImportError:
+        return clean_md, False
+
+
 def _apply_formatting(
     style: str,
     output_docx: Path,

@@ -4,9 +4,9 @@ Agentic coding guidelines for NormaDocs — Markdown to academic DOCX/PDF conver
 
 ## Project Overview
 
-NormaDocs converts Markdown documents to academic-standard DOCX/PDF formats (APA 7th, ICONTEC). The pipeline has three stages: **Preprocessor** → **Pandoc** → **Formatter**.
+NormaDocs converts Markdown documents to academic-standard DOCX/PDF formats (APA 7th, ICONTEC, IEEE). The pipeline has three stages: **Preprocessor** → **Pandoc** → **Formatter**.
 
-**Requirements**: Pandoc must be installed for conversion to work.
+**Requirement**: Pandoc must be installed for conversion to work.
 
 ---
 
@@ -20,7 +20,7 @@ make install          # Install dev dependencies: pip install -e ".[dev]"
 ### Testing
 ```bash
 make test            # Run all tests with verbose output
-make test-cov        # Run tests with coverage (minimum 60%)
+make test-cov        # Run tests with coverage (minimum 78%)
 
 # Single test file
 pytest tests/test_cli.py -v
@@ -61,7 +61,7 @@ make clean           # Remove build artifacts and caches
 ### General
 - **Language**: Python 3.10+
 - **Line length**: 100 characters (configured in ruff)
-- **Type checking**: MyPy with `strict = false`
+- **Type checking**: MyPy with `strict = true`
 - **Docstrings**: Use triple quotes for modules and public APIs
 
 ### Formatting
@@ -125,7 +125,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class DocumentMetadata:
-    title: str = "Sin Título"
+    title: str = "Untitled"
     author: str | None = None
     extra: dict[str, str] = field(default_factory=dict)
 
@@ -146,17 +146,17 @@ try:
     content = input_path.read_text(encoding="utf-8")
     clean_md, meta = preprocessor.process(content)
 except Exception as e:
-    typer.echo(f"Error procesando Markdown: {e}", err=True)
+    typer.echo(f"Error processing Markdown: {e}", err=True)
     raise typer.Exit(code=1) from None
 
 # Subprocess error handling pattern
 try:
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"  ✗ Error de Pandoc:\n{result.stderr}", file=sys.stderr)
+        print(f"  ✗ Pandoc error:\n{result.stderr}", file=sys.stderr)
         return False
 except FileNotFoundError:
-    print("  ✗ Error: Pandoc no encontrado en el sistema.", file=sys.stderr)
+    print("  ✗ Error: Pandoc not found on the system.", file=sys.stderr)
     return False
 ```
 
@@ -171,7 +171,7 @@ logger = logging.getLogger("normadocs")
 ```
 
 ### Testing
-- Use **unittest** with **pytest** as the test runner
+- Use **pytest** with **unittest** patterns
 - Use `unittest.mock.MagicMock` and `@patch` for mocking
 - Use `Typer.CliRunner` for CLI testing
 - Place tests in `tests/` directory with `test_*.py` naming
@@ -254,7 +254,7 @@ src/normadocs/standards/
 ├── schema.py        # Default configs for each standard
 ├── apa7.yaml        # APA 7th Edition configuration
 ├── icontec.yaml     # ICONTEC (NTC 1486) configuration
-└── ieee.yaml        # IEEE 8th Edition (placeholder)
+└── ieee.yaml        # IEEE 8th Edition configuration
 ```
 
 **Config Structure** (apa7.yaml example):
@@ -273,11 +273,11 @@ margins:
 spacing:
   line: double  # or 1.5, single
 tables:
-  caption_prefix: "Tabla"
+  caption_prefix: "Table"
   caption_above: true
-  note_suffix: "Elaboración propia."
+  note_suffix: "Author's elaboration."
 figures:
-  caption_prefix: "Figura"
+  caption_prefix: "Figure"
 ```
 
 **Loading Config:**
@@ -317,7 +317,8 @@ src/normadocs/
 ├── pdf_generator.py         # PDFGenerator (LibreOffice/WeasyPrint fallback)
 ├── languagetool_client.py   # LanguageTool API client
 ├── standards/               # YAML configuration files
-│   ├── __init__.py          # StandardLoader + preloaded configs (APA7_CONFIG, IEEE_CONFIG, ICONTEC_CONFIG)
+│   ├── __init__.py          # StandardLoader + preloaded configs
+│   ├── loader.py            # StandardLoader class
 │   ├── schema.py            # Default configs + merge utilities
 │   ├── apa7.yaml            # APA 7th Edition configuration
 │   ├── icontec.yaml         # ICONTEC (NTC 1486) configuration
@@ -369,4 +370,4 @@ Bandit skips: B404, B603, B607 (subprocess calls to pandoc/libreoffice are inten
 
 7. **Markdown preprocessing**: The preprocessor joins hard-wrapped lines, converts multiline tables to pipe tables, and inserts page breaks before H1 headings.
 
-8. **Coverage minimum**: 60% — new code should maintain or exceed this threshold.
+8. **Coverage minimum**: 78% — new code should maintain or exceed this threshold.
