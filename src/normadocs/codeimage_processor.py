@@ -180,7 +180,6 @@ class CodeImageProcessor:
         options = {
             "format": self.image_format,
             "quality": "100",
-            "scale": str(self.scale),
             "enable-local-file-access": "",
         }
 
