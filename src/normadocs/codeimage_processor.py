@@ -48,11 +48,11 @@ class CodeImageProcessor:
     The {code} marker triggers image generation with a fixed theme (monokai).
     """
 
-    DEFAULT_THEME = "monokai"
-    DEFAULT_FONT_FAMILY = "Fira Code, JetBrains Mono, Consolas, monospace"
-    DEFAULT_PADDING = "20px"
-    DEFAULT_BG_COLOR = "#272822"
-    DEFAULT_TEXT_COLOR = "#f8f8f2"
+    DEFAULT_THEME = "tango"
+    DEFAULT_FONT_FAMILY = "Consolas, DejaVu Sans Mono, Liberation Mono, monospace"
+    DEFAULT_PADDING = "16px"
+    DEFAULT_BG_COLOR = "#ffffff"
+    DEFAULT_TEXT_COLOR = "#2e3436"
 
     CODE_BLOCK_RE = re.compile(
         r"```(\w*)\s*\{code\}\s*\n(.*?)\n```",
@@ -63,25 +63,24 @@ class CodeImageProcessor:
     .code-image {{
         background-color: {bg_color};
         padding: {padding};
-        border-radius: 8px;
         font-family: {font_family};
-        font-size: 14px;
-        line-height: 1.6;
-        overflow: hidden;
+        font-size: 13px;
+        line-height: 1.5;
+        color: {text_color};
     }}
     .code-image pre {{
         margin: 0;
         padding: 0;
-        background: transparent;
+        background: transparent !important;
         font-family: inherit;
         font-size: inherit;
         line-height: inherit;
     }}
     .code-image .highlight {{
-        background: transparent;
+        background: transparent !important;
     }}
     .code-image .hll {{
-        background-color: transparent;
+        background-color: transparent !important;
     }}
     """
 
@@ -155,18 +154,28 @@ class CodeImageProcessor:
         )
 
         highlighted = highlight(code, lexer, formatter)
-        style_tag = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+        pygments_styles = formatter.get_style_defs('.highlight')
+
+        custom_css = self.CSS_TEMPLATE.format(
+            bg_color=self.DEFAULT_BG_COLOR,
+            padding=self.DEFAULT_PADDING,
+            font_family=self.DEFAULT_FONT_FAMILY,
+            text_color=self.DEFAULT_TEXT_COLOR,
+        )
 
         html = f"""
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-{style_tag}
+<style>
+{pygments_styles}
+{custom_css}
+</style>
 </head>
 <body>
 <div class="code-image">
-{highlighted}
+<pre>{highlighted}</pre>
 </div>
 </body>
 </html>
