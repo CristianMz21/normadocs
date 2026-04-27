@@ -3,32 +3,57 @@ name: CI
 on:
   push:
     branches: ["main"]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "Makefile"
+      - ".github/workflows/**"
   pull_request:
     branches: ["main"]
-  workflow_call: # ← Makes this reusable by release.yml
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "Makefile"
+      - ".github/workflows/**"
+  workflow_call:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
+
+env:
+  PIP_CACHE_DIR: ~/.cache/pip
+  UV_SYSTEM_PYTHON: 1
 
 jobs:
   quality:
     name: Lint & Type Check
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: "pip"
+          cache-dependency-path: "pyproject.toml"
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv pip install -e ".[dev]" --python python3.13
 
       - name: Lint with Ruff (no noqa allowed)
         run: ruff check src/ tests/ --output-format=github --no-cache
@@ -44,20 +69,25 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: "pip"
+          cache-dependency-path: "pyproject.toml"
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv pip install -e ".[dev]" --python python3.13
 
       - name: Run Bandit
         run: bandit -r src/ -c pyproject.toml
@@ -70,15 +100,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
+          cache-dependency-path: "pyproject.toml"
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
 
       - name: Install system deps
         run: |
@@ -86,19 +123,24 @@ jobs:
           sudo apt-get install -y pandoc
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv pip install -e ".[dev]" --python ${{ matrix.python-version }}
 
       - name: Run tests with coverage (warnings as errors)
         run: pytest tests/ -W error --cov=normadocs --cov-report=term-missing --cov-report=xml --cov-fail-under=78
 
-      - name: Upload coverage (3.12 only)
-        if: matrix.python-version == '3.12'
+      - name: Upload coverage (3.13 only)
+        if: matrix.python-version == '3.13'
         uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: coverage.xml
+
+      - name: Upload coverage to Codecov (3.13 only)
+        if: matrix.python-version == '3.13'
+        uses: codecov/codecov-action@v5
+        with:
+          file: coverage.xml
+          fail_ci_if_error: false
 
   build-check:
     name: Build Distribution
@@ -106,15 +148,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: "pip"
+          cache-dependency-path: "pyproject.toml"
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Install build tools
-        run: pip install build twine
+        run: uv pip install build twine
 
       - name: Build sdist and wheel
         run: python -m build
@@ -142,11 +190,11 @@ jobs:
         run: |
           repo_full="${{ github.repository }}"
           run_id="${{ github.run_id }}"
-          
+
           echo "Checking run $run_id for annotations in $repo_full..."
-          
+
           annotations=$(gh api repos/$repo_full/actions/runs/$run_id/jobs --jq '.jobs[].annotations // [] | length' 2>/dev/null | awk '{s+=$1} END {print s+0}' || echo "0")
-          
+
           if [ -n "$annotations" ] && [ "$annotations" -gt 0 ] 2>/dev/null; then
             echo "Found $annotations annotation(s):"
             gh api repos/$repo_full/actions/runs/$run_id/jobs --jq '.jobs[] | select(.annotations | length > 0) | .name as $job | .annotations[] | "\($job): \(.message) (\(.path):\(.start_line))"' 2>/dev/null
