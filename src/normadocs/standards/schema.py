@@ -28,7 +28,7 @@ DEFAULT_APA7_CONFIG: dict[str, Any] = {
         "borders": "horizontal_only",
         "caption_prefix": "Table",
         "caption_above": True,
-        "note_suffix": "Author's elaboration.",
+        "note_suffix": "Elaboración propia.",
         "vertical_align": "top",
     },
     "figures": {

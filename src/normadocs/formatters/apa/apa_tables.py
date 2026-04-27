@@ -41,7 +41,7 @@ class APATablesHandler:
             "borders": "horizontal_only",
             "caption_prefix": "Table",
             "caption_above": True,
-            "note_suffix": "Author's elaboration.",
+            "note_suffix": "Elaboración propia.",
             "vertical_align": "top",
         }
         return cast(dict[str, Any], self.config.get("tables", default_config))
@@ -782,7 +782,7 @@ class APATablesHandler:
                     desc = "Detalle de costos y Rubros del presupuesto."
 
             else:
-                desc = "Información técnica del proyecto."
+                desc = ""
 
             table_descriptions.append(desc)
 
@@ -821,7 +821,7 @@ class APATablesHandler:
             nota_t2.text = (
                 table_descriptions[i]
                 if i < len(table_descriptions)
-                else "Información técnica del proyecto."
+                else ""
             )
             nota_r2.append(nota_t2)
             nota_p.append(nota_r2)
