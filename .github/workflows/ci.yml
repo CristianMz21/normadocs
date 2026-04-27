@@ -124,6 +124,9 @@ jobs:
       - name: Install dependencies
         run: uv pip install -e ".[dev]" --python ${{ matrix.python-version }}
 
+      - name: Debug installed packages
+        run: uv pip list --python ${{ matrix.python-version }}
+
       - name: Verify pymupdf installed
         run: python -c "import fitz; print('pymupdf version:', fitz.__version__)"
 
