@@ -1,7 +1,8 @@
 site_name: NormaDocs
 repo_url: https://github.com/CristianMz21/normadocs
 repo_name: CristianMz21/normadocs
-edit_uri: edit/main/docs/src/
+docs_dir: src
+edit_uri: edit/main/src/
 
 theme:
   name: material
@@ -35,6 +36,8 @@ nav:
       - standards/apa7.md
       - standards/icontec.md
       - standards/ieee.md
+  - Reference:
+      - reference/formats.md
   - Troubleshooting: troubleshooting.md
   - Contributing: contributing.md
   - Changelog: changelog.md
