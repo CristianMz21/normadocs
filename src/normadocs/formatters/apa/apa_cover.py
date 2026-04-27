@@ -63,8 +63,13 @@ class APACoverHandler:
         content_lines.append(("", False))  # Blank line
         content_lines.append((meta.author or "", False))  # Author name
 
-        # Add affiliation
-        affiliation = getattr(meta, "affiliation", None) or meta.extra.get("affiliation", "")
+        # Add affiliation (combine with center if present)
+        center = getattr(meta, "center", None) or ""
+        affiliation = getattr(meta, "affiliation", None) or ""
+        if center and affiliation:
+            affiliation = f"{affiliation}\n{center}"
+        elif center:
+            affiliation = center
         if affiliation:
             content_lines.append((affiliation, False))
 
@@ -72,6 +77,15 @@ class APACoverHandler:
         institution = getattr(meta, "institution", None) or ""
         if institution and institution != affiliation:
             content_lines.append((institution, False))
+
+        # Add program and ficha (for SENA format)
+        program = getattr(meta, "program", None) or ""
+        ficha = getattr(meta, "ficha", None) or ""
+        if program:
+            content_lines.append(("", False))
+            content_lines.append((program, False))
+        if ficha:
+            content_lines.append((ficha, False))
 
         # Add date
         date = getattr(meta, "date", None) or ""

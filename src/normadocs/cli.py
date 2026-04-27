@@ -152,6 +152,27 @@ def convert(
             ),
         ),
     ] = False,
+    verify_apa: Annotated[
+        bool,
+        typer.Option(
+            "--verify-apa/--no-verify-apa",
+            help="Verify PDF against APA 7th Edition standards after export",
+        ),
+    ] = True,
+    apa_strict: Annotated[
+        bool,
+        typer.Option(
+            "--apa-strict",
+            help="Treat APA warnings as errors (fail if any warning found)",
+        ),
+    ] = False,
+    apa_report: Annotated[
+        Path | None,
+        typer.Option(
+            "--apa-report",
+            help="Save APA verification report to file (Markdown format)",
+        ),
+    ] = None,
 ) -> None:
     """
     Convert a Markdown file to DOCX/PDF with specific citation style.
@@ -231,12 +252,16 @@ def convert(
     logger.info("✔ Generado con éxito: %s", output_docx.name)
 
     # 6. PDF generation
-    cli_helpers._generate_pdf(format, output_docx, output_dir, clean_md, output_pdf)
+    pdf_generated = cli_helpers._generate_pdf(format, output_docx, output_dir, clean_md, output_pdf)
 
-    # 7. Cleanup Docker container (always runs, even on errors)
+    # 7. APA 7th Edition verification
+    if format in ["pdf", "all"] and pdf_generated and verify_apa:
+        cli_helpers._verify_apa(output_pdf, output_docx, meta, apa_strict, apa_report)
+
+    # 8. Cleanup Docker container (always runs, even on errors)
     cli_helpers._cleanup_docker(docker_container, lt_keep_alive, lt_port)
 
-    # 8. Write LanguageTool report
+    # 9. Write LanguageTool report
     cli_helpers._write_lt_report(lt_report, all_errors, input_path, language_tool)
 
     logger.info("\nDone!")

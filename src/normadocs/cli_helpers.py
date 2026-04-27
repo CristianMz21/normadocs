@@ -334,6 +334,75 @@ def _generate_pdf(
         return False
 
 
+def _verify_apa(
+    output_pdf: Path,
+    output_docx: Path,
+    meta: DocumentMetadata | None,
+    apa_strict: bool,
+    apa_report: Path | None,
+) -> bool:
+    """Run APA 7th Edition verification on exported PDF.
+
+    Args:
+        output_pdf: Path to the generated PDF
+        output_docx: Path to the source DOCX
+        meta: Document metadata for enhanced verification
+        apa_strict: If True, warnings are treated as errors
+        apa_report: Optional path to save verification report
+
+    Returns:
+        True if verification passed, False otherwise
+    """
+    try:
+        if not output_pdf.exists():
+            logger.warning("⚠ PDF no encontrado para verificación: %s", output_pdf)
+            return True
+
+        logger.info("▸ Verificando cumplimiento APA 7th...")
+
+        from .verifier.apa_verifier import APAVerifier
+
+        verifier = APAVerifier(
+            pdf_path=output_pdf,
+            docx_path=output_docx,
+            meta=meta,
+            strict=apa_strict,
+        )
+
+        result = verifier.verify_all()
+        verifier.close()
+
+        if result.passed:
+            logger.info("✔ Verificación APA 7th: PASSED (Score: %.1f/100)", result.score)
+        else:
+            logger.warning("✗ Verificación APA 7th: FAILED (Score: %.1f/100)", result.score)
+
+        if result.errors:
+            for issue in result.errors:
+                logger.warning("  [ERROR] %s: %s", issue.check, issue.evidence or issue.actual)
+
+        if result.warnings:
+            for issue in result.warnings:
+                logger.warning("  [WARN] %s: %s", issue.check, issue.evidence or issue.actual)
+
+        if apa_report:
+            report = verifier.generate_report(result, format="markdown")
+            apa_report.write_text(report, encoding="utf-8")
+            logger.info("▸ Reporte APA guardado: %s", apa_report)
+
+        return bool(result.passed)
+
+    except ImportError:
+        logger.warning(
+            "⚠ Verificador APA no disponible (instale dependencias con: "
+            "pip install normadocs[pdf-verifier])"
+        )
+        return True
+    except Exception as e:
+        logger.warning("⚠ Error en verificación APA: %s", e)
+        return True
+
+
 def _cleanup_docker(
     docker_container: str | None,
     lt_keep_alive: bool,
