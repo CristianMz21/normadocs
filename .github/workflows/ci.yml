@@ -87,7 +87,9 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev]" --python python3.13 --refresh
+        run: |
+          uv pip install -e ".[dev]" --python python3.13
+          uv pip install "pymupdf>=1.23.0" --python python3.13
 
       - name: Run Bandit
         run: bandit -r src/ -c pyproject.toml
@@ -125,12 +127,6 @@ jobs:
         run: |
           uv pip install -e ".[dev]" --python ${{ matrix.python-version }}
           uv pip install "pymupdf>=1.23.0" --python ${{ matrix.python-version }}
-
-      - name: Debug installed packages
-        run: uv pip list --python ${{ matrix.python-version }}
-
-      - name: Verify pymupdf installed
-        run: python -c "import fitz; print('pymupdf version:', fitz.__version__)"
 
       - name: Run tests with coverage (warnings as errors)
         run: pytest tests/ -W error --cov=normadocs --cov-report=term-missing --cov-report=xml --cov-fail-under=78
