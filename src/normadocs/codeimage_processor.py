@@ -154,7 +154,7 @@ class CodeImageProcessor:
         )
 
         highlighted = highlight(code, lexer, formatter)
-        pygments_styles = formatter.get_style_defs('.highlight')
+        pygments_styles = formatter.get_style_defs(".highlight")
 
         custom_css = self.CSS_TEMPLATE.format(
             bg_color=self.DEFAULT_BG_COLOR,
