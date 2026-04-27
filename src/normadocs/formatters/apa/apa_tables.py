@@ -818,11 +818,7 @@ class APATablesHandler:
             nota_rPr2.append(nota_sz2)
             nota_r2.append(nota_rPr2)
             nota_t2 = OxmlElement("w:t")
-            nota_t2.text = (
-                table_descriptions[i]
-                if i < len(table_descriptions)
-                else ""
-            )
+            nota_t2.text = table_descriptions[i] if i < len(table_descriptions) else ""
             nota_r2.append(nota_t2)
             nota_p.append(nota_r2)
 
