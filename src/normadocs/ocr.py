@@ -25,14 +25,17 @@ from pathlib import Path
 from typing import cast
 
 import numpy as np
+import pytesseract
 from PIL import Image
 
-# ``cv2`` (opencv-python) and ``pytesseract`` carry heavy / system-level
-# dependencies (OpenCV runtime, Tesseract binary) and are only needed at
-# function-call time. We keep them out of the module-level imports so that
-# consumers can ``from normadocs.ocr import OCRError`` (used in error
-# handling across the project) without pulling in OpenCV or Tesseract.
-# Mypy treats them as Any (per the project's ignore_missing_imports).
+# ``cv2`` (opencv-python) carries a heavy / system-level dependency
+# (OpenCV runtime) and is only needed at function-call time. We keep it
+# out of the module-level imports so that consumers can
+# ``from normadocs.ocr import OCRError`` (used in error handling across
+# the project) without pulling in OpenCV. ``pytesseract`` is a lightweight
+# pure-Python wrapper around the ``tesseract`` binary; it stays at module
+# level so the tests can patch ``normadocs.ocr.pytesseract.image_to_string``
+# in the usual ``unittest.mock.patch`` style.
 
 
 class OCRError(RuntimeError):
@@ -131,8 +134,6 @@ def extract_text_from_image(image_path: str | Path, *, lang: str = _LANGS) -> st
         OCRError: If the image cannot be loaded, the Tesseract binary
             is not installed, or the engine returns no output.
     """
-    import pytesseract  # lazy: needs the tesseract binary on PATH
-
     path = Path(image_path)
     try:
         img_bgr = _load_image(path)
