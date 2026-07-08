@@ -8,6 +8,7 @@ end-to-end ``extract_text_from_image`` test is marked
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from unittest.mock import patch
 
@@ -139,6 +140,10 @@ def test_extract_text_raises_when_image_missing(tmp_path: Path) -> None:
 
 
 @pytest.mark.ocr
+@pytest.mark.skipif(
+    shutil.which("tesseract") is None,
+    reason="tesseract binary not on PATH; install tesseract-ocr-spa",
+)
 def test_extract_text_end_to_end_with_real_tesseract(tmp_path: Path) -> None:
     """End-to-end smoke: write a small image, run the pipeline."""
     import cv2
