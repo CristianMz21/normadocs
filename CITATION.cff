@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: If you use NormaDocs in academic work, please cite it as below.
+type: software
+title: "NormaDocs"
+version: "0.2.1"
+date-released: 2026-04-10
+license: MIT
+url: "https://github.com/CristianMz21/normadocs"
+repository-code: "https://github.com/CristianMz21/normadocs"
+authors:
+  - given-names: "Cristian Arellano"
+    family-names: "Muñoz"
+    alias: "CristianMz21"
+    affiliation: "Independent maintainer"
+keywords:
+  - markdown
+  - pandoc
+  - academic-formatting
+  - apa
+  - ieee
+  - icontec
+  - docx
+  - pdf
+  - latin-america
+  - latex
+preferred-citation:
+  type: software
+  title: "NormaDocs"
+  version: "0.2.1"
+  date-released: 2026-04-10
+  license: MIT
+  url: "https://github.com/CristianMz21/normadocs"
+  authors:
+    - given-names: "Cristian Arellano"
+      family-names: "Muñoz"
+      alias: "CristianMz21"
+      affiliation: "Independent maintainer"

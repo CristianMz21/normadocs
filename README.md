@@ -33,6 +33,55 @@ Write in Markdown. Output perfectly formatted documents.
 
 ---
 
+## What is NormaDocs?
+
+NormaDocs is a Python package and CLI that converts a single Markdown file
+into a DOCX (and optionally PDF) formatted to academic citation standards:
+**APA 7th Edition**, **ICONTEC NTC 1486** (Colombian / LATAM), and
+**IEEE 8th Edition**. It runs the document through three stages — a Markdown
+preprocessor, Pandoc for the base conversion, and a python-docx formatter
+that applies margins, fonts, line spacing, table styles, and cover pages —
+and ships with both a CLI and a Python API.
+
+## Why this exists
+
+Generic Markdown converters (pandoc's default DOCX template, online
+converters) ship with no academic-standard compliance. Researchers and
+students who need APA, IEEE, or ICONTEC formatting currently hand-edit Word
+documents: adjusting margins to 1 inch, switching fonts to Times New Roman 12
+pt, double-spacing the body, applying "Table N" caption rules, and rebuilding
+cover pages. NormaDocs automates that workflow so the formatting is
+reproducible, scriptable, and reviewable in version control.
+
+## Ecosystem impact
+
+NormaDocs serves Spanish-speaking and LATAM students, researchers, educators,
+and developers who need reproducible academic document formatting from
+Markdown. Unlike generic Markdown converters, NormaDocs targets academic
+requirements such as **APA 7th Edition**, **IEEE**, and **ICONTEC NTC 1486**,
+a Colombian / LATAM standard commonly required in academic submissions. The
+project provides both a CLI and Python API, making it useful for students,
+documentation pipelines, research workflows, and academic publishing
+automation.
+
+## Who it is for
+
+- **Students** preparing theses, essays, or assignments in APA, IEEE, or
+  ICONTEC.
+- **Researchers** writing papers that must follow a specific academic standard.
+- **LATAM educators** preparing course material in ICONTEC NTC 1486 or APA.
+- **Documentation pipelines** that need to emit academic-formatted PDFs
+  alongside technical docs.
+- **Developers** integrating `normadocs` as a library in larger publishing or
+  submission tools.
+
+**Maintained by Cristian Arellano Muñoz
+([@CristianMz21](https://github.com/CristianMz21)).** The PyPI package is
+maintained by the same project maintainer; account names may differ between
+platforms.
+
+---
+
 ## Features
 
 - **3 Academic Standards**: APA 7th Edition, ICONTEC NTC 1486, IEEE 8th Edition
@@ -48,6 +97,11 @@ Write in Markdown. Output perfectly formatted documents.
 ---
 
 ## Supported Standards
+
+**ICONTEC NTC 1486** is the Colombian / LATAM academic standard commonly
+required for thesis submissions and university documents in the region. Choose
+ICONTEC when your target audience is Spanish-speaking LATAM academic
+institutions.
 
 | Standard | Font | Spacing | Use Case |
 |----------|------|---------|----------|
@@ -295,12 +349,46 @@ make build        # Build wheel + sdist
 
 ## Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](docs/src/contributing.md) for guidelines.
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the
+short contributor guide, or [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for
+the full dev guide with the citation-standard addition checklist.
 
-Full documentation: [normadocs.readthedocs.io](https://cristianmz21.github.io/normadocs/)
+Before opening a PR, also see [docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES.md)
+for scoped starter ideas and [ROADMAP.md](ROADMAP.md) for the project's
+direction.
+
+Full documentation: [cristianmz21.github.io/normadocs](https://cristianmz21.github.io/normadocs/)
+
+## Resources
+
+- [SUPPORT.md](SUPPORT.md) — how to ask questions, report bugs, and request
+  features.
+- [SECURITY.md](.github/SECURITY.md) — how to report security vulnerabilities
+  privately.
+- [GOVERNANCE.md](GOVERNANCE.md) — how decisions are made and how to propose
+  changes.
+- [MAINTAINERS.md](MAINTAINERS.md) — current maintainers and how new ones are
+  added.
+- [docs/COMMUNITY.md](docs/COMMUNITY.md) — community channels and discussion
+  categories.
+- [examples/](examples/) — sample Markdown files for each supported standard.
 
 ---
+
+## Project status
+
+NormaDocs is an **early-stage** open-source project. It is published on PyPI
+and usable today, but it does not yet claim large-scale adoption, hundreds of
+dependent repositories, or high monthly download numbers. Contributions,
+feedback, bug reports, examples, and academic formatting edge cases are
+welcome.
 
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
+
+## Citation
+
+If you use NormaDocs in academic work, please cite it using the metadata in
+[`CITATION.cff`](CITATION.cff) (GitHub renders this as a "Cite this repository"
+panel under the About section).

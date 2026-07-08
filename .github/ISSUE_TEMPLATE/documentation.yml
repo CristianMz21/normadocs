@@ -1,0 +1,47 @@
+name: Documentation Issue
+description: Report a gap, typo, or unclear section in the documentation
+labels: [documentation]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Documentation Issue
+        Use this template to report gaps, typos, broken links, or unclear
+        sections in the README, CLI help text, or the docs site.
+  - type: input
+    id: page
+    attributes:
+      label: Page or section
+      placeholder: "README.md, docs/src/installation.md, etc."
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of issue
+      options:
+        - Typo / grammar
+        - Broken link
+        - Outdated information
+        - Missing information
+        - Unclear explanation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: What is wrong or missing?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix or improvement
+      placeholder: Optional — what would you change?
+  - type: input
+    id: version
+    attributes:
+      label: NormaDocs version (if relevant)
+      placeholder: "0.2.1"

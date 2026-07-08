@@ -79,7 +79,9 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/CristianMz21/normadocs"
 Repository = "https://github.com/CristianMz21/normadocs"
+Documentation = "https://cristianmz21.github.io/normadocs/"
 "Bug Tracker" = "https://github.com/CristianMz21/normadocs/issues"
+Changelog = "https://github.com/CristianMz21/normadocs/blob/main/CHANGELOG.md"
 
 [project.scripts]
 normadocs = "normadocs.cli:app"

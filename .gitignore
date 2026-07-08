@@ -81,3 +81,12 @@ Thumbs.db
 
 # ─── MkDocs ────────────────────────────────────────────────────────────────
 docs/_site/
+
+# ─── OpenCode / SDD / GGA tooling (local-only, never commit) ───────────────
+.agents/
+.atl/
+.opencode/
+.specify/
+.gga
+skills-lock.json
+scripts/bootstrap-sdd.sh
