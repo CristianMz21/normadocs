@@ -33,6 +33,10 @@ dependencies = [
   "click>=8.0.0",
   "requests>=2.28.0",
   "pyyaml>=6.0",
+  "pytesseract>=0.3.10",
+  "opencv-python>=4.8.0",
+  "Pillow>=10.0.0",
+  "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
@@ -47,6 +51,10 @@ codeimage = [
   "pygments>=2.17.0",
   "imgkit>=1.0.0",
 ]
+ocr = [
+  "pytesseract>=0.3.10",
+  "opencv-python>=4.8.0",
+]
 dev = [
   "ruff",
   "mypy",
@@ -60,6 +68,12 @@ dev = [
   "bandit[toml]",
   "pdfplumber>=0.10.0",
   "pymupdf>=1.23.0",
+  # Pin numpy<2.5 in dev. numpy 2.5.1 ships type-statement (PEP 695) usage
+  # in its .pyi stubs that mypy 2.x cannot parse when target-version is 3.10
+  # (mypy reports "Type statement is only supported in Python 3.12 and
+  # greater" at numpy/__init__.pyi:737). Pin to a stable, mypy-compatible
+  # range until mypy's stub parser handles PEP 695 in stubs cleanly.
+  "numpy>=1.24,<2.5",
 ]
 
 [project.urls]
@@ -110,6 +124,9 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "--tb=short -q"
+markers = [
+  "ocr: end-to-end OCR tests that require the tesseract binary on PATH",
+]
 
 # ── Coverage ──────────────────────────────────────────────────────────
 [tool.coverage.run]
