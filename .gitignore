@@ -81,6 +81,7 @@ Thumbs.db
 
 # ─── MkDocs ────────────────────────────────────────────────────────────────
 docs/_site/
+docs/site/
 
 # ─── OpenCode / SDD / GGA tooling (local-only, never commit) ───────────────
 .agents/
