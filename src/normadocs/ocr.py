@@ -22,11 +22,17 @@ unreadable image, empty output).
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
-import cv2
 import numpy as np
-import pytesseract
 from PIL import Image
+
+# ``cv2`` (opencv-python) and ``pytesseract`` carry heavy / system-level
+# dependencies (OpenCV runtime, Tesseract binary) and are only needed at
+# function-call time. We keep them out of the module-level imports so that
+# consumers can ``from normadocs.ocr import OCRError`` (used in error
+# handling across the project) without pulling in OpenCV or Tesseract.
+# Mypy treats them as Any (per the project's ignore_missing_imports).
 
 
 class OCRError(RuntimeError):
@@ -48,22 +54,35 @@ _DENOISE_H: int = 30
 
 def _load_image(image_path: Path) -> np.ndarray:
     """Read an image file as a BGR numpy array."""
+    import cv2  # lazy: opencv-python is a heavy system-level dep
+
     if not image_path.is_file():
         raise OCRError(f"image file not found: {image_path}")
     img = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
     if img is None:
         raise OCRError(f"could not decode image: {image_path}")
-    return img
+    # cv2.imread is typed as returning Any in the bundled stubs. The runtime
+    # contract is np.ndarray (the IMREAD_COLOR branch is guaranteed non-None
+    # at this point because we just raised on None). The cast narrows the
+    # static type so mypy --strict accepts the function return annotation.
+    return cast(np.ndarray, img)
 
 
 def _resize_to_target(img: np.ndarray, target_width: int) -> np.ndarray:
     """Resize ``img`` so its width is ``target_width`` (aspect preserved)."""
+    import cv2  # lazy: opencv-python is a heavy system-level dep
+
     height, width = img.shape[:2]
     if width == target_width:
         return img
     scale = target_width / float(width)
-    new_height = int(round(height * scale))
-    return cv2.resize(img, (target_width, new_height), interpolation=cv2.INTER_CUBIC)
+    new_height = round(height * scale)
+    # cv2.resize is typed as returning Any in the bundled stubs; runtime
+    # contract is np.ndarray. Cast for the function return annotation.
+    return cast(
+        np.ndarray,
+        cv2.resize(img, (target_width, new_height), interpolation=cv2.INTER_CUBIC),
+    )
 
 
 def _preprocess(img_bgr: np.ndarray) -> np.ndarray:
@@ -78,6 +97,8 @@ def _preprocess(img_bgr: np.ndarray) -> np.ndarray:
     5. Histogram equalisation.
     6. Adaptive Gaussian threshold.
     """
+    import cv2  # lazy: opencv-python is a heavy system-level dep
+
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     resized = _resize_to_target(img_rgb, _TARGET_WIDTH)
     gray = cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY)
@@ -91,7 +112,9 @@ def _preprocess(img_bgr: np.ndarray) -> np.ndarray:
         31,
         15,
     )
-    return thresh
+    # cv2.adaptiveThreshold is typed as returning Any in the bundled stubs;
+    # runtime contract is np.ndarray. Cast for the function return annotation.
+    return cast(np.ndarray, thresh)
 
 
 def extract_text_from_image(image_path: str | Path, *, lang: str = _LANGS) -> str:
@@ -108,6 +131,8 @@ def extract_text_from_image(image_path: str | Path, *, lang: str = _LANGS) -> st
         OCRError: If the image cannot be loaded, the Tesseract binary
             is not installed, or the engine returns no output.
     """
+    import pytesseract  # lazy: needs the tesseract binary on PATH
+
     path = Path(image_path)
     try:
         img_bgr = _load_image(path)
@@ -123,7 +148,9 @@ def extract_text_from_image(image_path: str | Path, *, lang: str = _LANGS) -> st
         raise OCRError(f"image file not found: {path}") from exc
     if not text or not text.strip():
         raise OCRError(f"OCR returned no text for image: {path}")
-    return text.strip()
+    # pytesseract.image_to_string is typed as returning Any in the bundled
+    # stubs; runtime contract is str. Cast for the function return annotation.
+    return cast(str, text.strip())
 
 
 __all__ = ["OCRError", "extract_text_from_image"]

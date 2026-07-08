@@ -187,7 +187,16 @@ class IEEEDocxFormatter(DocumentFormatter):
         """Format tables with full borders."""
         for table in self.doc.tables:
             if "Table Grid" in self.doc.styles:
-                table.style = "Table Grid"
+                # python-docx's Table.style setter accepts both _TableStyle
+                # and str at runtime (see python-docx docx/table.py: the style
+                # setter declares the parameter as _TableStyle | str | None).
+                # The bundled type stub declares it as _TableStyle | None, so
+                # the static type check is stricter than the runtime behavior.
+                # We cast through Any to bridge the stub mismatch without
+                # weakening strict mode elsewhere. At runtime,
+                # docx.styles.style.StyleFactory maps WD_STYLE_TYPE.TABLE to
+                # _TableStyle, so the lookup returns a valid _TableStyle.
+                table.style = cast(Any, self.doc.styles["Table Grid"])
 
             for row in table.rows:
                 for cell in row.cells:
