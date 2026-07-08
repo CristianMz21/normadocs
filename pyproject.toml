@@ -122,6 +122,9 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "--tb=short -q"
+markers = [
+  "ocr: end-to-end OCR tests that require the tesseract binary on PATH",
+]
 
 # ── Coverage ──────────────────────────────────────────────────────────
 [tool.coverage.run]
