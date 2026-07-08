@@ -29,6 +29,9 @@ __all__ = [
 
 logger = logging.getLogger("normadocs")
 
+VALID_STYLES = ["apa", "icontec", "ieee"]
+VALID_FORMATS = ["docx", "pdf", "all"]
+
 app = typer.Typer(
     help="NormaDocs: Convert Markdown to APA 7th, ICONTEC, or IEEE formatted DOCX/PDF."
 )
@@ -180,6 +183,22 @@ def convert(
     input_path = Path(input_file)
     if not input_path.exists():
         typer.echo(f"Error: El archivo {input_file} no existe.", err=True)
+        raise typer.Exit(code=1)
+
+    if style.lower() not in VALID_STYLES:
+        typer.echo(
+            f"Error: Estilo de citación no soportado: '{style}'. "
+            f"Estilos disponibles: {', '.join(VALID_STYLES)}.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    if format.lower() not in VALID_FORMATS:
+        typer.echo(
+            f"Error: Formato de salida no soportado: '{format}'. "
+            f"Formatos disponibles: {', '.join(VALID_FORMATS)}.",
+            err=True,
+        )
         raise typer.Exit(code=1)
 
     output_dir.mkdir(parents=True, exist_ok=True)

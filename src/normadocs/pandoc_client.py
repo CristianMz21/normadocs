@@ -2,11 +2,29 @@
 Module for running Pandoc conversions.
 """
 
+import platform
 import sys
 import tempfile
 from pathlib import Path
 
 from .utils.subprocess import CommandFailedError, get_command_path, run_command
+
+
+def _print_pandoc_missing_error() -> None:
+    """Print a friendly, actionable error when Pandoc is not installed."""
+    system = platform.system()
+    if system == "Darwin":
+        hint = "brew install pandoc"
+    elif system == "Linux":
+        hint = "sudo apt install pandoc  (or use your distro's package manager)"
+    elif system == "Windows":
+        hint = "choco install pandoc  (or see the link below)"
+    else:
+        hint = "see the link below"
+
+    print("  ✗ Error: Pandoc no está instalado en el sistema.", file=sys.stderr)
+    print(f"    Instálalo con: {hint}", file=sys.stderr)
+    print("    Más info: https://pandoc.org/installing.html", file=sys.stderr)
 
 
 class PandocRunner:
@@ -50,7 +68,7 @@ class PandocRunner:
             try:
                 resolved_path = get_command_path(self.pandoc_path)
             except FileNotFoundError:
-                print("  ✗ Error: Pandoc no encontrado en el sistema.", file=sys.stderr)
+                _print_pandoc_missing_error()
                 return False
 
         path_obj = Path(output_path)
@@ -95,6 +113,6 @@ class PandocRunner:
             return False
 
         except FileNotFoundError:
-            print("  ✗ Error: Pandoc no encontrado en el sistema.", file=sys.stderr)
+            _print_pandoc_missing_error()
             Path(tmp_path).unlink(missing_ok=True)
             return False
