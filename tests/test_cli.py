@@ -2,6 +2,7 @@
 Tests for CLI.
 """
 
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -19,10 +20,12 @@ class TestCLI(unittest.TestCase):
     @patch("normadocs.cli_helpers.MarkdownPreprocessor")
     @patch("normadocs.cli.logger")
     def test_convert_command_success(self, mock_logger, mock_pre, mock_get_fmt, mock_pandoc):
-        # Mock file operations
-        with runner.isolated_filesystem():
-            with open("test.md", "w") as f:
-                f.write("# Title\n\nContent")
+        # ``runner.isolated_filesystem()`` was removed from typer/click's
+        # CliRunner in typer 0.26 / click 8.4. Use tempfile directly so the
+        # tests keep working on both old and new typer/click releases.
+        with tempfile.TemporaryDirectory() as tmp:
+            test_md = Path(tmp) / "test.md"
+            test_md.write_text("# Title\n\nContent", encoding="utf-8")
 
             # Setup mocks
             mock_proc_instance = MagicMock()
@@ -33,7 +36,7 @@ class TestCLI(unittest.TestCase):
             mock_run_instance.run.return_value = True
             mock_pandoc.return_value = mock_run_instance
 
-            result = runner.invoke(app, ["test.md"])
+            result = runner.invoke(app, [str(test_md)])
 
             self.assertEqual(result.exit_code, 0)
 
@@ -79,9 +82,9 @@ class TestCLILanguageTool(unittest.TestCase):
         mock_subprocess,
     ):
         """Test that --language-tool option is accepted."""
-        with runner.isolated_filesystem():
-            with open("test.md", "w") as f:
-                f.write("# Title\n\nContent")
+        with tempfile.TemporaryDirectory() as tmp:
+            test_md = Path(tmp) / "test.md"
+            test_md.write_text("# Title\n\nContent", encoding="utf-8")
 
             # Setup mocks
             mock_proc_instance = MagicMock()
@@ -101,7 +104,7 @@ class TestCLILanguageTool(unittest.TestCase):
             # Mock Document
             mock_doc.return_value = MagicMock(paragraphs=[])
 
-            result = runner.invoke(app, ["test.md", "--language-tool", "es"])
+            result = runner.invoke(app, [str(test_md), "--language-tool", "es"])
 
             # Should not fail due to unknown option
             self.assertEqual(result.exit_code, 0)
@@ -124,9 +127,9 @@ class TestCLILanguageTool(unittest.TestCase):
         mock_subprocess,
     ):
         """Test that --lt-port option is accepted."""
-        with runner.isolated_filesystem():
-            with open("test.md", "w") as f:
-                f.write("# Title\n\nContent")
+        with tempfile.TemporaryDirectory() as tmp:
+            test_md = Path(tmp) / "test.md"
+            test_md.write_text("# Title\n\nContent", encoding="utf-8")
 
             # Setup mocks
             mock_proc_instance = MagicMock()
@@ -146,7 +149,9 @@ class TestCLILanguageTool(unittest.TestCase):
             # Mock Document
             mock_doc.return_value = MagicMock(paragraphs=[])
 
-            result = runner.invoke(app, ["test.md", "--language-tool", "es", "--lt-port", "9000"])
+            result = runner.invoke(
+                app, [str(test_md), "--language-tool", "es", "--lt-port", "9000"]
+            )
 
             # Should complete without error
             self.assertEqual(result.exit_code, 0)
@@ -169,9 +174,9 @@ class TestCLILanguageTool(unittest.TestCase):
         mock_subprocess,
     ):
         """Test that --lt-keep-alive option is accepted."""
-        with runner.isolated_filesystem():
-            with open("test.md", "w") as f:
-                f.write("# Title\n\nContent")
+        with tempfile.TemporaryDirectory() as tmp:
+            test_md = Path(tmp) / "test.md"
+            test_md.write_text("# Title\n\nContent", encoding="utf-8")
 
             # Setup mocks
             mock_proc_instance = MagicMock()
@@ -191,7 +196,7 @@ class TestCLILanguageTool(unittest.TestCase):
             # Mock Document
             mock_doc.return_value = MagicMock(paragraphs=[])
 
-            result = runner.invoke(app, ["test.md", "--language-tool", "es", "--lt-keep-alive"])
+            result = runner.invoke(app, [str(test_md), "--language-tool", "es", "--lt-keep-alive"])
 
             # Should complete without error
             self.assertEqual(result.exit_code, 0)
@@ -214,9 +219,9 @@ class TestCLILanguageTool(unittest.TestCase):
         mock_subprocess,
     ):
         """Test that --lt-report option saves a report file."""
-        with runner.isolated_filesystem():
-            with open("test.md", "w") as f:
-                f.write("# Title\n\nContent with erro")
+        with tempfile.TemporaryDirectory() as tmp:
+            test_md = Path(tmp) / "test.md"
+            test_md.write_text("# Title\n\nContent with erro", encoding="utf-8")
 
             # Setup mocks
             mock_proc_instance = MagicMock()
@@ -239,20 +244,21 @@ class TestCLILanguageTool(unittest.TestCase):
             mock_doc.return_value = MagicMock(paragraphs=[])
 
             # Use --lt-continue-on-error so conversion completes and report is saved
+            report_path = Path(tmp) / "report.md"
             runner.invoke(
                 app,
                 [
-                    "test.md",
+                    str(test_md),
                     "--language-tool",
                     "es",
                     "--lt-report",
-                    "report.md",
+                    str(report_path),
                     "--lt-continue-on-error",
                 ],
             )
 
             # Should create report file
-            self.assertTrue(Path("report.md").exists())
+            self.assertTrue(report_path.exists())
 
 
 class TestCLILanguageToolErrors(unittest.TestCase):
@@ -276,9 +282,9 @@ class TestCLILanguageToolErrors(unittest.TestCase):
         mock_subprocess,
     ):
         """Test that errors stop conversion when --lt-stop-on-error (default)."""
-        with runner.isolated_filesystem():
-            with open("test.md", "w") as f:
-                f.write("# Title\n\nContent with erro")
+        with tempfile.TemporaryDirectory() as tmp:
+            test_md = Path(tmp) / "test.md"
+            test_md.write_text("# Title\n\nContent with erro", encoding="utf-8")
 
             # Setup mocks
             mock_proc_instance = MagicMock()
@@ -293,7 +299,7 @@ class TestCLILanguageToolErrors(unittest.TestCase):
             ]
             mock_lt_class.return_value = mock_lt_instance
 
-            result = runner.invoke(app, ["test.md", "--language-tool", "es"])
+            result = runner.invoke(app, [str(test_md), "--language-tool", "es"])
 
             # Should fail due to error
             self.assertNotEqual(result.exit_code, 0)
@@ -316,9 +322,9 @@ class TestCLILanguageToolErrors(unittest.TestCase):
         mock_subprocess,
     ):
         """Test that errors don't stop conversion with --lt-continue-on-error."""
-        with runner.isolated_filesystem():
-            with open("test.md", "w") as f:
-                f.write("# Title\n\nContent with erro")
+        with tempfile.TemporaryDirectory() as tmp:
+            test_md = Path(tmp) / "test.md"
+            test_md.write_text("# Title\n\nContent with erro", encoding="utf-8")
 
             # Setup mocks
             mock_proc_instance = MagicMock()
@@ -341,7 +347,7 @@ class TestCLILanguageToolErrors(unittest.TestCase):
             mock_doc.return_value = MagicMock(paragraphs=[])
 
             result = runner.invoke(
-                app, ["test.md", "--language-tool", "es", "--lt-continue-on-error"]
+                app, [str(test_md), "--language-tool", "es", "--lt-continue-on-error"]
             )
 
             # Should complete successfully despite error
@@ -369,9 +375,9 @@ class TestCLILanguageToolDocker(unittest.TestCase):
         mock_subprocess,
     ):
         """Test that --lt-docker option is accepted."""
-        with runner.isolated_filesystem():
-            with open("test.md", "w") as f:
-                f.write("# Title\n\nContent")
+        with tempfile.TemporaryDirectory() as tmp:
+            test_md = Path(tmp) / "test.md"
+            test_md.write_text("# Title\n\nContent", encoding="utf-8")
 
             # Setup mocks
             mock_proc_instance = MagicMock()
@@ -391,7 +397,7 @@ class TestCLILanguageToolDocker(unittest.TestCase):
             # Mock Document
             mock_doc.return_value = MagicMock(paragraphs=[])
 
-            result = runner.invoke(app, ["test.md", "--language-tool", "es", "--lt-docker"])
+            result = runner.invoke(app, [str(test_md), "--language-tool", "es", "--lt-docker"])
 
             # Should complete without error
             self.assertEqual(result.exit_code, 0)

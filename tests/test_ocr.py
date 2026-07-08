@@ -8,11 +8,22 @@ end-to-end ``extract_text_from_image`` test is marked
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
 import pytest
+
+# OCR tests require the opencv-python runtime, which lives behind the
+# optional ``[ocr]`` extra. The CI path installs only ``.[dev]``, so the
+# whole module is skipped there. To exercise these tests locally:
+#     pip install -e ".[ocr]"
+# or
+#     pip install opencv-python pytesseract
+pytest.importorskip(
+    "cv2", reason="OCR tests require opencv-python; install with `pip install normadocs[ocr]`"
+)
 
 from normadocs.ocr import (
     OCRError,
@@ -20,7 +31,6 @@ from normadocs.ocr import (
     _resize_to_target,
     extract_text_from_image,
 )
-
 
 # ----------------------------------------------------------------------------
 # Pure functions (no Tesseract dependency)
@@ -60,9 +70,11 @@ def test_extract_text_returns_stripped_output(tmp_path: Path) -> None:
     fake_path = tmp_path / "image.png"
     fake_path.write_bytes(b"\x89PNG\r\n\x1a\n")  # header only; OCR mocked
 
-    with patch("normadocs.ocr._load_image") as mock_load, \
-         patch("normadocs.ocr._preprocess") as mock_pre, \
-         patch("normadocs.ocr.pytesseract.image_to_string") as mock_engine:
+    with (
+        patch("normadocs.ocr._load_image") as mock_load,
+        patch("normadocs.ocr._preprocess") as mock_pre,
+        patch("normadocs.ocr.pytesseract.image_to_string") as mock_engine,
+    ):
         mock_load.return_value = np.zeros((100, 100, 3), dtype=np.uint8)
         mock_pre.return_value = np.zeros((100, 100), dtype=np.uint8)
         mock_engine.return_value = "  Hola mundo  \n"
@@ -82,16 +94,20 @@ def test_extract_text_raises_when_tesseract_missing(tmp_path: Path) -> None:
 
     import pytesseract
 
-    with patch("normadocs.ocr._load_image") as mock_load, \
-         patch("normadocs.ocr._preprocess") as mock_pre:
+    with (
+        patch("normadocs.ocr._load_image") as mock_load,
+        patch("normadocs.ocr._preprocess") as mock_pre,
+    ):
         mock_load.return_value = np.zeros((100, 100, 3), dtype=np.uint8)
         mock_pre.return_value = np.zeros((100, 100), dtype=np.uint8)
-        with patch(
-            "normadocs.ocr.pytesseract.image_to_string",
-            side_effect=pytesseract.TesseractNotFoundError(),
+        with (
+            patch(
+                "normadocs.ocr.pytesseract.image_to_string",
+                side_effect=pytesseract.TesseractNotFoundError(),
+            ),
+            pytest.raises(OCRError, match="tesseract binary not found"),
         ):
-            with pytest.raises(OCRError, match="tesseract binary not found"):
-                extract_text_from_image(fake_path)
+            extract_text_from_image(fake_path)
 
 
 def test_extract_text_raises_when_engine_returns_empty(tmp_path: Path) -> None:
@@ -99,9 +115,11 @@ def test_extract_text_raises_when_engine_returns_empty(tmp_path: Path) -> None:
     fake_path = tmp_path / "image.png"
     fake_path.write_bytes(b"\x89PNG\r\n\x1a\n")
 
-    with patch("normadocs.ocr._load_image") as mock_load, \
-         patch("normadocs.ocr._preprocess") as mock_pre, \
-         patch("normadocs.ocr.pytesseract.image_to_string") as mock_engine:
+    with (
+        patch("normadocs.ocr._load_image") as mock_load,
+        patch("normadocs.ocr._preprocess") as mock_pre,
+        patch("normadocs.ocr.pytesseract.image_to_string") as mock_engine,
+    ):
         mock_load.return_value = np.zeros((100, 100, 3), dtype=np.uint8)
         mock_pre.return_value = np.zeros((100, 100), dtype=np.uint8)
         mock_engine.return_value = "   \n  \n"
@@ -122,6 +140,10 @@ def test_extract_text_raises_when_image_missing(tmp_path: Path) -> None:
 
 
 @pytest.mark.ocr
+@pytest.mark.skipif(
+    shutil.which("tesseract") is None,
+    reason="tesseract binary not on PATH; install tesseract-ocr-spa",
+)
 def test_extract_text_end_to_end_with_real_tesseract(tmp_path: Path) -> None:
     """End-to-end smoke: write a small image, run the pipeline."""
     import cv2
