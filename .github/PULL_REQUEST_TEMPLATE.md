@@ -1,21 +1,30 @@
-## Description
-<!-- Describe your changes briefly -->
+## Summary
 
-## Type of Change
+<!-- One or two paragraphs describing the change. Link any related issue. -->
+
+Fixes #
+
+## Type of change
+
 - [ ] Bug fix (non-breaking change that fixes an issue)
 - [ ] New feature (non-breaking change that adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to change)
 - [ ] Documentation update
+- [ ] New citation standard or formatter change
 
 ## Checklist
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] Any dependent changes have been merged and published
 
-## Related Issues
+- [ ] I have read [CONTRIBUTING.md](CONTRIBUTING.md).
+- [ ] My code follows the project's style (ruff + mypy --strict + no
+      suppressions).
+- [ ] I have added or updated tests for the change.
+- [ ] I have updated relevant documentation (README, `docs/src/`, docstrings).
+- [ ] `make check` passes locally (lint + test-cov + security).
+- [ ] No fabricated adoption claims, user counts, or testimonials.
+- [ ] No secrets, tokens, or credentials committed.
+- [ ] No breaking CLI or Python API changes without a documented migration
+      path.
+
+## Related issues
+
 <!-- Link to related issues, e.g., "Fixes #123" -->
