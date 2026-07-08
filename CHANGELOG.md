@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-07-08
+
 ### Added
 
 - `short_title` field in `DocumentMetadata` for APA 7 running head
@@ -59,6 +61,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   comment, no `# type: ignore`).
 - README link to contributor docs (was pointing to a non-existent
   `docs/src/contributing.md`; now points to root `CONTRIBUTING.md`).
+- OCR lint violations introduced by the OCR integration commit (RUF046, W292
+  in `src/normadocs/ocr.py`; I001, SIM117, W292 in `tests/test_ocr.py`).
+- mypy `no-any-return` errors in `src/normadocs/ocr.py` (4 occurrences) and
+  pre-existing `__all__` / `table.style` annotations in
+  `utils/__init__.py` and `formatters/ieee.py`.
+- `tests/test_cli.py` updated to work with `typer` 0.26+ / `click` 8.4+
+  (replaces `runner.isolated_filesystem()` with `tempfile.TemporaryDirectory()`).
+- `tests/test_ocr.py` end-to-end test now auto-skips when `tesseract` is not
+  on PATH (`pytest.mark.skipif`).
+- `pyproject.toml`: `pytest` `markers` entry registered for the `ocr` mark;
+  dev install pinned `numpy>=1.24,<2.5` to avoid a mypy 2.x parser bug
+  with numpy 2.5.1 stubs.
 
 ### chore
 
@@ -66,6 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed lint issues in `test_apa_page.py` and `test_apa_styles.py`
 - `make check` is now fully green end-to-end (ruff, ruff format, mypy
   `--strict`, bandit, pytest with `--cov-fail-under=78`).
+- Public open-source readiness: lint, type, security, and full test matrix
+  (Python 3.10 / 3.11 / 3.12 / 3.13) all green on `main`.
 
 ## [0.2.1] - 2026-04-10
 
@@ -132,6 +148,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI with Typer
 - PDF generation with LibreOffice and WeasyPrint
 
+[0.2.2]: https://github.com/CristianMz21/normadocs/releases/tag/v0.2.2
 [0.2.1]: https://github.com/CristianMz21/normadocs/releases/tag/v0.2.1
 [0.2.0]: https://github.com/CristianMz21/normadocs/releases/tag/v0.2.0
 [0.1.2a1]: https://github.com/CristianMz21/normadocs/releases/tag/v0.1.2a1
