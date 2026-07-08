@@ -357,11 +357,9 @@ Before opening a PR, also see [docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES
 for scoped starter ideas and [ROADMAP.md](ROADMAP.md) for the project's
 direction.
 
-Full documentation: maintained in this repository and built with
-[MkDocs](https://www.mkdocs.org/) (Material theme). See
-[`docs/src/`](https://github.com/CristianMz21/normadocs/tree/main/docs/src)
-for the source. A GitHub Pages deployment is configured via
-[`.github/workflows/docs.yml`](.github/workflows/docs.yml).
+Full documentation: [cristianmz21.github.io/normadocs](https://cristianmz21.github.io/normadocs/)
+(built with [MkDocs](https://www.mkdocs.org/) Material theme, deployed
+via [`.github/workflows/docs.yml`](.github/workflows/docs.yml)).
 
 ## Resources
 
