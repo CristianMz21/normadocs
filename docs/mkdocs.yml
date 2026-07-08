@@ -1,8 +1,14 @@
 site_name: NormaDocs
+site_description: >-
+  NormaDocs converts Markdown to academically-formatted DOCX and PDF
+  documents following APA 7th Edition, ICONTEC NTC 1486, and IEEE 8th
+  Edition standards.
+site_url: https://cristianmz21.github.io/normadocs/
 repo_url: https://github.com/CristianMz21/normadocs
 repo_name: CristianMz21/normadocs
-docs_dir: src
 edit_uri: edit/main/src/
+
+docs_dir: src
 
 theme:
   name: material
@@ -19,6 +25,14 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
 
 plugins:
   - search
@@ -27,20 +41,30 @@ plugins:
 
 nav:
   - Home: index.md
-  - Installation: installation.md
+  - Getting Started:
+      - Installation: installation.md
+      - Quickstart: quickstart.md
   - Usage:
       - CLI: usage/cli.md
-      - Library: usage/library.md
+      - Python API: usage/library.md
   - Standards:
-      - standards/index.md
-      - standards/apa7.md
-      - standards/icontec.md
-      - standards/ieee.md
+      - Overview: standards/index.md
+      - APA 7th Edition: standards/apa7.md
+      - ICONTEC NTC 1486: standards/icontec.md
+      - IEEE 8th Edition: standards/ieee.md
+  - Guides:
+      - Examples: examples.md
+      - Bibliography: bibliography.md
+      - PDF Output: pdf-output.md
+      - Troubleshooting: troubleshooting.md
+  - Project:
+      - Contributing: contributing.md
+      - Community: community.md
+      - Security: security.md
+      - Roadmap: roadmap.md
+      - Changelog: changelog.md
   - Reference:
-      - reference/formats.md
-  - Troubleshooting: troubleshooting.md
-  - Contributing: contributing.md
-  - Changelog: changelog.md
+      - Format Reference: reference/formats.md
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -51,3 +75,5 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.mark
+  - toc:
+      permalink: true
