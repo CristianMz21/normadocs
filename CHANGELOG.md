@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.3b0] - 2026-08-05
+## [0.2.3] - 2026-08-05
+
+Stable release of the 0.2.3 beta (no code changes since 0.2.3b0; the
+beta was promoted to stable after the CI pipeline verified it end to
+end). This release fixes 5 APA 7 verifier false-failure paths, tightens
+the local quality gates beyond CI, and adds 35 strict unit tests.
 
 ### Fixed
 
