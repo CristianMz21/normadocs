@@ -36,10 +36,12 @@ class TestTablesCheckCompliant(unittest.TestCase):
         section.page_height = Inches(11)
 
         caption_para = doc.add_paragraph()
-        run1 = caption_para.add_run("Table 1")
-        run1.bold = True
-        run2 = caption_para.add_run(". Title of the Table in Italic")
-        run2.italic = True
+        caption_run = caption_para.add_run("Table 1")
+        caption_run.bold = True
+
+        title_para = doc.add_paragraph()
+        title_run = title_para.add_run("Title of the Table in Italic")
+        title_run.italic = True
 
         table = doc.add_table(rows=3, cols=3)
         table.style = "Table Grid"
@@ -62,11 +64,13 @@ class TestTablesCheckCompliant(unittest.TestCase):
         return check.run(ctx)
 
     def test_apa_table_proper_caption_passes(self) -> None:
-        """Table with proper APA caption (bold + italic) should pass."""
+        """Table with separate bold caption + italic title paragraph should pass cleanly."""
         docx_path = self._create_docx_with_apa_table()
         issues = self._run_check(docx_path)
         errors = [i for i in issues if i.severity == "error"]
+        warnings = [i for i in issues if i.severity == "warning"]
         self.assertEqual(errors, [], f"Expected no errors for APA table but got: {errors}")
+        self.assertEqual(warnings, [], f"Expected no warnings for APA table but got: {warnings}")
 
 
 class TestTablesCheckCaptionViolation(unittest.TestCase):
@@ -244,6 +248,143 @@ class TestTablesCheckMultipleTables(unittest.TestCase):
         issues = self._run_check(docx_path)
         errors = [i for i in issues if i.severity == "error"]
         self.assertEqual(errors, [], f"Expected no errors but got: {errors}")
+
+
+class TestTablesCheckCaptionItalicSeparateParagraph(unittest.TestCase):
+    """Tests for fix #5: italic title must live in a SEPARATE paragraph after 'Tabla N'."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temp_dir = TemporaryDirectory()
+        cls.temp_path = Path(cls.temp_dir.name)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.temp_dir.cleanup()
+
+    def _create_docx(
+        self,
+        name: str,
+        caption_text: str,
+        caption_bold: bool,
+        next_text: str | None,
+        next_italic: bool = False,
+        next_bold: bool = False,
+    ) -> Path:
+        path = self.temp_path / name
+        doc = Document()
+        section = doc.sections[0]
+        section.top_margin = Inches(1)
+        section.right_margin = Inches(1)
+        section.bottom_margin = Inches(1)
+        section.left_margin = Inches(1)
+        section.page_width = Inches(8.5)
+        section.page_height = Inches(11)
+
+        caption_para = doc.add_paragraph()
+        caption_run = caption_para.add_run(caption_text)
+        if caption_bold:
+            caption_run.bold = True
+
+        if next_text is not None:
+            next_para = doc.add_paragraph()
+            next_run = next_para.add_run(next_text)
+            if next_italic:
+                next_run.italic = True
+            if next_bold:
+                next_run.bold = True
+
+        table = doc.add_table(rows=3, cols=3)
+        table.style = "Table Grid"
+
+        doc.save(str(path))
+        return path
+
+    def _run_check(self, docx_path: Path) -> list:
+        pdf_path = self.temp_path / "output.pdf"
+        pdf_path.touch()
+        meta = DocumentMetadata(title="Test Document")
+        verifier = APAVerifier(pdf_path=pdf_path, docx_path=docx_path, meta=meta)
+        ctx = VerificationContext(
+            pdf=verifier.pdf,
+            docx=verifier.docx,
+            meta=meta,
+            strict=False,
+        )
+        check = TablesCheck()
+        return check.run(ctx)
+
+    def test_italic_title_in_next_paragraph_passes(self) -> None:
+        """Bold 'Tabla 1' + SEPARATE italic title paragraph => no caption_italic warning."""
+        docx_path = self._create_docx(
+            "separate_italic_passes.docx",
+            caption_text="Tabla 1",
+            caption_bold=True,
+            next_text="Title of the table in italic",
+            next_italic=True,
+        )
+        issues = self._run_check(docx_path)
+        italic_warnings = [
+            i for i in issues if "caption_italic" in i.check and i.severity == "warning"
+        ]
+        errors = [i for i in issues if i.severity == "error"]
+        self.assertEqual(errors, [], f"Expected no errors but got: {errors}")
+        self.assertEqual(
+            italic_warnings, [], f"Expected no italic warning for separate title: {italic_warnings}"
+        )
+
+    def test_missing_italic_title_after_caption_raises_warning(self) -> None:
+        """Bold 'Tabla 1' + non-italic next paragraph => caption_italic warning fires."""
+        docx_path = self._create_docx(
+            "missing_italic.docx",
+            caption_text="Tabla 1",
+            caption_bold=True,
+            next_text="Title not italic",
+            next_italic=False,
+        )
+        issues = self._run_check(docx_path)
+        italic_warnings = [
+            i for i in issues if "caption_italic" in i.check and i.severity == "warning"
+        ]
+        self.assertGreater(len(italic_warnings), 0, f"Expected italic warning but got: {issues}")
+
+    def test_next_paragraph_is_nota_does_not_count_as_title(self) -> None:
+        """An italic 'Nota.' next paragraph must NOT be mistaken for the title (guard L95)."""
+        docx_path = self._create_docx(
+            "next_is_nota.docx",
+            caption_text="Tabla 1",
+            caption_bold=True,
+            next_text="Nota. An italic note.",
+            next_italic=True,
+        )
+        issues = self._run_check(docx_path)
+        italic_warnings = [
+            i for i in issues if "caption_italic" in i.check and i.severity == "warning"
+        ]
+        self.assertGreater(
+            len(italic_warnings),
+            0,
+            f"Nota must not count as title; warning should still fire: {issues}",
+        )
+
+    def test_next_paragraph_is_otra_tabla_does_not_count_as_title(self) -> None:
+        """An italic 'Tabla 2' next paragraph must NOT be mistaken for the title (guard L93)."""
+        docx_path = self._create_docx(
+            "next_is_tabla.docx",
+            caption_text="Tabla 1",
+            caption_bold=True,
+            next_text="Tabla 2",
+            next_italic=True,
+        )
+        issues = self._run_check(docx_path)
+        italic_warnings = [
+            i for i in issues if "caption_italic" in i.check and i.severity == "warning"
+        ]
+        self.assertGreater(
+            len(italic_warnings),
+            0,
+            f"'Tabla N' must not count as title; warning should still fire: {issues}",
+        )
 
 
 if __name__ == "__main__":

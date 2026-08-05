@@ -267,5 +267,61 @@ class TestReferencesCheckAlphabeticalOrder(unittest.TestCase):
         )
 
 
+class TestReferencesCheckEmptySection(unittest.TestCase):
+    """Tests for an empty references section (heading present, no entries)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temp_dir = TemporaryDirectory()
+        cls.temp_path = Path(cls.temp_dir.name)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.temp_dir.cleanup()
+
+    def _create_docx_empty_references(self) -> Path:
+        path = self.temp_path / "empty_refs.docx"
+        doc = Document()
+        section = doc.sections[0]
+        section.top_margin = Inches(1)
+        section.right_margin = Inches(1)
+        section.bottom_margin = Inches(1)
+        section.left_margin = Inches(1)
+        section.page_width = Inches(8.5)
+        section.page_height = Inches(11)
+
+        doc.add_paragraph("References")
+        doc.add_paragraph("")
+        doc.add_paragraph("   ")
+
+        doc.save(str(path))
+        return path
+
+    def _run_check(self, docx_path: Path) -> list:
+        pdf_path = self.temp_path / "output.pdf"
+        pdf_path.touch()
+        meta = DocumentMetadata(title="Test Document")
+        verifier = APAVerifier(pdf_path=pdf_path, docx_path=docx_path, meta=meta)
+        ctx = VerificationContext(
+            pdf=verifier.pdf,
+            docx=verifier.docx,
+            meta=meta,
+            strict=False,
+        )
+        check = ReferencesCheck()
+        return check.run(ctx)
+
+    def test_empty_references_section_raises_error(self) -> None:
+        """A references section with no entries should raise entries_present error (L60-69)."""
+        docx_path = self._create_docx_empty_references()
+        issues = self._run_check(docx_path)
+        entries_errors = [
+            i for i in issues if "entries_present" in i.check and i.severity == "error"
+        ]
+        self.assertGreater(
+            len(entries_errors), 0, f"Expected entries_present error but got: {issues}"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
