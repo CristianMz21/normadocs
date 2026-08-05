@@ -70,14 +70,15 @@ class ReferencesCheck:
 
         first_ref = ref_paragraphs[0]
         first_line_indent = first_ref.first_line_indent
+        expected_hanging = -0.5  # APA 7 hanging indent: -0.5in first line, +0.5in left
         if first_line_indent is not None:
             indent_inches = first_line_indent / 914400.0
-            if abs(indent_inches - 0.5) > 0.1:
+            if abs(indent_inches - expected_hanging) > 0.1:
                 issues.append(
                     VerificationIssue(
                         check=f"{CheckCategory.REFERENCES}.hanging_indent",
                         severity="error",
-                        expected="0.5 inch hanging indent",
+                        expected="-0.5 inch hanging indent (first line outdent)",
                         actual=f"{indent_inches:.2f} inch",
                         evidence="First reference lacks proper hanging indent",
                     )
@@ -87,7 +88,7 @@ class ReferencesCheck:
                 VerificationIssue(
                     check=f"{CheckCategory.REFERENCES}.hanging_indent",
                     severity="error",
-                    expected="0.5 inch hanging indent",
+                    expected="-0.5 inch hanging indent (first line outdent)",
                     actual="No first-line indent",
                     evidence="First reference lacks first-line indent for hanging indent",
                 )

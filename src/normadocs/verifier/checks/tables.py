@@ -64,9 +64,11 @@ class TablesCheck:
                 table_has_caption = True
                 caption_data = table_numbers[idx]
 
+                caption_idx = caption_data["index"]
+
+                # Check caption paragraph for bold
                 runs = caption_data["paragraph_info"].runs
                 has_bold = any(run.get("bold") for run in runs)
-                has_italic = any(run.get("italic") for run in runs)
 
                 if not has_bold:
                     issues.append(
@@ -79,12 +81,27 @@ class TablesCheck:
                         )
                     )
 
+                # APA 7: title is italic in a SEPARATE paragraph after "Tabla N"
+                # Check the paragraph immediately after the caption for italic
+                has_italic = False
+                if caption_idx + 1 < len(paragraphs_info):
+                    next_para = paragraphs_info[caption_idx + 1]
+                    next_text = next_para.text.strip()
+                    # Only consider it a title if not "Tabla N", "Figura N" or "Nota."
+                    if (
+                        next_text
+                        and not next_text.startswith("Tabla ")
+                        and not next_text.startswith("Figura ")
+                        and not next_text.startswith("Nota.")
+                    ):
+                        has_italic = any(run.get("italic") for run in next_para.runs)
+
                 if not has_italic:
                     issues.append(
                         VerificationIssue(
                             check=f"{CheckCategory.TABLES}.caption_italic",
                             severity="warning",
-                            expected="Title should be italic",
+                            expected="Title should be italic (in paragraph after 'Tabla N')",
                             actual="Title not italic",
                             evidence=f"Table {idx + 1} caption title should be italic",
                         )

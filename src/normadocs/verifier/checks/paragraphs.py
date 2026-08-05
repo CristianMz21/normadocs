@@ -3,7 +3,7 @@
 Verifies paragraph formatting meets APA 7th Edition requirements:
 - First-line indent: 0.5 inches (1.27cm)
 - No extra space before or after paragraphs
-- Text is justified
+- Left-aligned text with ragged right margin (APA 7 Section 2.21)
 - No widow/orphan lines (handled by styles)
 """
 
@@ -12,12 +12,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .. import CheckCategory, VerificationIssue
+from ..docx_analyzer import DOCXParagraphInfo
 
 if TYPE_CHECKING:
     from ..apa_verifier import VerificationContext
 
 
-EXPECTED_FIRST_LINE_INENT = 0.5
+EXPECTED_FIRST_LINE_INDENT = 0.5
 INDENT_TOLERANCE = 0.1
 
 
@@ -37,7 +38,71 @@ class ParagraphsCheck:
 
         paragraphs_info = ctx.docx.get_paragraphs_info()
 
-        body_paragraphs = [p for p in paragraphs_info if p.text.strip()]
+        # Track sections to exclude abstract and references from body indent check
+        in_abstract = False
+        in_references = False
+        in_toc = False
+        abstract_keywords = ("resumen", "abstract")
+        ref_keywords = ("referencias", "references", "bibliografía", "bibliography")
+        toc_keywords = ("contenido", "contents", "index", "índice")
+
+        filtered: list[DOCXParagraphInfo] = []
+        for p in paragraphs_info:
+            style_name = p.style_name or ""
+            text_lower = p.text.strip().lower()
+
+            if style_name.startswith("Heading"):
+                if any(k in text_lower for k in ref_keywords):
+                    in_references = True
+                    in_abstract = False
+                    in_toc = False
+                elif any(k in text_lower for k in abstract_keywords):
+                    in_abstract = True
+                    in_references = False
+                    in_toc = False
+                elif any(k in text_lower for k in toc_keywords):
+                    in_toc = True
+                    in_references = False
+                    in_abstract = False
+                else:
+                    in_references = False
+                    in_abstract = False
+                    in_toc = False
+                continue
+
+            if not p.text.strip():
+                continue
+
+            # End abstract after keywords paragraph
+            if in_abstract and (
+                text_lower.startswith("palabras clave") or text_lower.startswith("keywords")
+            ):
+                in_abstract = False
+                continue
+
+            if in_abstract or in_references or in_toc:
+                continue
+
+            if (
+                "List" in style_name
+                or "Caption" in style_name
+                or "Compact" in style_name
+                or "Source" in style_name
+            ):
+                continue
+
+            text_stripped = p.text.strip()
+            if (
+                (text_stripped.startswith("Tabla ") and len(text_stripped.split()) <= 2)
+                or (text_stripped.startswith("Figura ") and len(text_stripped.split()) <= 2)
+                or text_stripped.startswith("Nota.")
+                or text_stripped.isdigit()
+            ):
+                continue
+
+            filtered.append(p)
+
+        body_paragraphs = filtered
 
         paragraphs_with_indent = 0
         paragraphs_without_indent = 0
@@ -46,7 +111,7 @@ class ParagraphsCheck:
             indent = p_info.first_line_indent
             if indent is not None:
                 indent_inches = indent / 914400.0
-                if abs(indent_inches - EXPECTED_FIRST_LINE_INENT) <= INDENT_TOLERANCE:
+                if abs(indent_inches - EXPECTED_FIRST_LINE_INDENT) <= INDENT_TOLERANCE:
                     paragraphs_with_indent += 1
                 else:
                     paragraphs_without_indent += 1
@@ -79,15 +144,15 @@ class ParagraphsCheck:
                     )
                 )
 
-        justified_count = sum(1 for p in body_paragraphs if p.alignment == "justify")
+        justified_count = sum(1 for p in body_paragraphs if p.alignment == "left")
         if total > 0 and justified_count / total < 0.5:
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.PARAGRAPHS}.justification",
                     severity="warning",
-                    expected="Text should be justified",
-                    actual=f"Only {justified_count}/{total} paragraphs are justified",
-                    evidence="Most paragraphs are not justified",
+                    expected="Left-aligned text with ragged right margin (APA 7 Section 2.21)",
+                    actual=f"Only {justified_count}/{total} paragraphs are left-aligned",
+                    evidence="Most paragraphs are not left-aligned",
                 )
             )
 

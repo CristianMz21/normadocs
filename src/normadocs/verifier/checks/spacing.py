@@ -39,8 +39,25 @@ class SpacingCheck:
         if not non_empty_paragraphs:
             return issues
 
+        # Exclude table captions, table titles, and table notes from spacing check
+        # APA 7 allows single spacing in table-related elements
+        spacing_paragraphs = [
+            p
+            for p in non_empty_paragraphs
+            if not (p.text.strip().startswith("Tabla ") and len(p.text.strip().split()) <= 2)
+            and not (p.text.strip().startswith("Figura ") and len(p.text.strip().split()) <= 2)
+            and not p.text.strip().startswith("Nota.")
+            and not p.text.strip().isdigit()
+            and (p.style_name or "") != ""
+            and not (p.style_name or "").startswith("Heading")
+            and "Caption" not in (p.style_name or "")
+            and "Source" not in (p.style_name or "")
+        ]
+        if not spacing_paragraphs:
+            return issues
+
         spacing_issues = 0
-        for p_info in non_empty_paragraphs:
+        for p_info in spacing_paragraphs:
             line_spacing = p_info.line_spacing
             if line_spacing is not None:
                 if isinstance(line_spacing, float):
@@ -55,7 +72,7 @@ class SpacingCheck:
                     if diff > LINE_SPACING_TOLERANCE:
                         spacing_issues += 1
 
-        total_checked = len(non_empty_paragraphs)
+        total_checked = len(spacing_paragraphs)
         if total_checked > 0:
             issue_ratio = spacing_issues / total_checked
             if issue_ratio > 0.5:

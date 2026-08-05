@@ -40,10 +40,12 @@ class TestReferencesCheckCompliant(unittest.TestCase):
         ref_heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
         ref1 = doc.add_paragraph("Smith, J. (2024). Title of the work. Publisher.")
-        ref1.paragraph_format.first_line_indent = Inches(0.5)
+        ref1.paragraph_format.left_indent = Inches(0.5)
+        ref1.paragraph_format.first_line_indent = Inches(-0.5)  # APA 7 hanging indent
 
         ref2 = doc.add_paragraph("Doe, A. (2023). Another work. Journal.")
-        ref2.paragraph_format.first_line_indent = Inches(0.5)
+        ref2.paragraph_format.left_indent = Inches(0.5)
+        ref2.paragraph_format.first_line_indent = Inches(-0.5)  # APA 7 hanging indent
 
         doc.save(str(path))
         return path

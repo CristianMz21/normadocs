@@ -290,20 +290,13 @@ class TestParagraphsCheckJustification(unittest.TestCase):
         check = ParagraphsCheck()
         return check.run(ctx)
 
-    def test_all_justified_no_warning(self) -> None:
-        """All paragraphs justified should not raise justification warning."""
-        docx_path = self._create_docx_justified()
-        issues = self._run_check(docx_path)
-        just_warnings = [
-            i for i in issues if "justification" in i.check and i.severity == "warning"
-        ]
-        self.assertEqual(
-            just_warnings, [], f"Expected no justification warning but got: {just_warnings}"
-        )
+    def test_all_justified_raises_warning(self) -> None:
+        """All paragraphs justified should raise justification warning.
 
-    def test_all_left_aligned_raises_warning(self) -> None:
-        """All paragraphs left-aligned should raise justification warning."""
-        docx_path = self._create_docx_left_aligned()
+        APA 7 Section 2.21: "Do not use full justification. Leave the right
+        margin uneven, or 'ragged.'" Left alignment is required.
+        """
+        docx_path = self._create_docx_justified()
         issues = self._run_check(docx_path)
         just_warnings = [
             i for i in issues if "justification" in i.check and i.severity == "warning"
@@ -312,15 +305,30 @@ class TestParagraphsCheckJustification(unittest.TestCase):
             len(just_warnings), 0, f"Expected justification warning but got: {issues}"
         )
 
-    def test_mixed_majority_justified_no_warning(self) -> None:
-        """3 justified out of 5 (>=50%) should not raise warning."""
-        docx_path = self._create_mixed_alignment_docx(justified_count=3, left_count=2)
+    def test_all_left_aligned_no_warning(self) -> None:
+        """All paragraphs left-aligned should NOT raise justification warning.
+
+        APA 7 Section 2.21: Left alignment with ragged right margin is correct.
+        """
+        docx_path = self._create_docx_left_aligned()
         issues = self._run_check(docx_path)
         just_warnings = [
             i for i in issues if "justification" in i.check and i.severity == "warning"
         ]
         self.assertEqual(
-            just_warnings, [], f"Expected no warning when >=50% justified but got: {just_warnings}"
+            just_warnings, [], f"Expected no justification warning but got: {just_warnings}"
+        )
+
+    def test_mixed_majority_left_aligned_no_warning(self) -> None:
+        """3 left-aligned out of 5 (>=50%) should not raise warning."""
+        docx_path = self._create_mixed_alignment_docx(justified_count=2, left_count=3)
+        issues = self._run_check(docx_path)
+        just_warnings = [
+            i for i in issues if "justification" in i.check and i.severity == "warning"
+        ]
+        self.assertEqual(
+            just_warnings, [],
+            f"Expected no warning when >=50% left-aligned but got: {just_warnings}",
         )
 
 
