@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3b0] - 2026-08-05
+
+### Fixed
+
+- **APA 7 verifier — 5 false-failure corrections** (commit 27c6548):
+  - `paragraphs`: filter headings, TOC, abstract, references, captions,
+    lists, and "Nota" paragraphs from the first-line-indent count so they
+    no longer trigger false `first_line_indent` errors (mirrors the
+    formatter's `apply_body_indent` exclusions).
+  - `paragraphs`: APA 7 Section 2.21 requires LEFT alignment (ragged
+    right), NOT full justification. The verifier now flags justified
+    body text and stops flagging left-aligned text.
+  - `spacing`: table captions, table titles, and "Nota" paragraphs are
+    excluded from the line-spacing check (APA 7 allows single spacing in
+    table elements).
+  - `references`: hanging indent is `-0.5in` (negative `first_line_indent`
+    with positive `left_indent`), not `+0.5in`.
+  - `tables`: the italic table title lives in the SEPARATE paragraph
+    after the bold "Tabla N" paragraph; the verifier now scans the next
+    paragraph for italic instead of expecting it inline.
+- Typo fixed in constant name: `EXPECTED_FIRST_LINE_INENT` ->
+  `EXPECTED_FIRST_LINE_INDENT`.
+- Module docstring corrected (was claiming "Text is justified").
+- Type annotation tightened for `mypy --strict` (`filtered: list` ->
+  `list[DOCXParagraphInfo]`).
+- Verification score on a real document improved from 40.0/100 (FAILED)
+  to 89.1/100 (PASSED) with 0 errors.
+
+### Changed
+
+- `Makefile` is now stricter than the CI gates: `ruff check src/ tests/`
+  with `RUFF_NOQA=1`, `mypy --strict src/`, `ruff format --check src/
+  tests/`, and `pytest -W error --cov-fail-under=86` (CI gate is 78).
+- CI workflows bumped `astral-sh/setup-uv@v5` -> `@v8.3.2` to eliminate
+  the Node.js 20 deprecation annotation that was failing the
+  zero-annotations job across `ci.yml`, `docs.yml`, and `release.yml`.
+
+### Tests
+
+- Added 35 strict unit tests for the APA 7 verifier, lifting overall
+  coverage from 82.93% to 86.96%:
+  - `TestParagraphsCheckExclusions` (9) + indent branch (1) ->
+    `paragraphs.py` 68% -> 100%.
+  - `TestSpacingCheckExclusions` (6) + early-return (2) + non-numeric
+    spacing (2) -> `spacing.py` 86% -> 100%.
+  - `TestReferencesCheckEmptySection` (1) -> `references.py` 94% -> 100%.
+  - `TestTablesCheckCaptionItalicSeparateParagraph` (4) + tightening of
+    `test_apa_table_proper_caption_passes` to assert
+    `warnings == []` -> `tables.py` 100% -> 100% (semantically tightened).
+  - `TestAPAVerifierEndToEnd` (4), `TestAPAVerifierReport` (3),
+    `TestAPAVerifierDocxDiscovery` (2), `TestAPAVerifierClose` (1) ->
+    `apa_verifier.py` orchestrator 24% -> 90%.
+- 608 tests pass, 3 skipped, with `-W error`.
+
 ## [0.2.2] - 2026-07-08
 
 ### Added
