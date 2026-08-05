@@ -47,7 +47,7 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v9
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -81,7 +81,7 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v9
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -114,7 +114,7 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v9
         with:
           enable-cache: false
 
@@ -160,7 +160,7 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v9
         with:
           enable-cache: true
 

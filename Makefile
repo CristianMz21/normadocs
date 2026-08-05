@@ -5,16 +5,16 @@ test:
 	pytest tests/ -v
 
 test-cov:
-	pytest tests/ --cov=normadocs --cov-report=term-missing --cov-fail-under=60
+	pytest tests/ -W error --cov=normadocs --cov-report=term-missing --cov-report=xml --cov-fail-under=86
 
 lint:
-	ruff check .
-	ruff format --check .
-	mypy src/normadocs
+	RUFF_NOQA=1 ruff check src/ tests/ --no-cache
+	ruff format --check src/ tests/ --no-cache
+	mypy --strict src/
 
 format:
-	ruff format .
-	ruff check --fix .
+	ruff format src/ tests/
+	ruff check --fix src/ tests/
 
 security:
 	bandit -r src/normadocs -c pyproject.toml
