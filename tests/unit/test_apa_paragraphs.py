@@ -229,6 +229,63 @@ class TestProcessParagraphs(unittest.TestCase):
 
             os.unlink(temp_path)
 
+    def test_heading_with_references_in_text_does_not_trigger_references_mode(self):
+        """A heading merely containing the word 'references' (e.g. 'Slide 4 — ... references')
+        must NOT enable references mode on following paragraphs."""
+        paragraphs = [
+            {"text": "Slide 4 — Well-being, teamwork and references", "style": "Heading 3"},
+            {
+                "text": "Oral script paragraph. Hello, this is a normal body paragraph that "
+                "should receive a first-line indent, not a hanging reference indent.",
+                "style": "Normal",
+            },
+            {"text": "References", "style": "Heading 1"},
+            {"text": "Smith, J. (2022). Article title.", "style": "Normal"},
+        ]
+        formatter, temp_path = self._create_formatter_with_doc(paragraphs)
+
+        try:
+            formatter._process_paragraphs()
+
+            # Body paragraph after the Slide heading: normal first-line indent,
+            # NOT a hanging reference indent (no left_indent)
+            body_para = formatter.doc.paragraphs[1]
+            self.assertEqual(body_para.paragraph_format.first_line_indent, Inches(0.5))
+            self.assertIsNone(body_para.paragraph_format.left_indent)
+
+            # Reference entry after the real References heading: hanging indent
+            ref_para = formatter.doc.paragraphs[3]
+            self.assertEqual(ref_para.paragraph_format.left_indent, Inches(0.5))
+            self.assertEqual(ref_para.paragraph_format.first_line_indent, Inches(-0.5))
+        finally:
+            import os
+
+            os.unlink(temp_path)
+
+    def test_references_mode_resets_after_other_heading(self):
+        """References mode must reset when a non-references heading
+        follows the references section."""
+        paragraphs = [
+            {"text": "References", "style": "Heading 1"},
+            {"text": "Smith, J. (2022). Article title.", "style": "Normal"},
+            {"text": "Appendix", "style": "Heading 1"},
+            {
+                "text": "Appendix body text that should NOT have hanging reference indent.",
+                "style": "Normal",
+            },
+        ]
+        formatter, temp_path = self._create_formatter_with_doc(paragraphs)
+
+        try:
+            formatter._process_paragraphs()
+
+            appendix_para = formatter.doc.paragraphs[3]
+            self.assertIsNone(appendix_para.paragraph_format.left_indent)
+        finally:
+            import os
+
+            os.unlink(temp_path)
+
 
 class TestMergeAndCleanParagraph(unittest.TestCase):
     """Tests for _merge_and_clean_paragraph method."""

@@ -74,7 +74,25 @@ class APAParagraphsHandler:
 
             # Detect sections
             if style_name.startswith("Heading"):
-                if "referencia" in text_lower or "reference" in text_lower:
+                # Strict detection: only a heading that IS the references
+                # section (exact title or starts with it) enables reference
+                # mode. A heading merely containing the word "references"
+                # (e.g. "Slide 4 — Well-being, teamwork and references")
+                # must NOT trigger it.
+                heading_stripped = text_lower.strip().rstrip(".")
+                is_references_heading = heading_stripped in (
+                    "referencias",
+                    "referencia",
+                    "bibliografía",
+                    "bibliografia",
+                    "bibliography",
+                    "references",
+                    "reference",
+                    "lista de referencias",
+                ) or heading_stripped.startswith(
+                    ("referencias ", "references ", "lista de referencias")
+                )
+                if is_references_heading:
                     in_references = True
                     in_toc = False
                     in_abstract = False
@@ -84,12 +102,14 @@ class APAParagraphsHandler:
                     # APA 7: RESUMEN title is centered and bold
                     in_abstract = True
                     in_toc = False
+                    in_references = False
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     for run in p.runs:
                         run.bold = True
                     p.paragraph_format.first_line_indent = Inches(0)
                 elif "contenido" in text_lower or "index" in text_lower:
                     in_toc = True
+                    in_references = False
                     p.paragraph_format.page_break_before = True
                 else:
                     # Every Level 1 heading starts a new page in APA 7
@@ -100,6 +120,8 @@ class APAParagraphsHandler:
                     if in_abstract or just_left_abstract:
                         p.paragraph_format.page_break_before = True
                         just_left_abstract = False
+                    # Leaving the references section: reset the flag
+                    in_references = False
                     in_abstract = False
                     in_toc = False
 
@@ -351,8 +373,17 @@ class APAParagraphsHandler:
             # Track sections via headings
             style_name = p.style.name if p.style else ""
             if style_name == "Heading 1":
-                text_lower = p.text.lower().strip()
-                in_references = "referencia" in text_lower or "reference" in text_lower
+                text_lower = p.text.lower().strip().rstrip(".")
+                in_references = text_lower in (
+                    "referencias",
+                    "referencia",
+                    "bibliografía",
+                    "bibliografia",
+                    "bibliography",
+                    "references",
+                    "reference",
+                    "lista de referencias",
+                ) or text_lower.startswith(("referencias ", "references ", "lista de referencias"))
                 continue
 
             pPr = p._element.find(qn("w:pPr"))
@@ -404,8 +435,17 @@ class APAParagraphsHandler:
 
             # Track References, TOC, and Abstract sections
             if style_name.startswith("Heading"):
-                text_lower = text.lower()
-                if "referencia" in text_lower or "reference" in text_lower:
+                text_lower = text.lower().strip().rstrip(".")
+                if text_lower in (
+                    "referencias",
+                    "referencia",
+                    "bibliografía",
+                    "bibliografia",
+                    "bibliography",
+                    "references",
+                    "reference",
+                    "lista de referencias",
+                ) or text_lower.startswith(("referencias ", "references ", "lista de referencias")):
                     in_references = True
                     in_toc = False
                     in_abstract = False
