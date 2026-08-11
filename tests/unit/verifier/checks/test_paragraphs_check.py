@@ -640,9 +640,7 @@ class TestParagraphsCheckExclusions(unittest.TestCase):
         docx_path = self._create_docx("centered_cover.docx", build)
         issues = self._run_check(docx_path)
         indent_issues = [i for i in issues if "indent" in i.check]
-        self.assertEqual(
-            indent_issues, [], f"Centered cover excluded but got: {indent_issues}"
-        )
+        self.assertEqual(indent_issues, [], f"Centered cover excluded but got: {indent_issues}")
 
     def test_empty_paragraph_skipped(self) -> None:
         """Empty paragraphs must be skipped from the indent count."""
