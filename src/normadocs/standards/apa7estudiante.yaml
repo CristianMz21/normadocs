@@ -1,0 +1,46 @@
+citation_style: apa
+figures:
+  caption_prefix: Figura
+  nota_prefix: Nota.
+  title_above: true
+fonts:
+  body:
+    name: Times New Roman
+    size: 12
+  headings:
+    level1:
+      alignment: center
+      bold: true
+    level2:
+      alignment: left
+      bold: true
+    level3:
+      alignment: left
+      bold: true
+      italic: true
+    name: Times New Roman
+margins:
+  bottom: 1
+  left: 1
+  right: 1
+  top: 1
+  unit: inches
+name: APA 7th Edition
+page_setup:
+  first_page_number: 1
+  header: true
+  page_numbers: true
+running_head:
+  enabled: false
+  max_length: 50
+spacing:
+  line: double
+  paragraph_after: 0
+  paragraph_before: 0
+tables:
+  borders: horizontal_only
+  caption_above: true
+  caption_prefix: Tabla
+  note_suffix: Elaboración propia.
+  vertical_align: top
+version: '7.0'

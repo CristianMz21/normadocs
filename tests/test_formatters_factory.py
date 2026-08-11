@@ -34,6 +34,15 @@ class TestGetFormatter(unittest.TestCase):
             formatter = get_formatter("apa7", str(doc_path))
             self.assertIsInstance(formatter, APADocxFormatter)
 
+    def test_get_formatter_apa7estudiante_returns_apa_formatter(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            doc_path = Path(tmpdir) / "test.docx"
+            Document().save(str(doc_path))
+            formatter = get_formatter("apa7estudiante", str(doc_path))
+            self.assertIsInstance(formatter, APADocxFormatter)
+            config = load_standard_config("apa7estudiante")
+            self.assertEqual(config.get("citation_style"), "apa")
+
     def test_get_formatter_icontec_returns_icontec_formatter(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             doc_path = Path(tmpdir) / "test.docx"

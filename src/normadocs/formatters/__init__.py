@@ -51,7 +51,7 @@ def get_formatter(
     else:
         final_config = yaml_config
 
-    if style in ("apa", "apa7"):
+    if style in ("apa", "apa7", "apa7estudiante"):
         return APADocxFormatter(doc_path, final_config)
     elif style == "icontec":
         return IcontecFormatter(doc_path, final_config)
