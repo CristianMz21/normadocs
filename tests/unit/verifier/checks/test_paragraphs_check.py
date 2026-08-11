@@ -601,6 +601,49 @@ class TestParagraphsCheckExclusions(unittest.TestCase):
             f"Tabla/Figura/Nota/digit paragraphs should be excluded but got: {indent_issues}",
         )
 
+    def test_english_table_caption_and_title_excluded(self) -> None:
+        """English captions and table-title lines must be excluded from the indent count."""
+
+        def build(doc: Document) -> None:
+            self._add_body_paragraphs(doc, count=5)
+            self._add_paragraph(doc, "Table 1", first_line_indent=None)
+            self._add_paragraph(doc, "Figure 1", first_line_indent=None)
+            self._add_paragraph(doc, ". Process inputs", first_line_indent=None)
+
+        docx_path = self._create_docx("english_caption_title.docx", build)
+        issues = self._run_check(docx_path)
+        indent_issues = [i for i in issues if "indent" in i.check]
+        self.assertEqual(
+            indent_issues,
+            [],
+            f"English captions/table titles should be excluded but got: {indent_issues}",
+        )
+
+    def test_centered_cover_paragraphs_excluded(self) -> None:
+        """Centered cover paragraphs (unindented per APA 7) must not count as missing indent."""
+
+        def build(doc: Document) -> None:
+            self._add_paragraph(
+                doc,
+                "Test Document Title",
+                first_line_indent=None,
+                alignment=WD_ALIGN_PARAGRAPH.CENTER,
+            )
+            self._add_paragraph(
+                doc,
+                "Author Name",
+                first_line_indent=None,
+                alignment=WD_ALIGN_PARAGRAPH.CENTER,
+            )
+            self._add_body_paragraphs(doc, count=5)
+
+        docx_path = self._create_docx("centered_cover.docx", build)
+        issues = self._run_check(docx_path)
+        indent_issues = [i for i in issues if "indent" in i.check]
+        self.assertEqual(
+            indent_issues, [], f"Centered cover excluded but got: {indent_issues}"
+        )
+
     def test_empty_paragraph_skipped(self) -> None:
         """Empty paragraphs must be skipped from the indent count."""
 

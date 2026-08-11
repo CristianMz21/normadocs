@@ -344,6 +344,50 @@ class TestSpacingCheckExclusions(unittest.TestCase):
             spacing_issues, [], f"Figura caption should be excluded from spacing: {spacing_issues}"
         )
 
+    def test_table_english_caption_not_flagged(self) -> None:
+        """A single-spaced 'Table 1' paragraph must not be flagged (English prefix)."""
+
+        def build(doc: Document) -> None:
+            self._add_body(doc, count=5)
+            self._add_single_spaced(doc, "Table 1")
+
+        docx_path = self._create_docx("table_english_caption.docx", build)
+        issues = self._run_check(docx_path)
+        spacing_issues = [i for i in issues if "line_spacing" in i.check]
+        self.assertEqual(
+            spacing_issues, [], f"Table caption should be excluded from spacing: {spacing_issues}"
+        )
+
+    def test_figure_english_caption_not_flagged(self) -> None:
+        """A single-spaced 'Figure 1' paragraph must not be flagged (English prefix)."""
+
+        def build(doc: Document) -> None:
+            self._add_body(doc, count=5)
+            self._add_single_spaced(doc, "Figure 1")
+
+        docx_path = self._create_docx("figure_english_caption.docx", build)
+        issues = self._run_check(docx_path)
+        spacing_issues = [i for i in issues if "line_spacing" in i.check]
+        self.assertEqual(
+            spacing_issues, [], f"Figure caption should be excluded from spacing: {spacing_issues}"
+        )
+
+    def test_table_title_line_not_flagged(self) -> None:
+        """A single-spaced table-title line ('. Process inputs') must not be flagged."""
+
+        def build(doc: Document) -> None:
+            self._add_body(doc, count=5)
+            self._add_single_spaced(doc, ". Process inputs")
+
+        docx_path = self._create_docx("table_title_line.docx", build)
+        issues = self._run_check(docx_path)
+        spacing_issues = [i for i in issues if "line_spacing" in i.check]
+        self.assertEqual(
+            spacing_issues,
+            [],
+            f"Table title line should be excluded from spacing: {spacing_issues}",
+        )
+
     def test_nota_paragraph_single_spaced_not_flagged(self) -> None:
         """A single-spaced 'Nota. ...' paragraph must not be flagged (filter L49)."""
 

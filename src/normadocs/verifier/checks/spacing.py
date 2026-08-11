@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import CheckCategory, VerificationIssue
+from .. import CheckCategory, VerificationIssue, is_apa_caption_or_table_title
 
 if TYPE_CHECKING:
     from ..apa_verifier import VerificationContext
@@ -44,9 +44,7 @@ class SpacingCheck:
         spacing_paragraphs = [
             p
             for p in non_empty_paragraphs
-            if not (p.text.strip().startswith("Tabla ") and len(p.text.strip().split()) <= 2)
-            and not (p.text.strip().startswith("Figura ") and len(p.text.strip().split()) <= 2)
-            and not p.text.strip().startswith("Nota.")
+            if not is_apa_caption_or_table_title(p.text)
             and not p.text.strip().isdigit()
             and (p.style_name or "") != ""
             and not (p.style_name or "").startswith("Heading")

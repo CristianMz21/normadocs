@@ -65,6 +65,31 @@ class CheckCategory:
     PAGE_SETUP = "page_setup"
 
 
+def is_apa_caption_or_table_title(text: str) -> bool:
+    """Detect APA caption/table-title paragraphs that may be single-spaced.
+
+    APA 7 allows single spacing in table titles, captions, and notes. This
+    covers the "Tabla N" / "Table N" / "Figura N" / "Figure N" captions
+    (Spanish and English), "Nota. ..." table notes, and the table-title
+    continuation lines produced by the APA formatter (e.g. ". Process inputs").
+
+    Args:
+        text: The paragraph text to evaluate.
+
+    Returns:
+        True if the paragraph is an APA caption, table note, or table title.
+    """
+    stripped = (text or "").strip()
+    if not stripped:
+        return False
+    if stripped.startswith("Nota."):
+        return True
+    first_word = stripped.split(maxsplit=1)[0] if stripped else ""
+    if first_word in ("Tabla", "Table", "Figura", "Figure") and len(stripped.split()) <= 2:
+        return True
+    return stripped.startswith(". ")
+
+
 def __getattr__(name: str) -> object:
     """Lazy import to avoid heavy dependencies at module load time."""
     if name == "APAVerifier":

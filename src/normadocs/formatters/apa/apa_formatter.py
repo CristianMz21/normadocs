@@ -83,6 +83,15 @@ class APADocxFormatter:
         self._tables.add_table_header_bold()
         self._keywords.apply_foreign_word_italics()
 
+        # Persist cover metadata in the DOCX core properties so the document
+        # carries title/author (the APA verifier's cover-page check and external
+        # tools read these fields; pandoc leaves them empty).
+        props = self._doc.core_properties
+        if meta.title:
+            props.title = meta.title
+        if meta.author:
+            props.author = meta.author
+
     def save(self, output_path: str) -> None:
         """Save the formatted document to output_path.
 

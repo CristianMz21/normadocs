@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import CheckCategory, VerificationIssue
+from .. import CheckCategory, VerificationIssue, is_apa_caption_or_table_title
 from ..docx_analyzer import DOCXParagraphInfo
 
 if TYPE_CHECKING:
@@ -92,12 +92,11 @@ class ParagraphsCheck:
                 continue
 
             text_stripped = p.text.strip()
-            if (
-                (text_stripped.startswith("Tabla ") and len(text_stripped.split()) <= 2)
-                or (text_stripped.startswith("Figura ") and len(text_stripped.split()) <= 2)
-                or text_stripped.startswith("Nota.")
-                or text_stripped.isdigit()
-            ):
+            if is_apa_caption_or_table_title(text_stripped) or text_stripped.isdigit():
+                continue
+
+            # Cover page elements are centered and unindented (APA 7 Section 2.3)
+            if p.alignment == "center":
                 continue
 
             filtered.append(p)
