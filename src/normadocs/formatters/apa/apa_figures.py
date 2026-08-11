@@ -155,114 +155,34 @@ class APAFiguresHandler:
                             ext_el.set("cy", str(int(old_cy * scale)))
 
     def add_figure_captions(self) -> None:
-        """Add APA 7 captions to figures: 'Figura N' (bold) + title (italic).
+        """Ensure every figure has an APA 7 caption: 'Figura N.' bold + title italic.
 
-        Finds images and their titles from Pandoc output, creates proper captions.
-        The title comes AFTER the image in Pandoc output (from ![Title](path) syntax).
+        Normalizes caption paragraphs already present in the document (produced by
+        Pandoc from alt-text or by manual '*Figura N. ...*' lines) into a single
+        APA 7 caption line. Idempotent: already-formatted captions are left intact.
         """
-        body = self.doc._body._element
-        children = list(body)
+        caption_re = re.compile(r"^(Figura|Figure)\s+(\d+)\s*[.:]?\s*(.*)$")
 
-        # Find all image paragraphs
-        image_positions = []
-
-        for i, child in enumerate(children):
-            if child.tag == qn("w:p"):
-                drawings = child.findall(f".//{qn('w:drawing')}")
-                if drawings:
-                    image_positions.append(i)
-
-        # Get all paragraph indices and their elements
-        para_elements = {}
-        for p_idx, para in enumerate(self.doc.paragraphs):
-            para_elements[para._element] = p_idx
-
-        # Process each image - search FORWARD to find title after image
-        for img_idx, img_pos in enumerate(image_positions, start=1):
-            title_para = None
-            title_para_idx = None
-            title_text = None
-
-            # Get caption prefix from config
-            fig_config = self._get_figure_config()
-            caption_prefix = fig_config.get("caption_prefix", "Figure")
-
-            # Search forward from image for the title (paragraph after image)
-            # Pandoc structure: image -> title (from ![Title](path)) -> Nota
-            for j in range(img_pos + 1, len(children)):
-                next_elem = children[j]
-                if next_elem.tag == qn("w:p"):
-                    para_idx = para_elements.get(next_elem)
-                    if para_idx is not None:
-                        text = self.doc.paragraphs[para_idx].text.strip()
-
-                        # Skip empty paragraphs
-                        if not text:
-                            continue
-
-                        # Check if this is "Nota" - if so, title is the paragraph before it
-                        if text.lower().startswith("nota"):
-                            if para_idx > 1:
-                                prev_text = self.doc.paragraphs[para_idx - 1].text.strip()
-                                # Verify it's a valid title (not a list, heading, or empty)
-                                is_valid_title = (
-                                    prev_text
-                                    and not prev_text.startswith("•")
-                                    and not prev_text.startswith("-")
-                                    and not prev_text.startswith("#")
-                                    and not prev_text.startswith(f"{caption_prefix} ")
-                                )
-                                if is_valid_title:
-                                    title_text = prev_text
-                                    title_para_idx = para_idx - 1
-                                    title_para = self.doc.paragraphs[para_idx - 1]
-                            break
-
-                        # Check if text starts with caption_prefix + N
-                        # (original title from markdown)
-                        if re.match(rf"^{caption_prefix}\s+\d+", text):
-                            # Extract the actual title after the prefix
-                            match = re.match(rf"^{caption_prefix}\s+\d+\s+(.+)$", text)
-                            if match:
-                                title_text = match.group(1).strip()
-                                title_para_idx = para_idx
-                                title_para = self.doc.paragraphs[para_idx]
-                            break
-
-            # Create "Figura N. Title" caption with proper formatting
-            if title_text:
-                # Create new caption paragraph BEFORE the image
-                new_p = self.doc.add_paragraph()
-                body.remove(new_p._element)
-                body.insert(img_pos, new_p._element)
-
-                run1 = new_p.add_run(f"{caption_prefix} {img_idx}. ")
-                run1.bold = True
-                self._apply_font_style(run1, bold=True)
-
-                run2 = new_p.add_run(title_text)
-                run2.italic = True
-                self._apply_font_style(run2, italic=True)
-
-                new_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-
-                # Remove the original title paragraph if it exists
-                if (
-                    title_para is not None
-                    and title_para_idx is not None
-                    and title_para_idx != img_pos
-                ):
-                    parent = title_para._element.getparent()
-                    if parent is not None:
-                        parent.remove(title_para._element)
-            else:
-                # No title found, just create "Figura N"
-                new_p = self.doc.add_paragraph()
-                body.remove(new_p._element)
-                body.insert(img_pos, new_p._element)
-
-                run1 = new_p.add_run(f"{caption_prefix} {img_idx}")
-                run1.bold = True
-                self._apply_font_style(run1, bold=True)
-
-                new_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        for para in self.doc.paragraphs:
+            text = para.text.strip()
+            m = caption_re.match(text)
+            if not m:
+                continue
+            label, num, title = m.group(1), m.group(2), m.group(3).strip()
+            runs = para.runs
+            label_ok = bool(runs) and bool(runs[0].bold)
+            italic_ok = not title or any(r.italic for r in runs)
+            if label_ok and italic_ok:
+                continue
+            for r in list(runs):
+                parent = r._element.getparent()
+                if parent is not None:
+                    parent.remove(r._element)
+            label_run = para.add_run(f"{label} {num}. ")
+            label_run.bold = True
+            self._apply_font_style(label_run, bold=True)
+            if title:
+                title_run = para.add_run(title)
+                title_run.italic = True
+                self._apply_font_style(title_run, italic=True)
+            para.alignment = WD_ALIGN_PARAGRAPH.LEFT

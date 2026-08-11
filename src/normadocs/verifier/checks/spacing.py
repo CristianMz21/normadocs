@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import CheckCategory, VerificationIssue, is_apa_caption_or_table_title
+from .. import (
+    CheckCategory,
+    VerificationIssue,
+    caption_and_title_indexes,
+    is_apa_caption_or_table_title,
+)
 
 if TYPE_CHECKING:
     from ..apa_verifier import VerificationContext
@@ -35,16 +40,16 @@ class SpacingCheck:
 
         paragraphs_info = ctx.docx.get_paragraphs_info()
 
-        non_empty_paragraphs = [p for p in paragraphs_info if p.text.strip()]
-        if not non_empty_paragraphs:
-            return issues
+        # Indexes of caption paragraphs and their following title lines
+        # (APA 7 allows single spacing in captions and titles).
+        skip_indexes = caption_and_title_indexes(paragraphs_info)
 
-        # Exclude table captions, table titles, and table notes from spacing check
-        # APA 7 allows single spacing in table-related elements
         spacing_paragraphs = [
             p
-            for p in non_empty_paragraphs
-            if not is_apa_caption_or_table_title(p.text)
+            for i, p in enumerate(paragraphs_info)
+            if i not in skip_indexes
+            and p.text.strip()
+            and not is_apa_caption_or_table_title(p.text)
             and not p.text.strip().isdigit()
             and (p.style_name or "") != ""
             and not (p.style_name or "").startswith("Heading")

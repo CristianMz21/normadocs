@@ -9,6 +9,7 @@ Verifies table formatting meets APA 7th Edition requirements:
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, TypedDict
 
 from .. import CheckCategory, VerificationIssue
@@ -87,11 +88,11 @@ class TablesCheck:
                 if caption_idx + 1 < len(paragraphs_info):
                     next_para = paragraphs_info[caption_idx + 1]
                     next_text = next_para.text.strip()
-                    # Only consider it a title if not "Tabla N", "Figura N" or "Nota."
+                    # Only consider it a title if not a caption label ("Tabla N",
+                    # "Figure N", ...) or a "Nota." line
                     if (
                         next_text
-                        and not next_text.startswith("Tabla ")
-                        and not next_text.startswith("Figura ")
+                        and not re.match(r"^(Tabla|Table|Figura|Figure)\s+\d+", next_text)
                         and not next_text.startswith("Nota.")
                     ):
                         has_italic = any(run.get("italic") for run in next_para.runs)

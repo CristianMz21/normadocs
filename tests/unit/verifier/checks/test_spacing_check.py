@@ -433,6 +433,33 @@ class TestSpacingCheckExclusions(unittest.TestCase):
             f"Heading/Caption-styled paragraphs should be excluded: {spacing_issues}",
         )
 
+    def test_title_line_after_caption_not_flagged(self) -> None:
+        """An italic single-spaced title right after a 'Table N' caption must be excluded."""
+
+        def build(doc: Document) -> None:
+            self._add_body(doc, count=5)
+            cap = doc.add_paragraph()
+            cap_run = cap.add_run("Table 1")
+            cap_run.bold = True
+            cap_run.font.name = "Times New Roman"
+            cap_run.font.size = Pt(12)
+            cap.paragraph_format.line_spacing = 1.0
+            title = doc.add_paragraph()
+            title_run = title.add_run("Tabla comparativa de herramientas")
+            title_run.italic = True
+            title_run.font.name = "Times New Roman"
+            title_run.font.size = Pt(12)
+            title.paragraph_format.line_spacing = 1.0
+
+        docx_path = self._create_docx("caption_with_title.docx", build)
+        issues = self._run_check(docx_path)
+        spacing_issues = [i for i in issues if "line_spacing" in i.check]
+        self.assertEqual(
+            spacing_issues,
+            [],
+            f"Caption+title block should be excluded from spacing: {spacing_issues}",
+        )
+
     def test_only_excluded_paragraphs_no_issue(self) -> None:
         """A doc with ONLY excluded paragraphs should early-return no issues (branch L57)."""
 

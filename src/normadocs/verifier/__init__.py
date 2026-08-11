@@ -6,9 +6,10 @@ standards using multiple analysis techniques (pdfplumber, PyMuPDF, python-docx).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 __all__ = [
     "APAVerifier",
@@ -84,10 +85,36 @@ def is_apa_caption_or_table_title(text: str) -> bool:
         return False
     if stripped.startswith("Nota."):
         return True
-    first_word = stripped.split(maxsplit=1)[0] if stripped else ""
-    if first_word in ("Tabla", "Table", "Figura", "Figure") and len(stripped.split()) <= 2:
+    # Caption labels with number, with or without a title:
+    # "Tabla 1", "Table 1", "Figura 1", "Figure 1", "Figura 1. Título", ...
+    if re.match(r"^(Tabla|Table|Figura|Figure)\s+\d+", stripped):
         return True
     return stripped.startswith(". ")
+
+
+def caption_and_title_indexes(paragraphs_info: list[Any]) -> set[int]:
+    """Return indexes of caption paragraphs and their following title lines.
+
+    APA 7 allows single spacing in table/figure captions and titles. The
+    formatter emits "Table N" / "Figura N" captions followed by an italic
+    title paragraph; both must be excluded from body spacing/indent checks.
+
+    Args:
+        paragraphs_info: The DOCXParagraphInfo list from the analyzer.
+
+    Returns:
+        Set of paragraph indexes that are captions or their title lines.
+    """
+    skip: set[int] = set()
+    for i, p in enumerate(paragraphs_info):
+        if is_apa_caption_or_table_title(p.text):
+            skip.add(i)
+            if i + 1 < len(paragraphs_info):
+                nxt = paragraphs_info[i + 1]
+                runs = getattr(nxt, "runs", None) or []
+                if nxt.text.strip() and runs and all(r.get("italic") for r in runs):
+                    skip.add(i + 1)
+    return skip
 
 
 def __getattr__(name: str) -> object:

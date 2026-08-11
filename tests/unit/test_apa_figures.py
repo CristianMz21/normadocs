@@ -336,7 +336,7 @@ class TestAddFigureCaptions(unittest.TestCase):
         self.assertGreaterEqual(len(doc.paragraphs), initial_count)
 
     def test_add_figure_captions_with_image_and_title(self):
-        """Caption should be 'Figure N' when title is not in Nota or Figure format."""
+        """Non-caption text must not be turned into an auto-created caption."""
         doc = Document()
         _add_paragraph_with_drawing(doc, descr="Test image")
         doc.add_paragraph("My Figure Title")
@@ -345,13 +345,13 @@ class TestAddFigureCaptions(unittest.TestCase):
         handler.add_figure_captions()
 
         full_text = "\n".join(p.text for p in doc.paragraphs)
-        self.assertIn("Figure 1", full_text)
+        self.assertNotIn("Figure 1", full_text)
 
     def test_add_figure_captions_with_nota(self):
-        """Title should be extracted correctly when Nota follows title."""
+        """Caption paragraph is normalized to 'Figure N. Title' when Nota follows."""
         doc = Document()
         _add_paragraph_with_drawing(doc, descr="Test image")
-        doc.add_paragraph("Title Before Nota")
+        doc.add_paragraph("Figure 1. Title Before Nota")
         doc.add_paragraph("Nota. This is the note context")
 
         handler = APAFiguresHandler(doc)
@@ -361,16 +361,31 @@ class TestAddFigureCaptions(unittest.TestCase):
         self.assertIn("Figure 1. Title Before Nota", full_text)
 
     def test_add_figure_captions_without_title(self):
-        """Caption should be 'Figure N' when no title is found."""
+        """Bare 'Figure N' caption is kept as a bold label."""
         doc = Document()
         _add_paragraph_with_drawing(doc, descr="Test image")
-        doc.add_paragraph("Some unrelated text")
+        doc.add_paragraph("Figure 1")
 
         handler = APAFiguresHandler(doc)
         handler.add_figure_captions()
 
         full_text = "\n".join(p.text for p in doc.paragraphs)
         self.assertIn("Figure 1", full_text)
+
+    def test_normalize_caption_bold_and_italic_runs(self):
+        """Normalized caption has a bold label and an italic title run."""
+        doc = Document()
+        doc.add_paragraph("Figure 1. Example Figure Title")
+
+        handler = APAFiguresHandler(doc)
+        handler.add_figure_captions()
+
+        para = doc.paragraphs[0]
+        self.assertEqual(len(para.runs), 2)
+        self.assertTrue(para.runs[0].bold)
+        self.assertEqual(para.runs[0].text, "Figure 1. ")
+        self.assertTrue(para.runs[1].italic)
+        self.assertEqual(para.runs[1].text, "Example Figure Title")
 
     def test_add_figure_captions_with_figura_title(self):
         """Caption should extract title from existing 'Figure N' paragraph."""

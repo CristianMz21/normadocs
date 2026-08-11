@@ -386,6 +386,25 @@ class TestTablesCheckCaptionItalicSeparateParagraph(unittest.TestCase):
             f"'Tabla N' must not count as title; warning should still fire: {issues}",
         )
 
+    def test_title_starting_with_tabla_word_counts_as_title(self) -> None:
+        """An italic title like 'Tabla comparativa de...' must count as the title."""
+        docx_path = self._create_docx(
+            "title_with_tabla_word.docx",
+            caption_text="Table 5",
+            caption_bold=True,
+            next_text="Tabla comparativa de IDE y lenguajes",
+            next_italic=True,
+        )
+        issues = self._run_check(docx_path)
+        italic_warnings = [
+            i for i in issues if "caption_italic" in i.check and i.severity == "warning"
+        ]
+        self.assertEqual(
+            italic_warnings,
+            [],
+            f"'Tabla comparativa...' title must count as italic title: {issues}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

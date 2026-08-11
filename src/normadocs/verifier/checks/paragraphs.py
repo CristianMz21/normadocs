@@ -11,7 +11,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import CheckCategory, VerificationIssue, is_apa_caption_or_table_title
+from .. import (
+    CheckCategory,
+    VerificationIssue,
+    caption_and_title_indexes,
+    is_apa_caption_or_table_title,
+)
 from ..docx_analyzer import DOCXParagraphInfo
 
 if TYPE_CHECKING:
@@ -46,8 +51,13 @@ class ParagraphsCheck:
         ref_keywords = ("referencias", "references", "bibliografía", "bibliography")
         toc_keywords = ("contenido", "contents", "index", "índice")
 
+        skip_indexes = caption_and_title_indexes(paragraphs_info)
+
         filtered: list[DOCXParagraphInfo] = []
-        for p in paragraphs_info:
+        for i, p in enumerate(paragraphs_info):
+            if i in skip_indexes:
+                continue
+
             style_name = p.style_name or ""
             text_lower = p.text.strip().lower()
 
