@@ -56,6 +56,8 @@ class ReferencesCheck:
 
         # Collect entries until the next heading (e.g. "Apéndices") so sections
         # that follow the references (appendices) are not counted as references.
+        # Note: assumes no subheadings inside the reference list (APA 7 forbids
+        # grouping references under subheadings).
         ref_paragraphs = []
         for p_info in paragraphs_info[ref_section_idx + 1 :]:
             if p_info.text.strip() and (p_info.style_name or "").startswith("Heading"):
