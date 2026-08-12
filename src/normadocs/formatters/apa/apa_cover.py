@@ -87,6 +87,19 @@ class APACoverHandler:
         if ficha:
             content_lines.append((ficha, False))
 
+        # Add subject/course and instructor (SENA student papers, APA 7 sec. 2.3)
+        subject = getattr(meta, "subject", None) or meta.extra.get("subject", "")
+        instructor = getattr(meta, "instructor", None) or ""
+        if subject:
+            content_lines.append((subject, False))
+        if instructor:
+            content_lines.append((f"Instructor: {instructor}", False))
+
+        # Add city and country (from location meta)
+        location = getattr(meta, "location", None) or ""
+        if location:
+            content_lines.append((location, False))
+
         # Add date
         date = getattr(meta, "date", None) or ""
         if date:

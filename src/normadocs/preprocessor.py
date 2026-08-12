@@ -64,6 +64,8 @@ class MarkdownPreprocessor:
                 "institution",
                 "center",
                 "instructor",
+                "subject",
+                "location",
                 "date",
                 "short_title",
             ]:

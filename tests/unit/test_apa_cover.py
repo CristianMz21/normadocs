@@ -198,6 +198,46 @@ class TestAddCoverPage(unittest.TestCase):
 
             os.unlink(temp_path)
 
+    def test_cover_with_subject_instructor_location(self):
+        """Subject, instructor and location should appear on the cover page."""
+        meta = DocumentMetadata(
+            title="Informe Técnico del Proyecto",
+            author="Cristian Arellano",
+            ficha="Ficha 3336101",
+            subject="Diseño de soluciones de software",
+            instructor="Aníbal Charry Q.",
+            location="Bogotá D.C., Colombia",
+        )
+        paragraphs = [
+            {"text": "Introducción", "style": "Heading 1"},
+            {"text": "Contenido...", "style": "Normal"},
+        ]
+        formatter, temp_path = self._create_formatter_with_doc(paragraphs)
+
+        try:
+            formatter._add_cover_page(meta)
+
+            all_texts = [p.text for p in formatter.doc.paragraphs]
+            self.assertIn(
+                meta.subject,
+                all_texts,
+                f"Subject '{meta.subject}' not found in document",
+            )
+            self.assertIn(
+                f"Instructor: {meta.instructor}",
+                all_texts,
+                f"Instructor '{meta.instructor}' not found in document",
+            )
+            self.assertIn(
+                meta.location,
+                all_texts,
+                f"Location '{meta.location}' not found in document",
+            )
+        finally:
+            import os
+
+            os.unlink(temp_path)
+
     def test_cover_with_affiliation(self):
         """Cover page should handle affiliation if present in metadata."""
         meta = DocumentMetadata(

@@ -18,6 +18,8 @@ class DocumentMetadata:
     institution: str | None = None
     center: str | None = None
     instructor: str | None = None
+    subject: str | None = None
+    location: str | None = None
     date: str | None = None
     short_title: str | None = None
     extra: dict[str, str] = field(default_factory=dict)
@@ -35,6 +37,8 @@ class DocumentMetadata:
             "institution",
             "center",
             "instructor",
+            "subject",
+            "location",
             "date",
             "short_title",
         }

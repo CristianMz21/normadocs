@@ -266,6 +266,48 @@ class TestReferencesCheckAlphabeticalOrder(unittest.TestCase):
             len(order_warnings), 0, f"Expected alphabetical order warning but got: {issues}"
         )
 
+    def test_section_after_references_is_not_counted(self) -> None:
+        """A heading after the references (e.g. appendices) must not be counted as a reference.
+
+        Regression: a later heading that contains the word "references" in its text
+        (e.g. "Slide 4 — ... references") used to trigger references mode and pollute
+        the reference list. A section that follows the references (apéndices) must be
+        cut at the next heading.
+        """
+        docx_path = self.temp_path / "refs_with_appendices.docx"
+        doc = Document()
+        section = doc.sections[0]
+        section.top_margin = Inches(1)
+        section.right_margin = Inches(1)
+        section.bottom_margin = Inches(1)
+        section.left_margin = Inches(1)
+        section.page_width = Inches(8.5)
+        section.page_height = Inches(11)
+
+        doc.add_paragraph("References")
+
+        ref1 = doc.add_paragraph("Alpha, A. (2023). Work starting with A.")
+        ref1.paragraph_format.first_line_indent = Inches(0.5)
+
+        ref2 = doc.add_paragraph("Zebra, Z. (2024). Work starting with Z.")
+        ref2.paragraph_format.first_line_indent = Inches(0.5)
+
+        # A later heading (appendix section) with a word that contains "references"
+        appendix = doc.add_paragraph("Appendix: Image references", style="Heading 1")
+        appendix.paragraph_format.first_line_indent = Inches(0.5)
+
+        appendix_body = doc.add_paragraph("Figure 1. Screenshot of the interface.")
+        appendix_body.paragraph_format.first_line_indent = Inches(0.5)
+
+        doc.save(str(docx_path))
+        issues = self._run_check(docx_path)
+        # Sections after the references heading must not be treated as reference
+        # entries, so they must not produce alphabetical order warnings.
+        order_warnings = [
+            i for i in issues if "alphabetical_order" in i.check and i.severity == "warning"
+        ]
+        self.assertEqual(order_warnings, [], f"Unexpected order warnings: {issues}")
+
 
 class TestReferencesCheckEmptySection(unittest.TestCase):
     """Tests for an empty references section (heading present, no entries)."""
