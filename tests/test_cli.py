@@ -402,6 +402,58 @@ class TestCLILanguageToolDocker(unittest.TestCase):
             # Should complete without error
             self.assertEqual(result.exit_code, 0)
 
+class TestCLIValidation(unittest.TestCase):
+    """Tests for early --style and --format validation."""
+
+    def test_invalid_style_rejected(self):
+        """Test that an unsupported --style value fails fast with a clear message."""
+        with runner.isolated_filesystem():
+            with open("test.md", "w") as f:
+                f.write("# Title\n\nContent")
+
+            result = runner.invoke(app, ["test.md", "--style", "banana"])
+
+            self.assertEqual(result.exit_code, 1)
+            self.assertIn("Estilo de citación no soportado", result.output)
+            self.assertIn("apa, icontec, ieee", result.output)
+
+    def test_invalid_format_rejected(self):
+        """Test that an unsupported --format value fails fast with a clear message."""
+        with runner.isolated_filesystem():
+            with open("test.md", "w") as f:
+                f.write("# Title\n\nContent")
+
+            result = runner.invoke(app, ["test.md", "--format", "banana"])
+
+            self.assertEqual(result.exit_code, 1)
+            self.assertIn("Formato de salida no soportado", result.output)
+            self.assertIn("docx, pdf, all", result.output)
+
+    def test_valid_styles_accepted(self):
+        """Test that all documented valid --style values pass validation."""
+        for style in ["apa", "icontec", "ieee"]:
+            with self.subTest(style=style):
+                with runner.isolated_filesystem():
+                    with open("test.md", "w") as f:
+                        f.write("# Title\n\nContent")
+
+                    result = runner.invoke(app, ["test.md", "--style", style])
+
+                    # Should not fail due to style validation specifically
+                    self.assertNotIn("no soportado", result.output)
+
+    def test_valid_formats_accepted(self):
+        """Test that all documented valid --format values pass validation."""
+        for fmt in ["docx", "pdf", "all"]:
+            with self.subTest(fmt=fmt):
+                with runner.isolated_filesystem():
+                    with open("test.md", "w") as f:
+                        f.write("# Title\n\nContent")
+
+                    result = runner.invoke(app, ["test.md", "--format", fmt])
+
+                    # Should not fail due to format validation specifically
+                    self.assertNotIn("no soportado", result.output)
 
 if __name__ == "__main__":
     unittest.main()
