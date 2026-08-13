@@ -58,6 +58,23 @@ class TestHeadingsCheckCompliant(unittest.TestCase):
         run.bold = True
         run.italic = True
 
+        h4 = doc.add_paragraph(style="Heading 4")
+        h4.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        h4.paragraph_format.first_line_indent = Inches(0.5)
+        run = h4.add_run("Level 4 run-in heading.")
+        run.font.name = "Times New Roman"
+        run.font.size = Pt(12)
+        run.bold = True
+
+        h5 = doc.add_paragraph(style="Heading 5")
+        h5.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        h5.paragraph_format.first_line_indent = Inches(0.5)
+        run = h5.add_run("Level 5 run-in heading.")
+        run.font.name = "Times New Roman"
+        run.font.size = Pt(12)
+        run.bold = True
+        run.italic = True
+
         doc.add_paragraph("Body paragraph after headings.")
 
         doc.save(str(path))

@@ -71,11 +71,16 @@ class FiguresCheck:
                     )
                 )
 
-            if not has_italic:
+            caption_text = caption_data["text"].rstrip(". ")
+            label_only = caption_text.casefold() in {
+                f"figure {idx + 1}".casefold(),
+                f"figura {idx + 1}".casefold(),
+            }
+            if not has_italic and not label_only:
                 issues.append(
                     VerificationIssue(
                         check=f"{CheckCategory.FIGURES}.caption_italic",
-                        severity="warning",
+                        severity="error" if ctx.strict else "warning",
                         expected="Title should be italic",
                         actual="Title not italic",
                         evidence=f"Figure {idx + 1} caption title should be italic",

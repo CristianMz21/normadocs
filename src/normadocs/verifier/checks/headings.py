@@ -33,7 +33,7 @@ class HeadingsCheck:
 
         headings_found: dict[int, list[dict[str, Any]]] = {}
 
-        for i in range(1, 4):
+        for i in range(1, 6):
             headings_found[i] = []
 
         paragraphs_info = ctx.docx.get_paragraphs_info()
@@ -47,6 +47,7 @@ class HeadingsCheck:
                                 "text": p_info.text,
                                 "alignment": p_info.alignment,
                                 "runs": p_info.runs,
+                                "first_line_indent": p_info.first_line_indent,
                             }
                         )
                 except (ValueError, IndexError):
@@ -127,6 +128,58 @@ class HeadingsCheck:
                                 actual=f"bold={has_bold}, italic={has_italic}",
                                 page=1,
                                 evidence=f"Heading 3 '{heading['text']}' should be bold + italic",
+                            )
+                        )
+
+                elif level in (4, 5):
+                    expected_italic = level == 5
+                    indent = heading.get("first_line_indent")
+                    indent_inches = None if indent is None else indent / 914400.0
+                    has_period = heading["text"].strip().endswith(".")
+                    if heading["alignment"] != "left":
+                        issues.append(
+                            VerificationIssue(
+                                check=f"{CheckCategory.HEADINGS}.level{level}_alignment",
+                                severity="error",
+                                expected="Left-aligned",
+                                actual=f"{heading['alignment']}",
+                                evidence=f"Heading {level} '{heading['text']}' is not left-aligned",
+                            )
+                        )
+                    if abs((indent_inches or 0.0) - 0.5) > 0.1:
+                        issues.append(
+                            VerificationIssue(
+                                check=f"{CheckCategory.HEADINGS}.level{level}_indent",
+                                severity="error",
+                                expected="0.5 inch first-line indent",
+                                actual=(
+                                    "No indent"
+                                    if indent_inches is None
+                                    else f"{indent_inches:.2f} inch"
+                                ),
+                                evidence=f"Heading {level} must use the indented run-in format",
+                            )
+                        )
+                    if not has_bold or has_italic != expected_italic:
+                        issues.append(
+                            VerificationIssue(
+                                check=f"{CheckCategory.HEADINGS}.level{level}_emphasis",
+                                severity="error",
+                                expected=("Bold + Italic" if expected_italic else "Bold only"),
+                                actual=f"bold={has_bold}, italic={has_italic}",
+                                evidence=f"Heading {level} has incorrect emphasis",
+                            )
+                        )
+                    if not has_period:
+                        issues.append(
+                            VerificationIssue(
+                                check=f"{CheckCategory.HEADINGS}.level{level}_period",
+                                severity="error",
+                                expected="Heading text ends with a period",
+                                actual=heading["text"],
+                                evidence=(
+                                    f"Heading {level} run-in text lacks its terminating period"
+                                ),
                             )
                         )
 

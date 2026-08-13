@@ -95,23 +95,44 @@ class ReferencesCheck:
             return issues
 
         expected_hanging = -0.5  # APA 7 hanging indent: -0.5in first line, +0.5in left
+        spacing_errors: list[int] = []
         for index, reference in enumerate(ref_paragraphs, start=1):
             first_line_indent = reference.first_line_indent
+            indent_valid = False
             if first_line_indent is not None:
                 indent_inches = first_line_indent / 914400.0
-                if abs(indent_inches - expected_hanging) <= 0.1:
-                    continue
+                indent_valid = abs(indent_inches - expected_hanging) <= 0.1
                 actual = f"{indent_inches:.2f} inch"
             else:
                 actual = "No first-line indent"
 
+            if not indent_valid:
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.REFERENCES}.hanging_indent",
+                        severity="error",
+                        expected="-0.5 inch hanging indent (first line outdent)",
+                        actual=actual,
+                        evidence=f"Reference {index} lacks proper hanging indent",
+                    )
+                )
+
+            if ctx.strict and (
+                reference.line_spacing is None
+                or abs(reference.line_spacing - 2.0) > 0.2
+                or reference.space_before not in (None, 0)
+                or reference.space_after not in (None, 0)
+            ):
+                spacing_errors.append(index)
+
+        if spacing_errors:
             issues.append(
                 VerificationIssue(
-                    check=f"{CheckCategory.REFERENCES}.hanging_indent",
+                    check=f"{CheckCategory.REFERENCES}.spacing",
                     severity="error",
-                    expected="-0.5 inch hanging indent (first line outdent)",
-                    actual=actual,
-                    evidence=f"Reference {index} lacks proper hanging indent",
+                    expected="Double-spaced references with no extra paragraph spacing",
+                    actual=f"References with spacing violations: {spacing_errors}",
+                    evidence="Every reference entry must use the APA reference spacing",
                 )
             )
 
@@ -121,7 +142,7 @@ class ReferencesCheck:
                 issues.append(
                     VerificationIssue(
                         check=f"{CheckCategory.REFERENCES}.alphabetical_order",
-                        severity="warning",
+                        severity="error" if ctx.strict else "warning",
                         expected="Alphabetical order",
                         actual=f"'{ref_texts[i]}' before '{ref_texts[i + 1]}'",
                         evidence="References not in alphabetical order",

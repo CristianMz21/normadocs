@@ -10,6 +10,7 @@ from .paragraphs import ParagraphsCheck
 from .references import ReferencesCheck
 from .running_head import RunningHeadCheck
 from .spacing import SpacingCheck
+from .structure import StructureCheck
 from .tables import TablesCheck
 
 __all__ = [
@@ -23,5 +24,6 @@ __all__ = [
     "ReferencesCheck",
     "RunningHeadCheck",
     "SpacingCheck",
+    "StructureCheck",
     "TablesCheck",
 ]

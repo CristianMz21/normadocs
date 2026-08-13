@@ -125,13 +125,17 @@ Page breaks are automatically inserted before every H1 (`#`) heading.
 
 ### Running Head (APA 7)
 
-The running head appears in the left header. Enable it by setting `short_title` in frontmatter:
+Student papers use page numbers without running-head text. The generic `apa`
+profile can use a running head on pages after the cover when `short_title` is
+provided:
 
 ```yaml
 short_title: "SHORT TITLE IN UPPERCASE"
 ```
 
-The running head consists of "SHORT TITLE: " prefix followed by the short title in uppercase.
+The `apa7estudiante` profile intentionally ignores this field for running-head
+text. Use the [APA standard guide](../standards/apa7.md) for the distinction
+between student and professional-style documents.
 
 ### Keywords
 

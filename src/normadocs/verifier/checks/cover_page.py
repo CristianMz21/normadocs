@@ -11,7 +11,8 @@ Verifies cover page formatting meets APA 7th Edition requirements:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import re
+from typing import TYPE_CHECKING, Literal
 
 from .. import CheckCategory, VerificationIssue
 
@@ -92,32 +93,85 @@ class CoverPageCheck:
 
             if ctx.meta.author and ctx.meta.author in text:
                 cover_elements["author"] = True
+                if ctx.strict and p_info.alignment != "center":
+                    issues.append(
+                        VerificationIssue(
+                            check=f"{CheckCategory.COVER_PAGE}.author_alignment",
+                            severity="error",
+                            expected="Author centered",
+                            actual=f"Alignment: {p_info.alignment}",
+                            evidence=f"Author is not centered: '{text[:50]}...'",
+                        )
+                    )
 
-            if ctx.meta.institution and ctx.meta.institution in text:
+            institution_values = [ctx.meta.institution, ctx.meta.affiliation]
+            if any(value and value in text for value in institution_values):
                 cover_elements["institution"] = True
+                if ctx.strict and p_info.alignment != "center":
+                    issues.append(
+                        VerificationIssue(
+                            check=f"{CheckCategory.COVER_PAGE}.affiliation_alignment",
+                            severity="error",
+                            expected="Institutional affiliation centered",
+                            actual=f"Alignment: {p_info.alignment}",
+                            evidence=f"Affiliation is not centered: '{text[:50]}...'",
+                        )
+                    )
 
-            if any(word in text.lower() for word in ["2024", "2025", "2026", "abril", "april"]):
+            date_present = (
+                bool(ctx.meta.date and ctx.meta.date in text)
+                if ctx.meta.date
+                else bool(re.search(r"\b(?:19|20)\d{2}\b", text))
+            )
+            if date_present:
                 cover_elements["date"] = True
 
+        missing_severity: Literal["error", "warning"] = "error" if ctx.strict else "warning"
         if not cover_elements["title"]:
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.COVER_PAGE}.title_present",
-                    severity="warning",
+                    severity=missing_severity,
                     expected="Title on cover page",
                     actual="Title not found in expected location",
                     evidence="Cover page may be missing title",
                 )
             )
 
-        if not cover_elements["author"]:
+        if not cover_elements["author"] and (not ctx.strict or ctx.meta.author):
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.COVER_PAGE}.author_present",
-                    severity="warning",
+                    severity=missing_severity,
                     expected="Author name on cover page",
                     actual="Author not found in expected location",
                     evidence="Cover page may be missing author",
+                )
+            )
+
+        if (
+            ctx.strict
+            and (ctx.meta.institution or ctx.meta.affiliation)
+            and not cover_elements["institution"]
+        ):
+            issues.append(
+                VerificationIssue(
+                    check=f"{CheckCategory.COVER_PAGE}.affiliation_present",
+                    severity="error",
+                    expected="Institutional affiliation on cover page",
+                    actual="Affiliation not found in the cover region",
+                    evidence="The configured institutional affiliation is missing from the cover",
+                )
+            )
+
+        if ctx.strict and ctx.meta.date and not cover_elements["date"]:
+            issues.append(
+                VerificationIssue(
+                    check=f"{CheckCategory.COVER_PAGE}.date_present",
+                    severity="error",
+                    expected="Due date on cover page",
+                    actual="Date not found in the cover region",
+                    evidence="The configured date is missing from the cover",
                 )
             )
 
@@ -142,7 +196,11 @@ class CoverPageCheck:
             for p in paragraphs_info[first_heading_index:]
             if p.style_name == "Heading 1" and p.text.strip()
         ]
-        if ctx.meta.title and cover_elements["title"] and ctx.meta.title not in body_headings:
+        if (
+            ctx.meta.title
+            and cover_elements["title"]
+            and ctx.meta.title.casefold() not in {heading.casefold() for heading in body_headings}
+        ):
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.COVER_PAGE}.title_repeated",

@@ -347,7 +347,7 @@ def _verify_apa(
         output_pdf: Path to the generated PDF
         output_docx: Path to the source DOCX
         meta: Document metadata for enhanced verification
-        apa_strict: If True, warnings are treated as errors
+        apa_strict: If True, every warning and verifier failure is fatal
         apa_report: Optional path to save verification report
 
     Returns:
@@ -397,10 +397,10 @@ def _verify_apa(
             "⚠ Verificador APA no disponible (instale dependencias con: "
             "pip install normadocs[pdf-verifier])"
         )
-        return True
+        return not apa_strict
     except Exception as e:
         logger.warning("⚠ Error en verificación APA: %s", e)
-        return True
+        return not apa_strict
 
 
 def _cleanup_docker(

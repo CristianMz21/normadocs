@@ -168,9 +168,9 @@ def convert(
         bool,
         typer.Option(
             "--apa-strict",
-            help="Treat APA warnings as errors (fail if any warning found)",
+            help="Use strict APA 7 validation; any detected warning is a failure",
         ),
-    ] = False,
+    ] = True,
     apa_report: Annotated[
         Path | None,
         typer.Option(
@@ -260,8 +260,18 @@ def convert(
     pdf_generated = cli_helpers._generate_pdf(format, output_docx, output_dir, clean_md, output_pdf)
 
     # 7. APA 7th Edition verification
-    if format in ["pdf", "all"] and pdf_generated and verify_apa:
-        cli_helpers._verify_apa(output_pdf, output_docx, meta, apa_strict, apa_report)
+    if (
+        style.lower() in {"apa", "apa7", "apa7estudiante"}
+        and format in ["pdf", "all"]
+        and pdf_generated
+        and verify_apa
+    ):
+        validation_passed = cli_helpers._verify_apa(
+            output_pdf, output_docx, meta, apa_strict, apa_report
+        )
+        if apa_strict and not validation_passed:
+            typer.echo("Error: el documento no cumple la validación estricta APA 7.", err=True)
+            raise typer.Exit(code=1)
 
     # 8. Cleanup Docker container (always runs, even on errors)
     cli_helpers._cleanup_docker(docker_container, lt_keep_alive, lt_port)

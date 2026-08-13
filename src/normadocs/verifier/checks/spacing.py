@@ -52,7 +52,7 @@ class SpacingCheck:
             and not is_apa_caption_or_table_title(p.text)
             and not p.text.strip().isdigit()
             and (p.style_name or "") != ""
-            and not (p.style_name or "").startswith("Heading")
+            and (ctx.strict or not (p.style_name or "").startswith("Heading"))
             and "Caption" not in (p.style_name or "")
             and "Source" not in (p.style_name or "")
         ]
@@ -60,6 +60,7 @@ class SpacingCheck:
             return issues
 
         spacing_issues = 0
+        paragraph_spacing_issues = 0
         for p_info in spacing_paragraphs:
             line_spacing = p_info.line_spacing
             if line_spacing is not None:
@@ -74,11 +75,34 @@ class SpacingCheck:
                     diff = abs(actual_spacing - APA_LINE_SPACING)
                     if diff > LINE_SPACING_TOLERANCE:
                         spacing_issues += 1
+                elif ctx.strict:
+                    spacing_issues += 1
+
+            if ctx.strict:
+                for value in (p_info.space_before, p_info.space_after):
+                    if value is not None and abs(float(value) / 12700.0) > 0.01:
+                        paragraph_spacing_issues += 1
 
         total_checked = len(spacing_paragraphs)
         if total_checked > 0:
             issue_ratio = spacing_issues / total_checked
-            if issue_ratio > 0.5:
+            if ctx.strict and (spacing_issues or paragraph_spacing_issues):
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.SPACING}.strict_spacing",
+                        severity="error",
+                        expected="Double spacing with 0pt before and after",
+                        actual=(
+                            f"{spacing_issues} line-spacing and "
+                            f"{paragraph_spacing_issues} paragraph-spacing violations"
+                        ),
+                        evidence=(
+                            f"Checked {total_checked} non-caption paragraphs without "
+                            "allowing a majority-compliant document"
+                        ),
+                    )
+                )
+            elif issue_ratio > 0.5:
                 issues.append(
                     VerificationIssue(
                         check=f"{CheckCategory.SPACING}.line_spacing",

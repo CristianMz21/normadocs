@@ -47,6 +47,7 @@ class ParagraphsCheck:
         in_abstract = False
         in_references = False
         in_toc = False
+        skip_first_body_after_heading = False
         abstract_keywords = ("resumen", "abstract")
         ref_keywords = ("referencias", "references", "bibliografía", "bibliography")
         toc_keywords = ("contenido", "contents", "index", "índice")
@@ -62,6 +63,7 @@ class ParagraphsCheck:
             text_lower = p.text.strip().lower()
 
             if style_name.startswith("Heading"):
+                skip_first_body_after_heading = True
                 if any(k in text_lower for k in ref_keywords):
                     in_references = True
                     in_abstract = False
@@ -109,6 +111,12 @@ class ParagraphsCheck:
             if p.alignment == "center":
                 continue
 
+            # The formatter follows the APA convention used by this project:
+            # the first paragraph after a heading is not first-line indented.
+            if skip_first_body_after_heading:
+                skip_first_body_after_heading = False
+                continue
+
             filtered.append(p)
 
         body_paragraphs = filtered
@@ -130,7 +138,20 @@ class ParagraphsCheck:
         total = len(body_paragraphs)
         if total > 0:
             indent_ratio = paragraphs_with_indent / total
-            if indent_ratio < 0.5 and paragraphs_without_indent > 3:
+            if ctx.strict and paragraphs_without_indent > 0:
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.PARAGRAPHS}.strict_first_line_indent",
+                        severity="error",
+                        expected="0.5 inch first-line indent on every body paragraph",
+                        actual=(
+                            f"{paragraphs_without_indent}/{total} body paragraphs "
+                            "lack the required indent"
+                        ),
+                        evidence="Strict APA validation does not accept partial compliance",
+                    )
+                )
+            elif indent_ratio < 0.5 and paragraphs_without_indent > 3:
                 issues.append(
                     VerificationIssue(
                         check=f"{CheckCategory.PARAGRAPHS}.first_line_indent",
@@ -154,7 +175,17 @@ class ParagraphsCheck:
                 )
 
         justified_count = sum(1 for p in body_paragraphs if p.alignment == "left")
-        if total > 0 and justified_count / total < 0.5:
+        if ctx.strict and total > 0 and justified_count < total:
+            issues.append(
+                VerificationIssue(
+                    check=f"{CheckCategory.PARAGRAPHS}.strict_alignment",
+                    severity="error",
+                    expected="Left-aligned body paragraphs",
+                    actual=f"{total - justified_count}/{total} are not left-aligned",
+                    evidence="Strict APA validation rejects justified or ambiguous body alignment",
+                )
+            )
+        elif total > 0 and justified_count / total < 0.5:
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.PARAGRAPHS}.justification",

@@ -3,6 +3,8 @@ Tests for CLI helper functions.
 """
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
 from normadocs.cli_helpers import (
@@ -368,6 +370,34 @@ class TestLanguageToolResult(unittest.TestCase):
         )
         self.assertEqual(result.errors[0]["message"], "Error 1")
         self.assertEqual(result.all_errors[0][0], "RULE")
+
+
+class TestVerifyAPA(unittest.TestCase):
+    """Tests for strict APA verification results returned to the CLI."""
+
+    @patch("normadocs.verifier.apa_verifier.APAVerifier")
+    def test_strict_validation_failure_is_returned(self, mock_verifier_class) -> None:
+        """A failed strict verifier result must make the CLI helper return False."""
+        from normadocs.cli_helpers import _verify_apa
+        from normadocs.verifier import VerificationResult
+
+        with TemporaryDirectory() as temp_dir:
+            pdf_path = Path(temp_dir) / "output.pdf"
+            docx_path = Path(temp_dir) / "output.docx"
+            pdf_path.touch()
+            docx_path.touch()
+
+            mock_verifier = mock_verifier_class.return_value
+            mock_verifier.verify_all.return_value = VerificationResult(
+                passed=False,
+                score=70.0,
+                pdf_path=pdf_path,
+                docx_path=docx_path,
+            )
+
+            result = _verify_apa(pdf_path, docx_path, None, True, None)
+
+        self.assertFalse(result)
 
 
 if __name__ == "__main__":

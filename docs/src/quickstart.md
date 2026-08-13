@@ -1,95 +1,143 @@
 # Quickstart
 
-This page is a 60-second first run. If you want a full install walkthrough see
-[Installation](installation.md); if you want a deep dive into the CLI see
-[CLI](usage/cli.md); for the Python library see
-[Python API](usage/library.md).
+Este recorrido genera un informe APA 7 estudiantil y verifica su PDF. Para que
+una persona o una IA pueda repetir el proceso, cada paso tiene una entrada,
+un comando y un resultado esperado.
 
-## 1. Install
+## 1. Instalar dependencias
 
 ```bash
-pip install normadocs
+pip install normadocs[pdf-verifier]
 ```
 
-You also need [Pandoc](https://pandoc.org/installing.html) on your `PATH`.
-Quick check:
+También necesitas Pandoc en `PATH` para cualquier conversión:
 
 ```bash
 pandoc --version
 ```
 
-## 2. Create a Markdown input
+Para PDF instala LibreOffice (recomendado) o WeasyPrint:
 
-Save the following as `paper.md`:
+```bash
+# Debian/Ubuntu
+sudo apt install libreoffice
+
+# Alternativa Python
+pip install normadocs[pdf]
+```
+
+## 2. Crear el Markdown
+
+Guarda este ejemplo como `informe.md`. Sustituye los datos de ejemplo; no
+uses valores inventados en un trabajo real.
 
 ```markdown
-**The Effects of Reading on Concentration**
+---
+title: "Efectos del aprendizaje automático en la educación"
+author: "Nombre completo"
+affiliation: "Programa académico"
+institution: "Institución educativa"
+instructor: "Nombre del docente"
+date: "2026-08-13"
+---
 
-Jane Doe
-Department of Psychology
-2026-04-10
+# Resumen
 
-# Abstract
+Resumen opcional de hasta 250 palabras.
 
-This paper reviews the literature on reading and attention.
+**Palabras clave:** aprendizaje automático, educación
 
-**Keywords:** reading, attention, learning
+# Introducción
+
+Presenta el problema, el contexto y el objetivo.
+
+# Desarrollo
+
+Expone el análisis y la evidencia.
+
+# Conclusiones
+
+Resume los hallazgos y sus límites.
+
+# Referencias
+
+Autor, A. A. (2026). Título de la obra. Editorial.
 ```
 
-## 3. Convert
+Para el informe académico general, `Introducción`, `Desarrollo`, `Conclusiones` y
+`Referencias` son obligatorios. `Resumen`, palabras clave y apéndices son
+opcionales, pero se validan cuando aparecen. Consulta el [contrato para agentes
+de IA](ai-agent.md) para todas las reglas.
 
-APA 7th Edition (the default):
+## 3. Generar DOCX
+
+El perfil predeterminado es `apa7estudiante`:
 
 ```bash
-normadocs paper.md
+normadocs informe.md \
+  --style apa7estudiante \
+  --format docx \
+  --output-dir ExportDocs
 ```
 
-ICONTEC NTC 1486 (Colombian / LATAM academic standard):
+Resultado:
+
+```text
+ExportDocs/informe_APA7ESTUDIANTE.docx
+```
+
+El DOCX aplica portada, márgenes, tipografía, espaciado, encabezados,
+referencias, tablas y figuras según el perfil seleccionado.
+
+## 4. Generar y verificar PDF
 
 ```bash
-normadocs paper.md --style icontec
+normadocs informe.md \
+  --style apa7estudiante \
+  --format all \
+  --output-dir ExportDocs \
+  --apa-report ExportDocs/informe_apa.md
 ```
 
-IEEE 8th Edition (engineering / technical):
+Resultado esperado:
+
+```text
+ExportDocs/informe_APA7ESTUDIANTE.docx
+ExportDocs/informe_APA7ESTUDIANTE.pdf
+ExportDocs/informe_apa.md
+```
+
+La validación APA estricta está activa por defecto. Si encuentra un error, el
+comando termina con código distinto de cero y el reporte muestra la categoría,
+la regla esperada, el valor encontrado y la evidencia.
+
+## 5. Corregir y repetir
+
+1. Abre `informe_apa.md`.
+2. Corrige el Markdown o el frontmatter; no edites manualmente el DOCX generado.
+3. Ejecuta de nuevo el comando `--format all`.
+4. Continúa hasta obtener `PASSED`.
+
+Para una validación no aplicable, usa `--no-verify-apa`; no lo uses para ocultar
+incumplimientos de un trabajo APA.
+
+## Otros estándares
 
 ```bash
-normadocs paper.md --style ieee
+# ICONTEC NTC 1486
+normadocs informe.md --style icontec --format all --output-dir ExportDocs
+
+# IEEE 8th Edition
+normadocs informe.md --style ieee --format docx --output-dir ExportDocs
 ```
 
-The output appears in the current working directory as
-`paper_APA.docx` (or `paper_ICONTEC.docx`, `paper_IEEE.docx`).
+ICONTEC e IEEE no se validan con el verificador APA. Sus reglas están en
+[Standards](standards/index.md).
 
-## 4. Add a bibliography (optional)
+## Siguiente paso
 
-If you have a BibTeX file, pass it with `-b` and optionally a CSL style with
-`-c`. See [Bibliography](bibliography.md) for details.
-
-```bash
-normadocs paper.md --style apa --bibliography references.bib --csl apa.csl
-```
-
-## 5. Generate a PDF (optional)
-
-```bash
-normadocs paper.md --style apa --format pdf
-```
-
-This requires either [LibreOffice](https://www.libreoffice.org/) (recommended)
-or `pip install normadocs[pdf]` (WeasyPrint). See
-[PDF Output](pdf-output.md).
-
-## 6. Verify the output
-
-```bash
-ls -la paper_*.docx
-```
-
-Open the file in Word, LibreOffice, or any DOCX viewer. The cover page,
-abstract, and headings should follow the chosen standard.
-
-## Next steps
-
-- [Examples](examples.md) — full sample documents for each standard.
-- [CLI Reference](usage/cli.md) — every flag documented.
-- [Standards](standards/index.md) — what each standard assumes.
-- [Troubleshooting](troubleshooting.md) — common first-run issues.
+- [Guía para agentes de IA](ai-agent.md)
+- [Referencia completa del CLI](usage/cli.md)
+- [Uso como biblioteca](usage/library.md)
+- [Reglas APA 7](standards/apa7.md)
+- [Solución de problemas](troubleshooting.md)

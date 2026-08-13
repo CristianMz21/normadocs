@@ -23,6 +23,25 @@ Verify installation:
 pandoc --version
 ```
 
+## APA Validation Fails
+
+**Symptom:** The command generates a DOCX/PDF but exits with a validation
+error or the report says `FAILED`.
+
+**Solution:** Read the first `structure` or `cover_page` issues in the APA
+report. The strict academic-report profile requires a cover, repeated title,
+Introduction, development, Conclusions and References in that order. Fix the
+Markdown headings and metadata, then regenerate; do not patch the generated
+DOCX manually.
+
+To inspect the report without terminal output:
+
+```bash
+normadocs informe.md --format all --apa-report ExportDocs/apa.md
+```
+
+Use `--no-verify-apa` only when the selected output is not an APA submission.
+
 ## PDF Generation Fails
 
 **Symptom:** PDF is not generated, only DOCX
@@ -72,5 +91,6 @@ Se según [@author2024] demuestra...
 
 If you encounter an issue not covered here:
 1. Check the [GitHub Issues](https://github.com/CristianMz21/normadocs/issues)
-2. Include your Markdown file content
-3. Include output of `normadocs --version`
+2. Include a minimal Markdown reproduction and the selected `--style`
+3. Include output of `normadocs --help`, `pandoc --version`, and the APA report
+   when validation is involved

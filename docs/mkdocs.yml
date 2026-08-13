@@ -44,6 +44,7 @@ nav:
   - Getting Started:
       - Installation: installation.md
       - Quickstart: quickstart.md
+      - AI Agent Guide: ai-agent.md
   - Usage:
       - CLI: usage/cli.md
       - Python API: usage/library.md

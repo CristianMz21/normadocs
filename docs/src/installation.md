@@ -25,8 +25,8 @@ brew install pandoc
 ```bash
 pip install normadocs
 
-# With PDF support
-pip install normadocs[pdf]
+# PDF generation plus strict APA PDF verification
+pip install "normadocs[pdf,pdf-verifier]"
 ```
 
 ### From Source
@@ -40,6 +40,9 @@ pip install -e ".[dev]"
 ## Verify Installation
 
 ```bash
-normadocs --version
+pandoc --version
 normadocs --help
 ```
+
+`normadocs --version` is not currently exposed by the CLI; use the installed
+package metadata when an automation system needs the package version.

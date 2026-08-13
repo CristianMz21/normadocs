@@ -38,8 +38,10 @@ class FontsCheck:
 
         body_fonts: dict[str, int] = {}
         body_font_sizes: dict[float, int] = {}
+        strict_font_errors: list[str] = []
+        strict_size_errors: list[str] = []
 
-        for p_info in paragraphs_info:
+        for index, p_info in enumerate(paragraphs_info, start=1):
             if not p_info.text.strip():
                 continue
 
@@ -55,6 +57,44 @@ class FontsCheck:
                 if font_size:
                     size_pt = self._pt_from_emu(font_size)
                     body_font_sizes[size_pt] = body_font_sizes.get(size_pt, 0) + 1
+
+                if ctx.strict and run_text.strip():
+                    if self._normalize_font(font_name or "") != APA_BODY_FONT.lower():
+                        strict_font_errors.append(
+                            f"paragraph {index}: {font_name or 'missing font'}"
+                        )
+                    if font_size is None:
+                        strict_size_errors.append(f"paragraph {index}: missing font size")
+                    elif abs(self._pt_from_emu(font_size) - APA_BODY_FONT_SIZE) > 0.01:
+                        strict_size_errors.append(
+                            f"paragraph {index}: {self._pt_from_emu(font_size):.1f}pt"
+                        )
+
+        if strict_font_errors:
+            issues.append(
+                VerificationIssue(
+                    check=f"{CheckCategory.FONTS}.font_consistency",
+                    severity="error",
+                    expected="Times New Roman on every text run",
+                    actual="; ".join(strict_font_errors[:5]),
+                    evidence=(
+                        f"{len(strict_font_errors)} text run(s) use a different or missing font"
+                    ),
+                )
+            )
+
+        if strict_size_errors:
+            issues.append(
+                VerificationIssue(
+                    check=f"{CheckCategory.FONTS}.font_size_consistency",
+                    severity="error",
+                    expected="12pt on every text run",
+                    actual="; ".join(strict_size_errors[:5]),
+                    evidence=(
+                        f"{len(strict_size_errors)} text run(s) use a different or missing size"
+                    ),
+                )
+            )
 
         if body_fonts:
             most_common_font = max(body_fonts, key=lambda k: body_fonts[k])
@@ -78,7 +118,9 @@ class FontsCheck:
                         severity="error",
                         expected=f"{APA_BODY_FONT_SIZE:.0f}pt",
                         actual=f"{most_common_size:.1f}pt",
-                        evidence=f"Size = {most_common_size:.1f}pt (expected {APA_BODY_FONT_SIZE:.0f}pt)",  # noqa: E501
+                        evidence=(
+                            f"Size = {most_common_size:.1f}pt (expected {APA_BODY_FONT_SIZE:.0f}pt)"
+                        ),
                     )
                 )
 

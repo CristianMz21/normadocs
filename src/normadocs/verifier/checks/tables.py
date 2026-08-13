@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, TypedDict
 
+from docx.oxml.ns import qn
+
 from .. import CheckCategory, VerificationIssue
 from ..docx_analyzer import DOCXParagraphInfo
 
@@ -71,7 +73,7 @@ class TablesCheck:
                 runs = caption_data["paragraph_info"].runs
                 has_bold = any(run.get("bold") for run in runs)
 
-                if not has_bold:
+                if not has_bold or (ctx.strict and not all(run.get("bold") for run in runs)):
                     issues.append(
                         VerificationIssue(
                             check=f"{CheckCategory.TABLES}.caption_bold",
@@ -101,7 +103,7 @@ class TablesCheck:
                     issues.append(
                         VerificationIssue(
                             check=f"{CheckCategory.TABLES}.caption_italic",
-                            severity="warning",
+                            severity="error" if ctx.strict else "warning",
                             expected="Title should be italic (in paragraph after 'Tabla N')",
                             actual="Title not italic",
                             evidence=f"Table {idx + 1} caption title should be italic",
@@ -112,11 +114,46 @@ class TablesCheck:
                 issues.append(
                     VerificationIssue(
                         check=f"{CheckCategory.TABLES}.caption_present",
-                        severity="warning",
+                        severity="error" if ctx.strict else "warning",
                         expected="Table caption above table",
                         actual="No caption found",
                         evidence=f"Table {idx + 1} lacks a proper table caption",
                     )
                 )
+
+            if ctx.strict and idx < len(table_numbers):
+                table_element = ctx.docx.tables[idx]._tbl
+                caption_element = ctx.docx.paragraphs[table_numbers[idx]["index"]]._element
+                body_children = list(ctx.docx.doc._body._element)
+                if body_children.index(caption_element) > body_children.index(table_element):
+                    issues.append(
+                        VerificationIssue(
+                            check=f"{CheckCategory.TABLES}.caption_position",
+                            severity="error",
+                            expected="Caption before table",
+                            actual="Caption appears after table",
+                            evidence=f"Table {idx + 1} caption is not above the table",
+                        )
+                    )
+
+            if ctx.strict:
+                table_element = ctx.docx.tables[idx]._tbl
+                properties = table_element.tblPr
+                borders = properties.find(qn("w:tblBorders")) if properties is not None else None
+                vertical_edges = ("left", "right", "insideV")
+                if borders is not None and any(
+                    (edge := borders.find(qn(f"w:{name}"))) is not None
+                    and edge.get(qn("w:val")) not in {None, "nil", "none"}
+                    for name in vertical_edges
+                ):
+                    issues.append(
+                        VerificationIssue(
+                            check=f"{CheckCategory.TABLES}.vertical_borders",
+                            severity="error",
+                            expected="Horizontal borders only",
+                            actual="Vertical table border detected",
+                            evidence=f"Table {idx + 1} contains a vertical border",
+                        )
+                    )
 
         return issues

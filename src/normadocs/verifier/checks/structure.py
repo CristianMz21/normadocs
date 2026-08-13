@@ -1,0 +1,367 @@
+"""Document structure verification for a general APA academic report."""
+
+from __future__ import annotations
+
+import re
+from itertools import pairwise
+from typing import TYPE_CHECKING, Literal
+
+from .. import CheckCategory, VerificationIssue
+from ..docx_analyzer import DOCXParagraphInfo
+
+if TYPE_CHECKING:
+    from ..apa_verifier import VerificationContext
+
+
+Severity = Literal["error", "warning"]
+
+INTRODUCTION_NAMES = frozenset({"introduccion", "introduction"})
+ABSTRACT_NAMES = frozenset({"resumen", "abstract", "summary"})
+CONCLUSION_NAMES = frozenset({"conclusion", "conclusiones", "conclusions"})
+REFERENCE_NAMES = frozenset({"referencias", "references", "bibliografia", "bibliography"})
+APPENDIX_PREFIXES = ("apendice", "apendices", "appendix", "appendices")
+DEVELOPMENT_NAMES = frozenset(
+    {
+        "desarrollo",
+        "development",
+        "marco teorico",
+        "theoretical framework",
+        "analisis",
+        "analysis",
+        "metodo",
+        "metodos",
+        "method",
+        "methods",
+        "resultados",
+        "results",
+        "discusion",
+        "discussion",
+    }
+)
+KEYWORD_PREFIXES = ("palabras clave:", "keywords:")
+
+
+class StructureCheck:
+    """Check the required structure of a general academic APA report."""
+
+    @staticmethod
+    def _normalize(text: str) -> str:
+        """Normalize heading text for Spanish/English structural matching."""
+        normalized = re.sub(r"^\s*\d+(?:\.\d+)*[.)]?\s*", "", text.strip())
+        normalized = normalized.casefold()
+        replacements = str.maketrans("áéíóúüñ", "aeiouun")
+        return normalized.translate(replacements)
+
+    @staticmethod
+    def _heading_level(style_name: str | None) -> int | None:
+        """Extract an outline level from a Word heading style name."""
+        if style_name is None:
+            return None
+        match = re.search(r"(?:heading|encabezado)\s*(\d+)\s*$", style_name, re.IGNORECASE)
+        return int(match.group(1)) if match else None
+
+    @staticmethod
+    def _severity(ctx: VerificationContext) -> Severity:
+        """Use warnings only for explicitly non-strict compatibility reports."""
+        return "error" if ctx.strict else "warning"
+
+    def _issue(
+        self,
+        ctx: VerificationContext,
+        check: str,
+        expected: str,
+        actual: str,
+        evidence: str,
+    ) -> VerificationIssue:
+        """Create a structural issue with strict-mode severity."""
+        return VerificationIssue(
+            check=f"{CheckCategory.STRUCTURE}.{check}",
+            severity=self._severity(ctx),
+            expected=expected,
+            actual=actual,
+            evidence=evidence,
+        )
+
+    @staticmethod
+    def _section_end(
+        headings: list[tuple[int, DOCXParagraphInfo, int]], heading_position: int, total: int
+    ) -> int:
+        """Return the paragraph boundary immediately before the next heading."""
+        for index, _, _ in headings:
+            if index > heading_position:
+                return index
+        return total
+
+    @staticmethod
+    def _has_content(
+        paragraphs: list[DOCXParagraphInfo], start: int, end: int, exclude_keywords: bool = False
+    ) -> bool:
+        """Return whether a section contains substantive non-empty paragraphs."""
+        for paragraph in paragraphs[start:end]:
+            text = paragraph.text.strip()
+            if not text:
+                continue
+            if exclude_keywords and text.casefold().startswith(KEYWORD_PREFIXES):
+                continue
+            return True
+        return False
+
+    def run(self, ctx: VerificationContext) -> list[VerificationIssue]:
+        """Validate report structure and section ordering."""
+        paragraphs = ctx.docx.get_paragraphs_info()
+        issues: list[VerificationIssue] = []
+        nonempty = [
+            (index, paragraph)
+            for index, paragraph in enumerate(paragraphs)
+            if paragraph.text.strip()
+        ]
+
+        if not nonempty:
+            return [
+                self._issue(
+                    ctx,
+                    "content_present",
+                    "A structured academic report",
+                    "No non-empty paragraphs",
+                    "The DOCX has no report content to validate",
+                )
+            ]
+
+        headings: list[tuple[int, DOCXParagraphInfo, int]] = []
+        for index, paragraph in nonempty:
+            level = self._heading_level(paragraph.style_name)
+            if level is not None:
+                headings.append((index, paragraph, level))
+
+        if not headings:
+            issues.append(
+                self._issue(
+                    ctx,
+                    "headings_present",
+                    "At least one Heading 1 for the report title and sections",
+                    "No heading-styled paragraphs found",
+                    "A report without structural headings cannot be validated as an APA report",
+                )
+            )
+            return issues
+
+        title = self._normalize(ctx.meta.title)
+        first_heading_index, first_heading, first_level = headings[0]
+        if first_level != 1:
+            issues.append(
+                self._issue(
+                    ctx,
+                    "title_heading_level",
+                    "The repeated title must be a level-1 heading",
+                    f"Heading level {first_level}",
+                    "The first structural heading is not a level-1 title",
+                )
+            )
+        if self._normalize(first_heading.text) != title:
+            issues.append(
+                self._issue(
+                    ctx,
+                    "title_repeated",
+                    f"First content heading exactly matching '{ctx.meta.title}'",
+                    f"'{first_heading.text.strip()}'",
+                    "The title-page title must be repeated before the report body",
+                )
+            )
+
+        cover_lines = [
+            paragraph.text.strip()
+            for paragraph in paragraphs[:first_heading_index]
+            if paragraph.text.strip()
+        ]
+        if len(cover_lines) < 3:
+            issues.append(
+                self._issue(
+                    ctx,
+                    "cover_content",
+                    "Cover with title, author, and an additional identification line",
+                    f"Only {len(cover_lines)} non-empty cover line(s)",
+                    "The report cover is incomplete before the repeated title",
+                )
+            )
+
+        if not self._has_content(paragraphs, first_heading_index + 1, len(paragraphs)):
+            issues.append(
+                self._issue(
+                    ctx,
+                    "body_content_present",
+                    "Substantive report content after the repeated title",
+                    "No content after the repeated title",
+                    "The document contains a title but no report body",
+                )
+            )
+
+        # APA heading hierarchy must not skip levels (for example, Heading 1 to 3).
+        previous_level = first_level
+        for _, paragraph, level in headings[1:]:
+            if level > previous_level + 1:
+                issues.append(
+                    self._issue(
+                        ctx,
+                        "heading_hierarchy",
+                        f"Heading level no greater than {previous_level + 1}",
+                        f"Heading {level}: '{paragraph.text.strip()}'",
+                        "The report skips an intermediate heading level",
+                    )
+                )
+            previous_level = level
+
+        sections: dict[str, list[tuple[int, DOCXParagraphInfo, int]]] = {
+            "abstract": [],
+            "introduction": [],
+            "development": [],
+            "conclusion": [],
+            "references": [],
+            "appendix": [],
+        }
+        for index, paragraph, level in headings[1:]:
+            normalized = self._normalize(paragraph.text)
+            if normalized in ABSTRACT_NAMES:
+                sections["abstract"].append((index, paragraph, level))
+            if normalized in INTRODUCTION_NAMES:
+                sections["introduction"].append((index, paragraph, level))
+            if normalized in CONCLUSION_NAMES:
+                sections["conclusion"].append((index, paragraph, level))
+            if normalized in REFERENCE_NAMES:
+                sections["references"].append((index, paragraph, level))
+            if normalized in DEVELOPMENT_NAMES:
+                sections["development"].append((index, paragraph, level))
+            if normalized.startswith(APPENDIX_PREFIXES):
+                sections["appendix"].append((index, paragraph, level))
+
+        for name in ("introduction", "development", "conclusion", "references"):
+            if not sections[name]:
+                issues.append(
+                    self._issue(
+                        ctx,
+                        f"{name}_present",
+                        f"A {name} section",
+                        "Section not found",
+                        f"The general academic report requires a {name} section",
+                    )
+                )
+
+        for name in ("introduction", "development", "conclusion", "references"):
+            for _index, paragraph, level in sections[name]:
+                if level != 1:
+                    issues.append(
+                        self._issue(
+                            ctx,
+                            f"{name}_level",
+                            f"{name.title()} as a level-1 heading",
+                            f"Heading {level}: '{paragraph.text.strip()}'",
+                            "Main report sections must use level-1 headings",
+                        )
+                    )
+
+        for name in ("introduction", "development", "conclusion"):
+            if not sections[name]:
+                continue
+            index = sections[name][0][0]
+            end = self._section_end(headings, index, len(paragraphs))
+            if not self._has_content(paragraphs, index + 1, end, exclude_keywords=True):
+                issues.append(
+                    self._issue(
+                        ctx,
+                        f"{name}_content",
+                        f"Substantive content inside the {name} section",
+                        "Section has no non-empty body paragraph",
+                        f"The {name} heading is present but contains no content",
+                    )
+                )
+
+        if sections["abstract"]:
+            abstract_index = sections["abstract"][0][0]
+            abstract_end = self._section_end(headings, abstract_index, len(paragraphs))
+            abstract_words = sum(
+                len(paragraph.text.split())
+                for paragraph in paragraphs[abstract_index + 1 : abstract_end]
+            )
+            if abstract_words > 250:
+                issues.append(
+                    self._issue(
+                        ctx,
+                        "abstract_length",
+                        "Abstract no longer than 250 words",
+                        f"{abstract_words} words",
+                        "APA 7 student abstracts should be concise",
+                    )
+                )
+            intro_index = sections["introduction"][0][0] if sections["introduction"] else None
+            if intro_index is not None and abstract_index > intro_index:
+                issues.append(
+                    self._issue(
+                        ctx,
+                        "abstract_order",
+                        "Abstract before Introduction",
+                        "Abstract appears after Introduction",
+                        "The abstract belongs before the report body",
+                    )
+                )
+
+        keyword_indexes = [
+            index
+            for index, paragraph in nonempty
+            if paragraph.text.strip().casefold().startswith(KEYWORD_PREFIXES)
+        ]
+        if keyword_indexes:
+            if not sections["abstract"]:
+                issues.append(
+                    self._issue(
+                        ctx,
+                        "keywords_without_abstract",
+                        "Keywords only when an abstract is present",
+                        "Keywords found without Abstract/Resumen",
+                        "Keywords must belong to the abstract block",
+                    )
+                )
+            else:
+                abstract_index = sections["abstract"][0][0]
+                abstract_end = self._section_end(headings, abstract_index, len(paragraphs))
+                if not all(abstract_index < index < abstract_end for index in keyword_indexes):
+                    issues.append(
+                        self._issue(
+                            ctx,
+                            "keywords_order",
+                            "Keywords inside the abstract block",
+                            "Keywords outside the abstract block",
+                            "Keywords must immediately follow the abstract text",
+                        )
+                    )
+
+        ordered_sections = [(name, entries[0][0]) for name, entries in sections.items() if entries]
+        for (left_name, left_index), (right_name, right_index) in pairwise(ordered_sections):
+            if left_index > right_index:
+                issues.append(
+                    self._issue(
+                        ctx,
+                        "section_order",
+                        "Introduction, development, conclusions, references, appendices",
+                        f"{left_name} appears after {right_name}",
+                        "The report sections are not in APA academic order",
+                    )
+                )
+
+        if sections["references"]:
+            references_index = sections["references"][0][0]
+            for index, paragraph, _ in headings:
+                if index <= references_index:
+                    continue
+                normalized = self._normalize(paragraph.text)
+                if not normalized.startswith(APPENDIX_PREFIXES):
+                    issues.append(
+                        self._issue(
+                            ctx,
+                            "content_after_references",
+                            "Only appendices after References",
+                            f"Heading after References: '{paragraph.text.strip()}'",
+                            "References must close the main report body",
+                        )
+                    )
+                    break
+
+        return issues

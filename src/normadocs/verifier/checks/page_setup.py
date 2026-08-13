@@ -44,8 +44,12 @@ class PageSetupCheck:
                 )
             )
 
-        default_header = ctx.docx.get_header_text("default")
-        if "PAGE" not in default_header.upper() and "1" not in default_header:
+        default_header = " ".join(ctx.docx.get_header_text("default").split()).upper()
+        if ctx.strict:
+            default_header_valid = default_header == "PAGE" or default_header.isdigit()
+        else:
+            default_header_valid = "PAGE" in default_header or "1" in default_header
+        if not default_header_valid:
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.PAGE_SETUP}.page_numbers",
@@ -55,5 +59,38 @@ class PageSetupCheck:
                     evidence="Document lacks page number field in header",
                 )
             )
+
+        if ctx.strict:
+            first_header = " ".join(ctx.docx.get_header_text("first").split()).upper()
+            if first_header != "PAGE" and not first_header.isdigit():
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.PAGE_SETUP}.first_page_number",
+                        severity="error",
+                        expected="Page number only in the first-page header",
+                        actual=f"'{first_header}'",
+                        evidence="The cover header must contain only the page number field",
+                    )
+                )
+
+            footer_text = " ".join(
+                " ".join(
+                    (
+                        ctx.docx.get_footer_text("default"),
+                        ctx.docx.get_footer_text("first"),
+                        ctx.docx.get_footer_text("even"),
+                    )
+                ).split()
+            )
+            if footer_text:
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.PAGE_SETUP}.footer_content",
+                        severity="error",
+                        expected="No page footer content",
+                        actual=f"'{footer_text}'",
+                        evidence="APA page numbers belong in the header, not the footer",
+                    )
+                )
 
         return issues

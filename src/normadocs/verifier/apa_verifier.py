@@ -21,6 +21,7 @@ from .checks import (
     ReferencesCheck,
     RunningHeadCheck,
     SpacingCheck,
+    StructureCheck,
     TablesCheck,
 )
 from .docx_analyzer import DOCXAnalyzer
@@ -37,7 +38,7 @@ class VerificationContext:
     pdf: PDFAnalyzer
     docx: DOCXAnalyzer
     meta: DocumentMetadata
-    strict: bool = False
+    strict: bool = True
 
 
 class VerificationCheck(Protocol):
@@ -60,7 +61,7 @@ class APAVerifier:
         pdf_path: str | Path,
         docx_path: str | Path | None = None,
         meta: DocumentMetadata | None = None,
-        strict: bool = False,
+        strict: bool = True,
     ) -> None:
         """Initialize the APA verifier.
 
@@ -129,6 +130,7 @@ class APAVerifier:
             (CheckCategory.HEADINGS, HeadingsCheck()),
             (CheckCategory.COVER_PAGE, CoverPageCheck()),
             (CheckCategory.TABLES, TablesCheck()),
+            (CheckCategory.STRUCTURE, StructureCheck()),
             (CheckCategory.FIGURES, FiguresCheck()),
             (CheckCategory.REFERENCES, ReferencesCheck()),
         ]
@@ -162,6 +164,13 @@ class APAVerifier:
                     if "." not in issue.check:
                         issue.check = f"{category}.{issue.check.split('.')[-1]}"
                     all_issues.append(issue)
+
+                    # Strict APA validation promotes every warning to a hard
+                    # failure. Keep the issue in ``all_issues`` with its
+                    # original wording while exposing it consistently in the
+                    # result's error collection.
+                    if self.strict and issue.severity == "warning":
+                        issue.severity = "error"
 
                     if issue.severity == "error":
                         errors.append(issue)

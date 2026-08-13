@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.text.paragraph import Paragraph
 
 PageMargins = tuple[float, float, float, float]
@@ -131,8 +131,53 @@ class DOCXAnalyzer:
             has_different_first_page_header_footer=section.different_first_page_header_footer,
         )
 
+    @staticmethod
+    def _effective_line_spacing(paragraph: Paragraph) -> float | None:
+        """Return direct or inherited line spacing as a numeric multiplier."""
+        paragraph_format = paragraph.paragraph_format
+        direct = paragraph_format.line_spacing
+        if direct is not None:
+            return float(direct)
+
+        style = paragraph.style
+        if style is None:
+            return None
+        style_format = style.paragraph_format
+        inherited = style_format.line_spacing
+        if inherited is not None:
+            return float(inherited)
+
+        rule = style_format.line_spacing_rule
+        if rule == WD_LINE_SPACING.DOUBLE:
+            return 2.0
+        if rule == WD_LINE_SPACING.ONE_POINT_FIVE:
+            return 1.5
+        if rule == WD_LINE_SPACING.SINGLE:
+            return 1.0
+        return None
+
+    @staticmethod
+    def _effective_indent(paragraph: Paragraph) -> Any:
+        """Return direct or inherited first-line indentation."""
+        direct = paragraph.paragraph_format.first_line_indent
+        if direct is not None:
+            return direct
+        if paragraph.style is not None:
+            return paragraph.style.paragraph_format.first_line_indent
+        return None
+
+    @staticmethod
+    def _effective_spacing(paragraph: Paragraph, attribute: str) -> Any:
+        """Return direct or inherited paragraph spacing for an attribute."""
+        direct = getattr(paragraph.paragraph_format, attribute)
+        if direct is not None:
+            return direct
+        if paragraph.style is not None:
+            return getattr(paragraph.style.paragraph_format, attribute)
+        return None
+
     def get_paragraphs_info(self) -> list[DOCXParagraphInfo]:
-        """Extract detailed paragraph information.
+        """Extract detailed paragraph information, including inherited styles.
 
         Returns:
             List of DOCXParagraphInfo for each paragraph.
@@ -141,25 +186,30 @@ class DOCXAnalyzer:
 
         for p in self.paragraphs:
             runs_data: list[dict[str, Any]] = []
+            style_font = p.style.font if p.style is not None else None
             for run in p.runs:
                 runs_data.append(
                     {
                         "text": run.text,
-                        "font_name": run.font.name,
-                        "font_size": run.font.size,
+                        "font_name": run.font.name or (style_font.name if style_font else None),
+                        "font_size": run.font.size or (style_font.size if style_font else None),
                         "bold": run.bold,
                         "italic": run.italic,
                     }
                 )
 
+            alignment_value = p.alignment
+            if alignment_value is None and p.style is not None:
+                alignment_value = p.style.paragraph_format.alignment
+
             alignment = None
-            if p.alignment == WD_ALIGN_PARAGRAPH.LEFT:
+            if alignment_value == WD_ALIGN_PARAGRAPH.LEFT:
                 alignment = "left"
-            elif p.alignment == WD_ALIGN_PARAGRAPH.CENTER:
+            elif alignment_value == WD_ALIGN_PARAGRAPH.CENTER:
                 alignment = "center"
-            elif p.alignment == WD_ALIGN_PARAGRAPH.RIGHT:
+            elif alignment_value == WD_ALIGN_PARAGRAPH.RIGHT:
                 alignment = "right"
-            elif p.alignment == WD_ALIGN_PARAGRAPH.JUSTIFY:
+            elif alignment_value == WD_ALIGN_PARAGRAPH.JUSTIFY:
                 alignment = "justify"
 
             paragraphs_info.append(
@@ -167,10 +217,10 @@ class DOCXAnalyzer:
                     text=p.text,
                     style_name=p.style.name if p.style else None,
                     alignment=alignment,
-                    first_line_indent=p.paragraph_format.first_line_indent,
-                    space_before=p.paragraph_format.space_before,
-                    space_after=p.paragraph_format.space_after,
-                    line_spacing=p.paragraph_format.line_spacing,
+                    first_line_indent=self._effective_indent(p),
+                    space_before=self._effective_spacing(p, "space_before"),
+                    space_after=self._effective_spacing(p, "space_after"),
+                    line_spacing=self._effective_line_spacing(p),
                     runs=runs_data,
                 )
             )
@@ -233,6 +283,17 @@ class DOCXAnalyzer:
             )
 
         return tables_info
+
+    def get_footer_text(self, footer_type: str = "default") -> str:
+        """Get text content from a section footer."""
+        section = self.doc.sections[0]
+        if footer_type == "first":
+            footer = section.first_page_footer
+        elif footer_type == "even":
+            footer = section.even_page_footer
+        else:
+            footer = section.footer
+        return "\n".join(p.text for p in footer.paragraphs if p.text)
 
     def get_header_text(self, header_type: str = "default") -> str:
         """Get text content from headers.

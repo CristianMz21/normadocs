@@ -85,6 +85,17 @@ class TestAPAVerifier(unittest.TestCase):
         finally:
             docx_path.unlink(missing_ok=True)
 
+    def test_verifier_defaults_to_strict_validation(self) -> None:
+        """The public verifier defaults to rejecting all detected warnings."""
+        docx_path = self._create_simple_docx()
+        pdf_path = self._create_mock_pdf_path()
+
+        try:
+            verifier = APAVerifier(pdf_path=pdf_path, docx_path=docx_path)
+            assert verifier.strict is True
+        finally:
+            docx_path.unlink(missing_ok=True)
+
     def test_verifier_initialization_with_metadata(self) -> None:
         """Test APAVerifier with metadata."""
         docx_path = self._create_simple_docx()
@@ -117,7 +128,7 @@ class TestAPAVerifier(unittest.TestCase):
             verifier = APAVerifier(pdf_path=pdf_path, docx_path=docx_path)
             checks = verifier._init_checks()
 
-            assert len(checks) == 11
+            assert len(checks) == 12
             check_categories = [c[0] for c in checks]
             assert "margins" in check_categories
             assert "fonts" in check_categories
@@ -195,6 +206,9 @@ class TestAPAVerifierEndToEnd(unittest.TestCase):
         section.header.paragraphs[0].add_run("1")
         section.first_page_header.paragraphs[0].add_run("1")
 
+        doc.core_properties.title = "Test Document"
+        doc.core_properties.author = "Author"
+
         def style_run(run, bold=False, italic=False) -> None:
             run.font.name = "Times New Roman"
             run.font.size = Pt(12)
@@ -202,6 +216,56 @@ class TestAPAVerifierEndToEnd(unittest.TestCase):
                 run.bold = True
             if italic:
                 run.italic = True
+
+        cover_title = doc.add_paragraph()
+        cover_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        style_run(cover_title.add_run("Test Document"), bold=True)
+        cover_author = doc.add_paragraph()
+        cover_author.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        style_run(cover_author.add_run("Author"))
+        cover_date = doc.add_paragraph()
+        cover_date.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        style_run(cover_date.add_run("2026"))
+
+        content_title = doc.add_paragraph("Test Document", style="Heading 1")
+        content_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        content_title.paragraph_format.line_spacing = 2.0
+        content_title.paragraph_format.space_before = Inches(0)
+        content_title.paragraph_format.space_after = Inches(0)
+        style_run(content_title.runs[0], bold=True)
+
+        intro_heading = doc.add_paragraph("Introducción", style="Heading 1")
+        intro_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        intro_heading.paragraph_format.line_spacing = 2.0
+        intro_heading.paragraph_format.space_before = Inches(0)
+        intro_heading.paragraph_format.space_after = Inches(0)
+        style_run(intro_heading.runs[0], bold=True)
+        intro_body = doc.add_paragraph("Introduction content for the report structure.")
+        intro_body.paragraph_format.first_line_indent = Inches(0.5)
+        intro_body.paragraph_format.line_spacing = 2.0
+        style_run(intro_body.runs[0])
+
+        development_heading = doc.add_paragraph("Desarrollo", style="Heading 1")
+        development_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        development_heading.paragraph_format.line_spacing = 2.0
+        development_heading.paragraph_format.space_before = Inches(0)
+        development_heading.paragraph_format.space_after = Inches(0)
+        style_run(development_heading.runs[0], bold=True)
+        development_body = doc.add_paragraph("Development content for the report structure.")
+        development_body.paragraph_format.first_line_indent = Inches(0.5)
+        development_body.paragraph_format.line_spacing = 2.0
+        style_run(development_body.runs[0])
+
+        conclusion_heading = doc.add_paragraph("Conclusiones", style="Heading 1")
+        conclusion_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        conclusion_heading.paragraph_format.line_spacing = 2.0
+        conclusion_heading.paragraph_format.space_before = Inches(0)
+        conclusion_heading.paragraph_format.space_after = Inches(0)
+        style_run(conclusion_heading.runs[0], bold=True)
+        conclusion_body = doc.add_paragraph("Conclusions content for the report structure.")
+        conclusion_body.paragraph_format.first_line_indent = Inches(0.5)
+        conclusion_body.paragraph_format.line_spacing = 2.0
+        style_run(conclusion_body.runs[0])
 
         for i in range(3):
             para = doc.add_paragraph()
@@ -228,6 +292,9 @@ class TestAPAVerifierEndToEnd(unittest.TestCase):
 
         ref_heading = doc.add_paragraph(style="Heading 1")
         ref_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        ref_heading.paragraph_format.line_spacing = 2.0
+        ref_heading.paragraph_format.space_before = Inches(0)
+        ref_heading.paragraph_format.space_after = Inches(0)
         style_run(ref_heading.add_run("Referencias"), bold=True)
 
         for text in (
@@ -277,6 +344,14 @@ class TestAPAVerifierEndToEnd(unittest.TestCase):
             result = verifier.verify_all()
             self.assertFalse(
                 result.passed, f"Expected strict mode to fail on warning but got: {result.passed}"
+            )
+            self.assertEqual(result.warnings, [], "Strict mode must promote warnings to errors")
+            self.assertTrue(
+                any(
+                    "justification" in issue.check or "strict_alignment" in issue.check
+                    for issue in result.errors
+                ),
+                f"Expected strict justification error, got: {result.errors}",
             )
         finally:
             verifier.close()

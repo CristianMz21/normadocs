@@ -2,7 +2,9 @@
 
 ## Overview
 
-The APA 7th Edition standard in NormaDocs applies automatic formatting to produce documents that comply with the American Psychological Association's 7th Edition guidelines for academic writing.
+The APA 7th Edition standard in NormaDocs applies automatic formatting and
+strict structural validation for academic writing. For a deterministic
+person-or-agent workflow, see the [AI agent guide](../ai-agent.md).
 
 ## Configuration
 
@@ -77,6 +79,26 @@ letter-size pages, double spacing, Times New Roman 12-point text, a centered
 bold title page, page number 1 on the cover, page numbers on later pages, and
 no optional running-head text. A `short_title` in the front matter does not
 enable a running head in this profile.
+
+## Strict validation
+
+PDF and `all` conversions run the APA verifier in strict mode by default. A
+single detectable violation is reported as an error; the verifier does not
+accept a document merely because most paragraphs comply. Strict validation
+checks every section's margins and page size, inherited font and spacing
+styles, body indentation and alignment, all five heading levels, cover metadata
+when supplied, page headers/footers, reference hanging indents and ordering,
+and table/figure caption rules.
+
+For the general academic-report profile, the structural validator requires a
+cover, a repeated title, Introduction, a development section, Conclusions, and
+References in that order. Abstracts and keywords are optional; when included,
+the abstract must be at most 250 words and keywords must remain inside its
+block. Only appendices may follow References.
+
+Use `--no-verify-apa` only when validation is not applicable. The Python API
+also defaults to strict verification; pass `strict=False` to `APAVerifier` only
+for a compatibility report that keeps warnings separate from errors.
 
 ### Customization
 
@@ -354,10 +376,10 @@ A complete example APA 7th Edition document is available at `examples/example_ap
 
 ```bash
 # Convert APA document
-normadocs examples/example_apa.md -s apa -o ./output
+normadocs examples/example_apa.md -s apa7estudiante -o ./output
 
-# With PDF output
-normadocs examples/example_apa.md -s apa -f all -o ./output
+# With PDF output and strict validation
+normadocs examples/example_apa.md -s apa7estudiante -f all -o ./output
 ```
 
 ### Python Library Usage

@@ -1,5 +1,10 @@
 # NormaDocs
 
+Convierte Markdown en DOCX/PDF académicos reproducibles y valida el resultado
+cuando el perfil APA lo requiere. La ruta rápida para trabajos estudiantiles es
+[Quickstart](quickstart.md); la ruta para agentes está en [AI Agent
+Guide](ai-agent.md).
+
 [![PyPI Version](https://img.shields.io/pypi/v/normadocs.svg)](https://pypi.org/project/normadocs/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![CI](https://github.com/CristianMz21/normadocs/actions/workflows/ci.yml/badge.svg)](https://github.com/CristianMz21/normadocs/actions/workflows/ci.yml)
@@ -21,8 +26,11 @@
 ```bash
 pip install normadocs
 
-# Convert to APA (default)
-normadocs document.md
+# Convertir a APA 7 estudiantil (predeterminado)
+normadocs document.md --format docx
+
+# Convertir, generar PDF y validar estrictamente
+normadocs document.md --format all --apa-report ExportDocs/apa.md
 
 # Convert to ICONTEC with PDF output
 normadocs document.md --style icontec --format pdf
@@ -35,14 +43,15 @@ normadocs document.md -o ./Submissions -s apa -f all
 
 | Standard | Status | Font | Spacing | Typical Use |
 |----------|--------|------|---------|-------------|
-| **APA 7th Edition** | ✅ Complete | Times New Roman 12pt | Double | Social Sciences |
-| **ICONTEC (NTC 1486)** | ✅ Complete | Arial 12pt | 1.5 lines | Colombian Academic |
-| **IEEE 8th Edition** | ✅ Complete | Times New Roman 10pt | Single | Engineering/Technical |
+| **APA 7th Edition** | ✅ Formatter + strict verifier | Times New Roman 12pt | Double | Social Sciences |
+| **ICONTEC (NTC 1486)** | ✅ Formatter; manual review | Arial 12pt | 1.5 lines | Colombian Academic |
+| **IEEE 8th Edition** | ✅ Formatter; manual review | Times New Roman 10pt | Single | Engineering/Technical |
 
 ## Documentation
 
 - [Installation](installation.md) — Detailed installation instructions
 - [CLI Usage](usage/cli.md) — Command-line interface reference
+- [AI Agent Guide](ai-agent.md) — Deterministic contract for AI-assisted use
 - [Library Usage](usage/library.md) — Using NormaDocs as a Python library
 - [Supported Standards](standards/index.md) — APA 7th, ICONTEC, IEEE formatting details
 - [Troubleshooting](troubleshooting.md) — Common issues and solutions
