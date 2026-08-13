@@ -136,6 +136,31 @@ class APACoverHandler:
         if not last_p.text.strip():
             last_p._element.getparent().remove(last_p._element)
 
+        # APA 7 repeats the paper title, centered and bold, at the start of
+        # the first text page. Preserve an existing title heading and insert
+        # one only when the source starts with another level-1 heading.
+        first_heading = next(
+            (
+                p
+                for p in self.doc.paragraphs
+                if p.style and p.style.name == "Heading 1" and p.text.strip()
+            ),
+            None,
+        )
+        has_title_heading = any(
+            p.style
+            and p.style.name == "Heading 1"
+            and p.text.strip().casefold() == meta.title.strip().casefold()
+            for p in self.doc.paragraphs
+        )
+        if first_heading is not None and not has_title_heading:
+            title_heading = first_heading.insert_paragraph_before(meta.title)
+            title_heading.style = self.doc.styles["Heading 1"]
+            title_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            title_heading.paragraph_format.page_break_before = True
+            for run in title_heading.runs:
+                run.bold = True
+
         # Add page break after cover page
         for p in self.doc.paragraphs:
             style_name = p.style.name if p.style else ""

@@ -73,9 +73,8 @@ class APAPageHandler:
             section.top_margin = self._margin_to_inches(margins["top"], unit)
             section.bottom_margin = self._margin_to_inches(margins["bottom"], unit)
 
-            # Enable separate first-page header/footer for APA running head support
-            # This allows the cover page (page 1) to have no running head
-            # while subsequent pages have the running head
+            # Enable separate first-page header/footer so the cover can show
+            # only its page number while later pages may use a running head.
             section.different_first_page_header_footer = True
 
             # Clear footers completely to prevent Pandoc page numbers at bottom
@@ -97,11 +96,14 @@ class APAPageHandler:
             for fref in list(sectPr.findall(qn("w:footerReference"))):
                 sectPr.remove(fref)
 
+            # Student APA papers show the page number on the cover too.
             self._add_page_number(section)
+            self._add_page_number(section, section.first_page_header)
 
-    def _add_page_number(self, section: SectionType) -> None:
-        """Add page number top-right in header."""
-        header = section.header
+    def _add_page_number(self, section: SectionType, header: Any | None = None) -> None:
+        """Add only the page number to a selected header, default or first-page."""
+        if header is None:
+            header = section.header
         header.is_linked_to_previous = False
 
         # Clear existing header text
@@ -152,10 +154,37 @@ class APAPageHandler:
             p_elem = header.paragraphs[-1]._element
             p_elem.getparent().remove(p_elem)
 
+    @staticmethod
+    def _has_page_break_before(paragraph: Any) -> bool:
+        """Return whether a paragraph already starts on a new page."""
+        if bool(paragraph.paragraph_format.page_break_before):
+            return True
+        previous = paragraph._element.getprevious()
+        while previous is not None:
+            if any(br.get(qn("w:type")) == "page" for br in previous.iter(qn("w:br"))):
+                return True
+            if previous.tag == qn("w:p") and not "".join(previous.itertext()).strip():
+                previous = previous.getprevious()
+                continue
+            return False
+        return False
+
     def add_section_page_breaks(self) -> None:
-        """Add page breaks before Conclusions and Referencias sections."""
+        """Add section breaks only when one is not already before the heading.
+
+        Markdown preprocessing already inserts explicit page breaks before
+        level-1 headings. Repeating those breaks here creates blank pages in
+        LibreOffice. Direct callers that provide an unprocessed DOCX retain
+        the legacy fallback for Conclusions/References.
+        """
         # Sections that need to start on a new page
-        new_page_sections = ["Conclusiones", "Referencias"]
+        new_page_sections = [
+            "Conclusiones",
+            "Referencias",
+            "References",
+            "Appendix A",
+            "Appendices",
+        ]
 
         # Find headings and add page breaks before them
         for _i, p in enumerate(self.doc.paragraphs):
@@ -164,10 +193,18 @@ class APAPageHandler:
                 heading_text = p.text.strip()
                 for section in new_page_sections:
                     if heading_text.lower() == section.lower():
-                        # Create a page break using br element
+                        if self._has_page_break_before(p):
+                            break
+                        # Create a valid WordprocessingML paragraph containing
+                        # the page-break run. A standalone w:br sibling is not
+                        # valid WordprocessingML and may be dropped by converters.
+                        break_paragraph = OxmlElement("w:p")
+                        break_run = OxmlElement("w:r")
                         br = OxmlElement("w:br")
                         br.set(qn("w:type"), "page")
-                        p._element.addprevious(br)
+                        break_run.append(br)
+                        break_paragraph.append(break_run)
+                        p._element.addprevious(break_paragraph)
                         break
 
     def setup_running_head(self, short_title: str | None = None) -> None:
@@ -181,7 +218,7 @@ class APAPageHandler:
         the cover page (not on the cover page itself).
 
         This is implemented using different_first_page_header_footer = True:
-        - first_page_header (cover page): empty (no running head)
+        - first_page_header (cover page): page number only
         - header (pages 2+): running head with short title and page number
 
         Args:
@@ -204,18 +241,20 @@ class APAPageHandler:
         if len(display_title) > max_length:
             display_title = display_title[:max_length]
 
-        # Apply running head to ALL sections
-        # With different_first_page_header_footer=True:
-        # - first_page_header is for page 1 (cover page) - we leave it empty
-        # - header is for pages 2+ - we put the running head here
+        # Apply running head to all sections. With
+        # different_first_page_header_footer=True, the first-page header
+        # contains only its page number and later pages contain the running head.
+
         for section in self.doc.sections:
-            # Clear the first page header (cover page should have NO running head)
+            # Clear the first-page header and restore its page number only;
+            # the student cover must not contain the running-head text.
             first_page_header = section.first_page_header
             first_page_header.is_linked_to_previous = False
             for p in first_page_header.paragraphs:
                 p.clear()
                 for child in list(p._element):
                     p._element.remove(child)
+            self._add_page_number(section, first_page_header)
 
             # Set up the default header with running head (for pages 2+)
             header = section.header

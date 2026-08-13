@@ -105,22 +105,29 @@ DEFAULT_IEEE_CONFIG: dict[str, Any] = {
 def get_default_config(style: str) -> dict[str, Any]:
     """Get the default configuration for a given style.
 
+    Student APA papers differ from professional papers because they omit the
+    running-head text by default. Keep that profile explicit so it remains
+    correct even if its YAML file is unavailable in a fallback installation.
+
     Args:
-        style: The style name (e.g., "apa", "icontec", "ieee").
+        style: The style name (e.g., "apa", "apa7", "apa7estudiante").
 
     Returns:
-        A dictionary containing the default configuration for that style.
-
-    Raises:
-        ValueError: If the style is not recognized.
+        A dictionary containing the merged standard defaults.
     """
+    style_lower = style.lower()
+    if style_lower == "apa7estudiante":
+        student_config = deep_copy(DEFAULT_APA7_CONFIG)
+        student_config["running_head"] = {"enabled": False, "max_length": 50}
+        return cast(dict[str, Any], student_config)
+
     defaults = {
         "apa": DEFAULT_APA7_CONFIG,
         "apa7": DEFAULT_APA7_CONFIG,
         "icontec": DEFAULT_ICONTEC_CONFIG,
         "ieee": DEFAULT_IEEE_CONFIG,
     }
-    return defaults.get(style.lower(), DEFAULT_APA7_CONFIG)
+    return defaults.get(style_lower, DEFAULT_APA7_CONFIG)
 
 
 def merge_with_defaults(config: dict[str, Any], style: str) -> dict[str, Any]:

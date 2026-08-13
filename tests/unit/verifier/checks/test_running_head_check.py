@@ -42,7 +42,7 @@ class TestRunningHeadCheckCompliant(unittest.TestCase):
 
         first_header = section.first_page_header
         first_header_para = first_header.paragraphs[0]
-        first_header_para.text = ""
+        first_header_para.text = "1"
 
         doc.add_paragraph("Body text.")
 
@@ -69,6 +69,30 @@ class TestRunningHeadCheckCompliant(unittest.TestCase):
         issues = self._run_check(docx_path, meta)
         errors = [i for i in issues if i.severity == "error"]
         self.assertEqual(errors, [], f"Expected no errors but got: {errors}")
+
+    def test_student_paper_page_number_only_passes(self) -> None:
+        """Student APA papers may omit the running-head text and keep page numbers."""
+        docx_path = self._create_docx_with_proper_running_head()
+        doc = Document(str(docx_path))
+        doc.sections[0].header.paragraphs[0].text = "PAGE"
+        doc.save(str(docx_path))
+
+        meta = DocumentMetadata(title="Student Paper")
+        issues = self._run_check(docx_path, meta)
+        errors = [i for i in issues if i.severity == "error"]
+        self.assertEqual(errors, [], f"Expected page-number-only header to pass: {errors}")
+
+    def test_student_paper_rejects_extra_header_text(self) -> None:
+        """A student header containing extra text must fail."""
+        docx_path = self._create_docx_with_proper_running_head()
+        doc = Document(str(docx_path))
+        doc.sections[0].header.paragraphs[0].text = "1 ONLINE ORDER FULFILLMENT"
+        doc.save(str(docx_path))
+
+        meta = DocumentMetadata(title="Student Paper")
+        issues = self._run_check(docx_path, meta)
+        errors = [i for i in issues if "student_header_content" in i.check]
+        self.assertGreater(len(errors), 0, f"Expected extra header text error: {issues}")
 
 
 class TestRunningHeadCheckDifferentFirstPage(unittest.TestCase):

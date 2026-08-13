@@ -10,6 +10,7 @@ Verifies references section meets APA 7th Edition requirements:
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 from .. import CheckCategory, VerificationIssue
@@ -20,6 +21,22 @@ if TYPE_CHECKING:
 
 class ReferencesCheck:
     """Check references formatting against APA 7th Edition requirements."""
+
+    @staticmethod
+    def _sort_key(reference: str) -> tuple[str, int, str]:
+        """Return an APA-aware ordering key for a reference entry.
+
+        APA orders works alphabetically by author, then chronologically for
+        works by the same author. Undated works (``s. f.``/``n.d.``) precede
+        dated works, which a plain lexical comparison does not implement.
+        """
+        author = reference.split("(", 1)[0].strip().casefold()
+        date_match = re.search(r"\((s\.\s*f\.|n\.\s*d\.|\d{4})\)", reference, re.IGNORECASE)
+        if date_match is None or date_match.group(1).casefold() in {"s. f.", "n. d."}:
+            year = 0
+        else:
+            year = int(date_match.group(1))
+        return author, year, reference.casefold()
 
     def run(self, ctx: VerificationContext) -> list[VerificationIssue]:
         """Run references verification.
@@ -77,35 +94,30 @@ class ReferencesCheck:
             )
             return issues
 
-        first_ref = ref_paragraphs[0]
-        first_line_indent = first_ref.first_line_indent
         expected_hanging = -0.5  # APA 7 hanging indent: -0.5in first line, +0.5in left
-        if first_line_indent is not None:
-            indent_inches = first_line_indent / 914400.0
-            if abs(indent_inches - expected_hanging) > 0.1:
-                issues.append(
-                    VerificationIssue(
-                        check=f"{CheckCategory.REFERENCES}.hanging_indent",
-                        severity="error",
-                        expected="-0.5 inch hanging indent (first line outdent)",
-                        actual=f"{indent_inches:.2f} inch",
-                        evidence="First reference lacks proper hanging indent",
-                    )
-                )
-        else:
+        for index, reference in enumerate(ref_paragraphs, start=1):
+            first_line_indent = reference.first_line_indent
+            if first_line_indent is not None:
+                indent_inches = first_line_indent / 914400.0
+                if abs(indent_inches - expected_hanging) <= 0.1:
+                    continue
+                actual = f"{indent_inches:.2f} inch"
+            else:
+                actual = "No first-line indent"
+
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.REFERENCES}.hanging_indent",
                     severity="error",
                     expected="-0.5 inch hanging indent (first line outdent)",
-                    actual="No first-line indent",
-                    evidence="First reference lacks first-line indent for hanging indent",
+                    actual=actual,
+                    evidence=f"Reference {index} lacks proper hanging indent",
                 )
             )
 
         ref_texts = [p.text.strip() for p in ref_paragraphs]
         for i in range(len(ref_texts) - 1):
-            if ref_texts[i] > ref_texts[i + 1]:
+            if self._sort_key(ref_texts[i]) > self._sort_key(ref_texts[i + 1]):
                 issues.append(
                     VerificationIssue(
                         check=f"{CheckCategory.REFERENCES}.alphabetical_order",

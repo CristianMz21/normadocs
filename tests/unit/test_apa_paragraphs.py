@@ -9,9 +9,12 @@ import unittest
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.shared import Inches
 
 from normadocs.formatters.apa import APADocxFormatter
+from normadocs.formatters.apa.apa_paragraphs import APAParagraphsHandler
 
 
 class TestProcessParagraphs(unittest.TestCase):
@@ -173,8 +176,8 @@ class TestProcessParagraphs(unittest.TestCase):
 
             os.unlink(temp_path)
 
-    def test_level_1_heading_starts_new_page(self):
-        """Level 1 headings should start a new page (page_break_before = True)."""
+    def test_level_1_heading_does_not_force_new_page(self):
+        """Ordinary Level 1 headings should not force a page break in APA 7."""
         paragraphs = [
             {"text": "Párrafo inicial.", "style": "Normal"},
             {"text": "Título Nivel 1", "style": "Heading 1"},
@@ -185,7 +188,48 @@ class TestProcessParagraphs(unittest.TestCase):
             formatter._process_paragraphs()
 
             heading_para = formatter.doc.paragraphs[1]
-            self.assertTrue(heading_para.paragraph_format.page_break_before)
+            self.assertFalse(heading_para.paragraph_format.page_break_before)
+        finally:
+            import os
+
+            os.unlink(temp_path)
+
+    def test_explicit_break_is_checked_per_heading(self):
+        """An earlier explicit break must not suppress a later heading break."""
+        doc = Document()
+        first_heading = doc.add_paragraph("First heading", style="Heading 1")
+        break_paragraph = OxmlElement("w:p")
+        break_run = OxmlElement("w:r")
+        explicit_break = OxmlElement("w:br")
+        explicit_break.set(qn("w:type"), "page")
+        break_run.append(explicit_break)
+        break_paragraph.append(break_run)
+        first_heading._element.addprevious(break_paragraph)
+        second_heading = doc.add_paragraph("Second heading", style="Heading 1")
+        handler = APAParagraphsHandler(doc)
+
+        handler._set_page_break_before(first_heading)
+        handler._set_page_break_before(second_heading)
+
+        self.assertTrue(handler._has_page_break_before(first_heading))
+        self.assertFalse(handler._has_page_break_before(second_heading))
+        self.assertFalse(first_heading.paragraph_format.page_break_before)
+        self.assertTrue(second_heading.paragraph_format.page_break_before)
+
+    def test_stale_page_break_is_removed_from_later_heading(self):
+        """Reused DOCX files must not retain breaks on ordinary later headings."""
+        paragraphs = [
+            {"text": "Introduction", "style": "Heading 1"},
+            {"text": "First body paragraph.", "style": "Normal"},
+            {"text": "Methods", "style": "Heading 1"},
+            {"text": "Methods body paragraph.", "style": "Normal"},
+        ]
+        formatter, temp_path = self._create_formatter_with_doc(paragraphs)
+
+        try:
+            formatter.doc.paragraphs[2].paragraph_format.page_break_before = True
+            formatter._process_paragraphs()
+            self.assertFalse(formatter.doc.paragraphs[2].paragraph_format.page_break_before)
         finally:
             import os
 

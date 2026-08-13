@@ -58,8 +58,13 @@ def convert(
         str, typer.Option("--format", "-f", help="Output format: docx, pdf, or all")
     ] = "docx",
     style: Annotated[
-        str, typer.Option("--style", "-s", help="Citation style: apa, icontec")
-    ] = "apa",
+        str,
+        typer.Option(
+            "--style",
+            "-s",
+            help="Citation style: apa7estudiante (default), apa, icontec, or ieee",
+        ),
+    ] = "apa7estudiante",
     bibliography: Annotated[
         str | None, typer.Option("--bibliography", "-b", help="Path to bibliography file (.bib)")
     ] = None,

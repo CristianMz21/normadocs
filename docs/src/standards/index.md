@@ -20,6 +20,12 @@ American Psychological Association format, commonly used in social sciences.
 
 **Configuration:** `apa7.yaml`
 
+For student assignments, use the dedicated `apa7estudiante` profile. It keeps
+page numbers on every page and omits optional running-head text, as APA 7
+requires for student papers.
+
+**Student configuration:** `apa7estudiante.yaml`
+
 **Example Document:** `examples/example_apa.md`
 
 [See APA Configuration →](apa7.md)

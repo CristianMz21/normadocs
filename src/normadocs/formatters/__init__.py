@@ -22,7 +22,7 @@ __all__ = [
 
 
 def get_formatter(
-    style: str = "apa",
+    style: str = "apa7estudiante",
     doc_path: str = "",
     config: dict[str, Any] | None = None,
 ) -> APADocxFormatter | IcontecFormatter | IEEEDocxFormatter:
@@ -30,7 +30,7 @@ def get_formatter(
     Factory to get the appropriate formatter with YAML config.
 
     Args:
-        style: The citation style ('apa', 'icontec', 'ieee').
+        style: The citation style ('apa7estudiante', 'apa', 'icontec', 'ieee').
         doc_path: Path to the DOCX file to format.
         config: Optional config dict to override YAML defaults.
 
@@ -58,7 +58,9 @@ def get_formatter(
     elif style == "ieee":
         return IEEEDocxFormatter(doc_path, final_config)
     else:
-        raise ValueError(f"Unsupported style: {style}. Available: apa, icontec, ieee")
+        raise ValueError(
+            f"Unsupported style: {style}. Available: apa, apa7estudiante, icontec, ieee"
+        )
 
 
 def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -87,7 +89,7 @@ def load_standard_config(style: str) -> dict[str, Any]:
     Load citation standard configuration from YAML file, merged with defaults.
 
     Args:
-        style: The citation style name (e.g., 'apa7', 'icontec').
+        style: The citation style name (e.g., 'apa7', 'apa7estudiante', 'icontec').
 
     Returns:
         Dictionary containing the merged standard configuration.

@@ -193,6 +193,7 @@ class TestAPAVerifierEndToEnd(unittest.TestCase):
         section.different_first_page_header_footer = True
 
         section.header.paragraphs[0].add_run("1")
+        section.first_page_header.paragraphs[0].add_run("1")
 
         def style_run(run, bold=False, italic=False) -> None:
             run.font.name = "Times New Roman"

@@ -64,6 +64,20 @@ running_head:
   max_length: 50
 ```
 
+### Student papers
+
+Use `apa7estudiante` for essays, assignments, and other student papers:
+
+```bash
+normadocs paper.md --format docx
+```
+
+This profile keeps the APA 7 student-paper requirements: 1-inch margins,
+letter-size pages, double spacing, Times New Roman 12-point text, a centered
+bold title page, page number 1 on the cover, page numbers on later pages, and
+no optional running-head text. A `short_title` in the front matter does not
+enable a running head in this profile.
+
 ### Customization
 
 Override defaults by passing a config dictionary to the formatter:

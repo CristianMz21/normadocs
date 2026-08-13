@@ -77,8 +77,10 @@ class APADocxFormatter:
         self._paragraphs.format_lists()
         self._paragraphs.apply_body_indent()
         self._keywords.format_keywords(meta)
-        self._page.add_section_page_breaks()
         self._paragraphs.fix_text_spacing_global()
+        # Add required section page breaks after paragraph cleanup so the
+        # OpenXML break paragraphs are not removed by run consolidation.
+        self._page.add_section_page_breaks()
 
         self._tables.add_table_header_bold()
         self._keywords.apply_foreign_word_italics()

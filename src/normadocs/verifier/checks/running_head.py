@@ -1,10 +1,10 @@
 """Running head verification for APA 7th Edition.
 
-Verifies that the running head meets APA 7th Edition requirements:
-- Appears on all pages except the first (cover page)
-- Left side: Short title in ALL CAPS (max 50 characters)
-- Right side: Page number
-- Format: "SHORT TITLE                                     1"
+Verifies that the student-paper header meets APA 7th Edition requirements:
+- Page number appears on every page, including the cover
+- Student papers omit running-head text unless explicitly requested
+- Professional papers may include a short title in ALL CAPS on pages 2+
+- Format: page number only, or "SHORT TITLE                                     1"
 """
 
 from __future__ import annotations
@@ -51,16 +51,24 @@ class RunningHeadCheck:
         first_page_header = ctx.docx.get_header_text("first")
 
         if not default_header.strip():
+            expected_header = (
+                "Running head with short title and page number"
+                if ctx.meta.short_title
+                else "Page number only"
+            )
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.RUNNING_HEAD}.missing_on_pages_2+",
                     severity="error",
-                    expected="Running head with short title and page number",
+                    expected=expected_header,
                     actual="Empty header",
-                    evidence="Pages 2+ have no running head in header",
+                    evidence="Pages 2+ have no page number header",
                 )
             )
         else:
+            # APA 7 student papers do not require a running head. When the
+            # source has no short_title, validate only the page number and
+            # intentionally allow the title text to be absent.
             if ctx.meta.short_title:
                 expected_short = ctx.meta.short_title.upper()
                 if len(expected_short) > MAX_RUNNING_HEAD_LENGTH:
@@ -77,25 +85,43 @@ class RunningHeadCheck:
                         )
                     )
 
-            if "PAGE" not in default_header.upper() and "1" not in default_header:
-                issues.append(
-                    VerificationIssue(
-                        check=f"{CheckCategory.RUNNING_HEAD}.page_number",
-                        severity="error",
-                        expected="Page number in running head",
-                        actual="No page number found",
-                        evidence="Running head header lacks page number",
+            if ctx.meta.short_title:
+                if "PAGE" not in default_header.upper() and not default_header.strip().isdigit():
+                    issues.append(
+                        VerificationIssue(
+                            check=f"{CheckCategory.RUNNING_HEAD}.page_number",
+                            severity="error",
+                            expected="Page number in header",
+                            actual="No page number found",
+                            evidence="Header lacks page number",
+                        )
                     )
-                )
+            else:
+                # With no short_title, a student paper must contain only the
+                # rendered page field (LibreOffice exposes it as a digit).
+                normalized_header = " ".join(default_header.split()).upper()
+                if normalized_header != "PAGE" and not normalized_header.isdigit():
+                    issues.append(
+                        VerificationIssue(
+                            check=f"{CheckCategory.RUNNING_HEAD}.student_header_content",
+                            severity="error",
+                            expected="Only the page number in the header",
+                            actual=f"'{default_header}'",
+                            evidence="Student APA header contains text besides the page number",
+                        )
+                    )
 
-        if first_page_header.strip():
+        # APA 7 student papers include page number 1 on the cover, but no
+        # running-head text. Accept the rendered field as a digit or PAGE.
+        normalized_first = " ".join(first_page_header.split()).upper()
+        if not normalized_first or normalized_first not in {"PAGE", "1"}:
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.RUNNING_HEAD}.present_on_cover",
                     severity="error",
-                    expected="No running head on cover page (page 1)",
-                    actual="Running head present",
-                    evidence=f"Cover page header contains: '{first_page_header}'",
+                    expected="Page number only on cover page",
+                    actual=f"'{first_page_header}'",
+                    evidence="Cover page header contains running-head text",
                 )
             )
 

@@ -354,6 +354,54 @@ class TestAddCoverPage(unittest.TestCase):
 
             os.unlink(temp_path)
 
+    def test_title_is_repeated_before_first_content_heading(self):
+        """APA title should be repeated when the first heading has another name."""
+        meta = DocumentMetadata(title="Título del Documento", author="Autor Test")
+        paragraphs = [
+            {"text": "Introducción", "style": "Heading 1"},
+            {"text": "Contenido de la introducción.", "style": "Normal"},
+        ]
+        formatter, temp_path = self._create_formatter_with_doc(paragraphs)
+
+        try:
+            formatter._add_cover_page(meta)
+
+            title_headings = [
+                p
+                for p in formatter.doc.paragraphs
+                if p.style and p.style.name == "Heading 1" and p.text == meta.title
+            ]
+            self.assertEqual(len(title_headings), 1)
+            self.assertEqual(title_headings[0].alignment, WD_ALIGN_PARAGRAPH.CENTER)
+            self.assertTrue(all(run.bold for run in title_headings[0].runs if run.text))
+            self.assertTrue(title_headings[0].paragraph_format.page_break_before)
+        finally:
+            import os
+
+            os.unlink(temp_path)
+
+    def test_existing_title_heading_is_not_duplicated(self):
+        """An existing first-page title heading should be preserved once."""
+        meta = DocumentMetadata(title="Título del Documento", author="Autor Test")
+        paragraphs = [
+            {"text": meta.title, "style": "Heading 1"},
+            {"text": "Contenido.", "style": "Normal"},
+        ]
+        formatter, temp_path = self._create_formatter_with_doc(paragraphs)
+
+        try:
+            formatter._add_cover_page(meta)
+            title_headings = [
+                p
+                for p in formatter.doc.paragraphs
+                if p.style and p.style.name == "Heading 1" and p.text == meta.title
+            ]
+            self.assertEqual(len(title_headings), 1)
+        finally:
+            import os
+
+            os.unlink(temp_path)
+
 
 class TestBackwardCompatibilityModule(unittest.TestCase):
     """Tests for the backward compatibility apa.py module."""

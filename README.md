@@ -196,7 +196,7 @@ pip install -e ".[dev]"
 normadocs [INPUT] [OPTIONS]
 
 Options:
-  -s, --style [apa|icontec|ieee]   Citation standard (default: apa)
+  -s, --style [apa7estudiante|apa|icontec|ieee]   Citation standard (default: apa7estudiante)
   -f, --format [docx|pdf|all]      Output format (default: docx)
   -o, --output DIR                  Output directory
   -b, --bibliography FILE           BibTeX file (.bib)
@@ -207,8 +207,11 @@ Options:
 ### Examples
 
 ```bash
-# APA (default)
-normadocs paper.md
+# APA 7 student paper (default profile)
+normadocs paper.md --format docx
+
+# APA (generic profile)
+normadocs paper.md --style apa
 
 # ICONTEC with PDF
 normadocs paper.md -s icontec -f all

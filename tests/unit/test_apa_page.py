@@ -9,6 +9,8 @@ import tempfile
 import unittest
 
 from docx import Document
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 
 from normadocs.formatters.apa.apa_page import APAPageHandler
@@ -115,7 +117,9 @@ class TestSetupPageLayout(unittest.TestCase):
 class TestAddPageNumber(unittest.TestCase):
     """Tests for _add_page_number method."""
 
-    def _create_doc_with_header(self) -> tuple[Document, APAPageHandler, str]:
+    def _create_doc_with_header(
+        self, config: dict | None = None
+    ) -> tuple[Document, APAPageHandler, str]:
         """Create a document for header testing."""
         doc = Document()
         doc.add_paragraph("Introduction", style="Heading 1")
@@ -126,7 +130,7 @@ class TestAddPageNumber(unittest.TestCase):
 
         doc.save(temp_path)
         doc = Document(temp_path)
-        handler = APAPageHandler(doc)
+        handler = APAPageHandler(doc, config)
         return doc, handler, temp_path
 
     def test_page_number_in_header(self):
@@ -140,6 +144,33 @@ class TestAddPageNumber(unittest.TestCase):
                 header_text = "".join(p.text for p in section.header.paragraphs)
                 # Page number placeholder "1" should be in header
                 self.assertIn("1", header_text)
+        finally:
+            os.unlink(temp_path)
+
+    def test_page_number_is_present_on_cover_header(self):
+        """Student APA cover should have page number 1 without running-head text."""
+        doc, handler, temp_path = self._create_doc_with_header()
+
+        try:
+            handler.setup_page_layout()
+            first_header_text = "".join(
+                p.text for p in doc.sections[0].first_page_header.paragraphs
+            )
+            self.assertIn("1", first_header_text)
+        finally:
+            os.unlink(temp_path)
+
+    def test_student_profile_keeps_page_number_without_running_head(self):
+        """Student APA profile must suppress optional running-head text."""
+        doc, handler, temp_path = self._create_doc_with_header({"running_head": {"enabled": False}})
+
+        try:
+            handler.setup_page_layout()
+            handler.setup_running_head("OPTIONAL RUNNING HEAD")
+
+            header_text = " ".join(p.text for p in doc.sections[0].header.paragraphs).strip()
+            self.assertNotIn("OPTIONAL RUNNING HEAD", header_text)
+            self.assertIn("1", header_text)
         finally:
             os.unlink(temp_path)
 
@@ -249,13 +280,9 @@ class TestAddSectionPageBreaks(unittest.TestCase):
             prev_elem = conclusiones_para._element.getprevious()
             has_page_break = False
             while prev_elem is not None:
-                if prev_elem.tag.endswith("}br"):
-                    br_type = prev_elem.get(
-                        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type"
-                    )
-                    if br_type == "page":
-                        has_page_break = True
-                        break
+                if any(br.get(qn("w:type")) == "page" for br in prev_elem.iter(qn("w:br"))):
+                    has_page_break = True
+                    break
                 prev_elem = prev_elem.getprevious()
 
             self.assertTrue(has_page_break, "Conclusiones should have a page break before it")
@@ -284,16 +311,24 @@ class TestAddSectionPageBreaks(unittest.TestCase):
             prev_elem = referencias_para._element.getprevious()
             has_page_break = False
             while prev_elem is not None:
-                if prev_elem.tag.endswith("}br"):
-                    br_type = prev_elem.get(
-                        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type"
-                    )
-                    if br_type == "page":
-                        has_page_break = True
-                        break
+                if any(br.get(qn("w:type")) == "page" for br in prev_elem.iter(qn("w:br"))):
+                    has_page_break = True
+                    break
                 prev_elem = prev_elem.getprevious()
 
             self.assertTrue(has_page_break, "Referencias should have a page break before it")
+        finally:
+            os.unlink(temp_path)
+
+    def test_page_break_before_english_references(self):
+        """English References should also start on a new page."""
+        headings = ["Introduction", "References"]
+        doc, handler, temp_path = self._create_doc_with_headings(headings)
+
+        try:
+            handler.add_section_page_breaks()
+            references = next(p for p in doc.paragraphs if p.text.strip() == "References")
+            self.assertTrue(handler._has_page_break_before(references))
         finally:
             os.unlink(temp_path)
 
@@ -319,16 +354,44 @@ class TestAddSectionPageBreaks(unittest.TestCase):
             prev_elem = diskusion_para._element.getprevious()
             has_page_break = False
             while prev_elem is not None:
-                if prev_elem.tag.endswith("}br"):
-                    br_type = prev_elem.get(
-                        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type"
-                    )
-                    if br_type == "page":
-                        has_page_break = True
-                        break
+                if any(br.get(qn("w:type")) == "page" for br in prev_elem.iter(qn("w:br"))):
+                    has_page_break = True
+                    break
                 prev_elem = prev_elem.getprevious()
 
             self.assertFalse(has_page_break, "Discusión should NOT have a page break before it")
+        finally:
+            os.unlink(temp_path)
+
+    def test_existing_break_does_not_suppress_later_section_break(self):
+        """An existing break before Referencias must not suppress Conclusiones."""
+        doc = Document()
+        doc.add_paragraph("Introduction", style="Heading 1")
+        doc.add_paragraph("Introduction content.", style="Normal")
+        references = doc.add_paragraph("References", style="Heading 1")
+        break_paragraph = OxmlElement("w:p")
+        break_run = OxmlElement("w:r")
+        explicit_break = OxmlElement("w:br")
+        explicit_break.set(qn("w:type"), "page")
+        break_run.append(explicit_break)
+        break_paragraph.append(break_run)
+        references._element.addprevious(break_paragraph)
+        doc.add_paragraph("Reference entry.", style="Normal")
+        conclusions = doc.add_paragraph("Conclusiones", style="Heading 1")
+
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as f:
+            temp_path = f.name
+        doc.save(temp_path)
+        doc = Document(temp_path)
+        handler = APAPageHandler(doc)
+
+        try:
+            handler.add_section_page_breaks()
+
+            references = next(p for p in doc.paragraphs if p.text == "References")
+            conclusions = next(p for p in doc.paragraphs if p.text == "Conclusiones")
+            self.assertTrue(handler._has_page_break_before(references))
+            self.assertTrue(handler._has_page_break_before(conclusions))
         finally:
             os.unlink(temp_path)
 
@@ -354,13 +417,9 @@ class TestAddSectionPageBreaks(unittest.TestCase):
             prev_elem = conclusiones_para._element.getprevious()
             has_page_break = False
             while prev_elem is not None:
-                if prev_elem.tag.endswith("}br"):
-                    br_type = prev_elem.get(
-                        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type"
-                    )
-                    if br_type == "page":
-                        has_page_break = True
-                        break
+                if any(br.get(qn("w:type")) == "page" for br in prev_elem.iter(qn("w:br"))):
+                    has_page_break = True
+                    break
                 prev_elem = prev_elem.getprevious()
 
             self.assertTrue(has_page_break, "conclusiones (lowercase) should have a page break")

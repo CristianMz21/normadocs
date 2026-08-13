@@ -71,6 +71,19 @@ class TestReferencesCheckCompliant(unittest.TestCase):
         errors = [i for i in issues if i.severity == "error"]
         self.assertEqual(errors, [], f"Expected no errors for proper refs but got: {errors}")
 
+    def test_every_reference_requires_hanging_indent(self) -> None:
+        """A later reference without hanging indent must be reported."""
+        docx_path = self._create_docx_with_proper_references()
+        doc = Document(str(docx_path))
+        doc.paragraphs[-1].paragraph_format.first_line_indent = None
+        doc.save(str(docx_path))
+
+        issues = self._run_check(docx_path)
+        later_errors = [
+            i for i in issues if "hanging_indent" in i.check and "Reference 2" in i.evidence
+        ]
+        self.assertGreater(len(later_errors), 0, f"Expected second-reference error: {issues}")
+
 
 class TestReferencesCheckMissingSection(unittest.TestCase):
     """Tests for missing references section."""
@@ -265,6 +278,24 @@ class TestReferencesCheckAlphabeticalOrder(unittest.TestCase):
         self.assertGreater(
             len(order_warnings), 0, f"Expected alphabetical order warning but got: {issues}"
         )
+
+    def test_same_author_undated_reference_precedes_dated_reference(self) -> None:
+        """APA places an undated work before dated works by the same author."""
+        path = self.temp_path / "same_author_refs.docx"
+        doc = Document()
+        doc.add_paragraph("References")
+
+        first = doc.add_paragraph("Servicio Nacional de Aprendizaje. (s. f.). Undated guide.")
+        first.paragraph_format.first_line_indent = Inches(-0.5)
+        second = doc.add_paragraph("Servicio Nacional de Aprendizaje. (2026). Dated guide.")
+        second.paragraph_format.first_line_indent = Inches(-0.5)
+        doc.save(str(path))
+
+        issues = self._run_check(path)
+        order_warnings = [
+            i for i in issues if "alphabetical_order" in i.check and i.severity == "warning"
+        ]
+        self.assertEqual(order_warnings, [], f"Unexpected APA order warning: {issues}")
 
     def test_section_after_references_is_not_counted(self) -> None:
         """A heading after the references (e.g. appendices) must not be counted as a reference.

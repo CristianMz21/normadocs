@@ -48,6 +48,7 @@ class TestCoverPageCheckCompliant(unittest.TestCase):
         run = title_para.add_run(title)
         run.font.name = "Times New Roman"
         run.font.size = Pt(12)
+        run.bold = True
 
         author_para = doc.add_paragraph()
         author_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -61,11 +62,16 @@ class TestCoverPageCheckCompliant(unittest.TestCase):
         run.font.name = "Times New Roman"
         run.font.size = Pt(12)
 
+        first_header = section.first_page_header
+        first_header.paragraphs[0].text = "1"
+
         date_para = doc.add_paragraph()
         date_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run = date_para.add_run(year)
         run.font.name = "Times New Roman"
         run.font.size = Pt(12)
+
+        doc.add_paragraph(title, style="Heading 1")
 
         doc.save(str(path))
         return path
@@ -92,8 +98,8 @@ class TestCoverPageCheckCompliant(unittest.TestCase):
             institution="University of Example",
         )
         issues = self._run_check(docx_path, meta)
-        header_errors = [i for i in issues if "no_header" in i.check and i.severity == "error"]
-        self.assertEqual(header_errors, [], f"Expected no header error but got: {issues}")
+        errors = [i for i in issues if i.severity == "error"]
+        self.assertEqual(errors, [], f"Expected compliant cover without errors but got: {issues}")
 
 
 class TestCoverPageCheckHeaderViolation(unittest.TestCase):
@@ -289,16 +295,14 @@ class TestCoverPageCheckAlignment(unittest.TestCase):
         check = CoverPageCheck()
         return check.run(ctx)
 
-    def test_title_not_centered_raises_warning(self) -> None:
-        """Title not centered should raise warning."""
+    def test_title_not_centered_raises_error(self) -> None:
+        """Title not centered should raise an error under strict APA validation."""
         docx_path = self._create_docx_title_not_centered()
         meta = DocumentMetadata(title="My Document Title", author="Author Name")
         issues = self._run_check(docx_path, meta)
-        align_warnings = [
-            i for i in issues if "title_alignment" in i.check and i.severity == "warning"
-        ]
+        align_errors = [i for i in issues if "title_alignment" in i.check and i.severity == "error"]
         self.assertGreater(
-            len(align_warnings), 0, f"Expected title alignment warning but got: {issues}"
+            len(align_errors), 0, f"Expected title alignment error but got: {issues}"
         )
 
 

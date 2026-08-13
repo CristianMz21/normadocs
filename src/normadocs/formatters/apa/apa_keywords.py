@@ -102,13 +102,21 @@ class APAKeywordsHandler:
         from docx.oxml import OxmlElement
         from docx.oxml.ns import qn
 
+        from .apa_page import APAPageHandler
+
         for p in self.doc.paragraphs:
             if p.style and p.style.name.startswith("Heading"):
                 text = p.text.strip().lower()
                 if "introducción" in text or "introduction" in text:
-                    br = OxmlElement("w:br")
-                    br.set(qn("w:type"), "page")
-                    p._element.addprevious(br)
+                    if APAPageHandler._has_page_break_before(p):
+                        break
+                    break_paragraph = OxmlElement("w:p")
+                    break_run = OxmlElement("w:r")
+                    page_break = OxmlElement("w:br")
+                    page_break.set(qn("w:type"), "page")
+                    break_run.append(page_break)
+                    break_paragraph.append(break_run)
+                    p._element.addprevious(break_paragraph)
                     break
 
     def format_nota_italic(self) -> None:

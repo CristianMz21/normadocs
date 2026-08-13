@@ -46,6 +46,32 @@ class APAParagraphsHandler:
             str, self.config.get("fonts", fonts).get("body", {}).get("name", "Times New Roman")
         )
 
+    @staticmethod
+    def _has_page_break_before(paragraph: ParagraphType) -> bool:
+        """Return whether the nearest preceding body content is a page break."""
+        previous = paragraph._element.getprevious()
+        while previous is not None:
+            if any(br.get(qn("w:type")) == "page" for br in previous.iter(qn("w:br"))):
+                return True
+            # Raw OpenXML page breaks can be followed by empty paragraphs.
+            # Skip only those empty paragraphs; any real content ends the search.
+            if previous.tag == qn("w:p") and not "".join(previous.itertext()).strip():
+                previous = previous.getprevious()
+                continue
+            return False
+        return False
+
+    def _set_page_break_before(self, paragraph: ParagraphType) -> None:
+        """Add a page break only when one is not already immediately before it.
+
+        The Markdown preprocessor emits explicit OpenXML page breaks before
+        level-1 headings. Adding ``page_break_before`` again creates blank
+        pages in LibreOffice, so the formatter deduplicates the two paths per
+        heading rather than using a document-wide flag.
+        """
+        if not self._has_page_break_before(paragraph):
+            paragraph.paragraph_format.page_break_before = True
+
     def process(self) -> None:
         """Iterate through paragraphs to apply APA 7 formatting.
 
@@ -64,6 +90,7 @@ class APAParagraphsHandler:
         in_abstract = False
         just_left_abstract = False
         first_paragraph_after_heading = False  # APA 7: first paragraph has no indent
+        first_heading_seen = False
         heading_levels = self._build_heading_level_map()
 
         for p in self.doc.paragraphs:
@@ -96,7 +123,7 @@ class APAParagraphsHandler:
                     in_references = True
                     in_toc = False
                     in_abstract = False
-                    p.paragraph_format.page_break_before = True
+                    self._set_page_break_before(p)
                     first_paragraph_after_heading = True
                 elif "resumen" in text_lower or "abstract" in text_lower:
                     # APA 7: RESUMEN title is centered and bold
@@ -110,15 +137,24 @@ class APAParagraphsHandler:
                 elif "contenido" in text_lower or "index" in text_lower:
                     in_toc = True
                     in_references = False
-                    p.paragraph_format.page_break_before = True
+                    self._set_page_break_before(p)
                 else:
-                    # Every Level 1 heading starts a new page in APA 7
+                    # APA 7 does not require every Level 1 heading to start a
+                    # new page. The cover handler and explicit section breaks
+                    # handle pages that must be separated; ordinary headings
+                    # should flow with their following content.
                     if style_name == "Heading 1":
-                        p.paragraph_format.page_break_before = True
+                        # Clear stale page-break formatting inherited from a
+                        # previously formatted DOCX, except for the first
+                        # content heading used to separate the cover page.
+                        if first_heading_seen:
+                            p.paragraph_format.page_break_before = False
+                        else:
+                            first_heading_seen = True
                         first_paragraph_after_heading = True
                     # If leaving abstract section, force page break on any heading
                     if in_abstract or just_left_abstract:
-                        p.paragraph_format.page_break_before = True
+                        self._set_page_break_before(p)
                         just_left_abstract = False
                     # Leaving the references section: reset the flag
                     in_references = False
@@ -216,7 +252,7 @@ class APAParagraphsHandler:
                 ):
                     # Force page break on first paragraph after abstract/keywords
                     if just_left_abstract:
-                        p.paragraph_format.page_break_before = True
+                        self._set_page_break_before(p)
                         just_left_abstract = False
                     # APA 7: First paragraph after heading has NO indent
                     # Subsequent paragraphs have 0.5 inch first-line indent

@@ -20,6 +20,14 @@ from normadocs.formatters.ieee import IEEEDocxFormatter
 
 
 class TestGetFormatter(unittest.TestCase):
+    def test_get_formatter_without_style_uses_student_apa_profile(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            doc_path = Path(tmpdir) / "test.docx"
+            Document().save(str(doc_path))
+            formatter = get_formatter(doc_path=str(doc_path))
+            self.assertIsInstance(formatter, APADocxFormatter)
+            self.assertFalse(formatter.config["running_head"]["enabled"])
+
     def test_get_formatter_apa_returns_apa_formatter(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             doc_path = Path(tmpdir) / "test.docx"
@@ -42,6 +50,7 @@ class TestGetFormatter(unittest.TestCase):
             self.assertIsInstance(formatter, APADocxFormatter)
             config = load_standard_config("apa7estudiante")
             self.assertEqual(config.get("citation_style"), "apa")
+            self.assertFalse(config["running_head"]["enabled"])
 
     def test_get_formatter_icontec_returns_icontec_formatter(self):
         with tempfile.TemporaryDirectory() as tmpdir:

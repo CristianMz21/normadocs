@@ -9,6 +9,7 @@ import unittest
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
 from docx.shared import Inches
 
 from normadocs.formatters.apa import APADocxFormatter
@@ -85,6 +86,32 @@ class TestFormatKeywords(unittest.TestCase):
                     break
 
             self.assertTrue(found_italic_label, "Keywords label run not found or not italic")
+        finally:
+            import os
+
+            os.unlink(temp_path)
+
+    def test_introduction_break_uses_valid_openxml_paragraph(self):
+        """The introduction break must be a valid paragraph/run/br structure."""
+        paragraphs = [
+            {"text": "Abstract", "style": "Heading 1"},
+            {"text": "This is the abstract content.", "style": "Normal"},
+            {"text": "Keywords: testing, unittest", "style": "Normal"},
+            {"text": "Introduction", "style": "Heading 1"},
+        ]
+        formatter, temp_path = self._create_formatter_with_doc(paragraphs)
+
+        try:
+            meta = DocumentMetadata(title="Test", author="Author")
+            formatter._format_keywords(meta)
+            intro = next(p for p in formatter.doc.paragraphs if p.text == "Introduction")
+            previous = intro._element.getprevious()
+            self.assertIsNotNone(previous)
+            self.assertEqual(previous.tag, qn("w:p"))
+            self.assertEqual(
+                [br.get(qn("w:type")) for br in previous.iter(qn("w:br"))],
+                ["page"],
+            )
         finally:
             import os
 
