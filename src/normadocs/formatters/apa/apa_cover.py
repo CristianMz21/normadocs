@@ -155,7 +155,10 @@ class APACoverHandler:
         )
         if first_heading is not None and not has_title_heading:
             title_heading = first_heading.insert_paragraph_before(meta.title)
-            title_heading.style = self.doc.styles["Heading 1"]
+            # Reuse the source heading's style object. Pandoc may preserve a
+            # heading style on a paragraph without exposing it under the
+            # localized ``Heading 1`` collection name.
+            title_heading.style = first_heading.style
             title_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
             title_heading.paragraph_format.page_break_before = True
             for run in title_heading.runs:
