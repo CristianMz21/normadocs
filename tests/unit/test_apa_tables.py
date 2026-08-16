@@ -210,6 +210,38 @@ class TestAddTableCaptions(unittest.TestCase):
         self.assertIn("Table 2", full_text)
         self.assertIn("Table 3", full_text)
 
+    def test_source_caption_number_is_respected(self):
+        """An explicit 'Tabla N' line in the source keeps its number."""
+        doc, _ = _make_doc_with_tables(num_tables=1, cols=2)
+        caption_p = doc.add_paragraph("Tabla 3. Datos de la encuesta")
+        doc.tables[0]._tbl.addprevious(caption_p._element)
+        formatter = APADocxFormatter.__new__(APADocxFormatter)
+        formatter.doc = doc
+
+        formatter._add_table_captions()
+
+        full_text = "\n".join(p.text for p in doc.paragraphs)
+        self.assertIn("Table 3", full_text)
+        self.assertIn("Datos de la encuesta", full_text)
+        self.assertNotIn("Tabla 3. Datos", full_text)
+        self.assertIsNone(caption_p._element.getparent())
+
+    def test_numbering_continues_after_explicit_source_number(self):
+        """Tables without a source number continue after the highest used one."""
+        doc, _ = _make_doc_with_tables(num_tables=2, cols=2)
+        caption_p = doc.add_paragraph("Tabla 3. Datos de la encuesta")
+        doc.tables[0]._tbl.addprevious(caption_p._element)
+        formatter = APADocxFormatter.__new__(APADocxFormatter)
+        formatter.doc = doc
+
+        formatter._add_table_captions()
+
+        full_text = "\n".join(p.text for p in doc.paragraphs)
+        self.assertIn("Table 3", full_text)
+        self.assertIn("Table 4", full_text)
+        self.assertNotIn("Table 1", full_text)
+        self.assertNotIn("Table 2", full_text)
+
 
 class TestAddTableNotes(unittest.TestCase):
     """Tests for _add_table_notes descriptive notes based on table content."""

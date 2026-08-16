@@ -11,7 +11,7 @@ Verifies references section meets APA 7th Edition requirements:
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .. import CheckCategory, VerificationIssue
 
@@ -149,5 +149,71 @@ class ReferencesCheck:
                     )
                 )
                 break
+
+        issues.extend(self._check_entry_format(ref_paragraphs, ctx))
+
+        return issues
+
+    _JOURNAL_VOLUME = re.compile(r"(?<=[.!?]\s)([A-ZÁÉÍÓÚÑ][^.!?]*?),\s*\d+(?=\s*[(,])")
+    _YEAR_MARKER = re.compile(r"\((?:s\.\s*f\.|n\.\s*d\.|\d{4})")
+    _SPANISH_CONJUNCTION = re.compile(r"\.\s*y\s+[A-ZÁÉÍÓÚÑ]")
+
+    def _check_entry_format(
+        self, ref_paragraphs: list[Any], ctx: VerificationContext
+    ) -> list[VerificationIssue]:
+        """Verify the internal format of each reference entry."""
+        issues: list[VerificationIssue] = []
+
+        for index, p_info in enumerate(ref_paragraphs, start=1):
+            text = p_info.text.strip()
+            if not text:
+                continue
+
+            if re.search(r"\b(?:recuperado\s+de|retrieved\s+from)\b", text, re.IGNORECASE):
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.REFERENCES}.retrieved_from",
+                        severity="warning",
+                        expected="Direct URL or DOI without 'Recuperado de'",
+                        actual="APA 6 retrieval phrase present",
+                        evidence=f"Reference {index} still uses 'Recuperado de'/'Retrieved from'",
+                    )
+                )
+
+            marker = self._YEAR_MARKER.search(text)
+            head = text[: marker.start()] if marker else text
+            if self._SPANISH_CONJUNCTION.search(head):
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.REFERENCES}.entry_ampersand",
+                        severity="error",
+                        expected="Last author joined with ', & '",
+                        actual="Authors joined with 'y'",
+                        evidence=f"Reference {index} must use '&' before the last author",
+                    )
+                )
+
+            if re.search(r"\bdoi:", text, re.IGNORECASE) or "dx.doi.org" in text:
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.REFERENCES}.doi_format",
+                        severity="warning",
+                        expected="DOI as 'https://doi.org/…'",
+                        actual="Legacy DOI notation",
+                        evidence=f"Reference {index} must use the https://doi.org/ format",
+                    )
+                )
+
+            has_italic = any(run.get("italic") for run in p_info.runs)
+            if not has_italic and self._JOURNAL_VOLUME.search(text):
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.REFERENCES}.italic_source",
+                        severity="warning",
+                        expected="Journal name and volume in italics",
+                        actual="No italicized source in a journal-style entry",
+                        evidence=f"Reference {index} looks like a journal article without italics",
+                    )
+                )
 
         return issues

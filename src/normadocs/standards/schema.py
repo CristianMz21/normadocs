@@ -24,6 +24,9 @@ DEFAULT_APA7_CONFIG: dict[str, Any] = {
     "margins": {"unit": "inches", "top": 1.0, "bottom": 1.0, "left": 1.0, "right": 1.0},
     "spacing": {"line": "double", "paragraph_before": 0, "paragraph_after": 0},
     "page_setup": {"page_numbers": True, "header": True, "first_page_number": 1},
+    "citations": {"et_al_min_authors": 3, "ampersand": True},
+    "block_quote": {"min_words": 40, "indent_inches": 0.5},
+    "references": {"sort": True, "italicize_journals": True},
     "tables": {
         "borders": "horizontal_only",
         "caption_prefix": "Table",
@@ -33,6 +36,7 @@ DEFAULT_APA7_CONFIG: dict[str, Any] = {
     },
     "figures": {
         "caption_prefix": "Figure",
+        "caption_above": True,
         "title_above": True,
         "nota_prefix": "Note.",
     },

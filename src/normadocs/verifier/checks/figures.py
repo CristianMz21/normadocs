@@ -1,7 +1,9 @@
 """Figures verification for APA 7th Edition.
 
 Verifies figure formatting meets APA 7th Edition requirements:
-- Figure caption: "Figure N" bold + title italic, positioned BELOW figure
+- Figure caption: "Figure N" bold + title italic, positioned ABOVE the
+  figure image (the note stays below)
+- Sequential numbering without gaps or duplicates
 - Note: "Nota." italic if present
 - Proper scaling and alignment
 """
@@ -9,6 +11,8 @@ Verifies figure formatting meets APA 7th Edition requirements:
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
+
+from docx.oxml.ns import qn
 
 from .. import CheckCategory, VerificationIssue
 from ..docx_analyzer import DOCXParagraphInfo
@@ -87,6 +91,9 @@ class FiguresCheck:
                     )
                 )
 
+        self._check_numbering_sequence(figure_captions, issues)
+        self._check_caption_position(figure_captions, ctx, issues)
+
         if not figure_captions:
             text_by_page = ctx.pdf.extract_text_by_page()
             all_text = " ".join(text for text in text_by_page.values())
@@ -102,3 +109,53 @@ class FiguresCheck:
                 )
 
         return issues
+
+    def _check_numbering_sequence(
+        self, figure_captions: list[FigureCaption], issues: list[VerificationIssue]
+    ) -> None:
+        """Verify figure numbers run 1..N without gaps or duplicates."""
+        numbers: list[int] = []
+        for caption_data in figure_captions:
+            parts = caption_data["text"].split()
+            if len(parts) >= 2 and parts[1].rstrip(".").isdigit():
+                numbers.append(int(parts[1].rstrip(".")))
+
+        if numbers and sorted(numbers) != list(range(1, len(numbers) + 1)):
+            issues.append(
+                VerificationIssue(
+                    check=f"{CheckCategory.FIGURES}.numbering_sequence",
+                    severity="error",
+                    expected=f"Sequential numbering 1..{len(numbers)}",
+                    actual=f"Figure numbers found: {numbers}",
+                    evidence="Figure numbers must be consecutive starting at 1",
+                )
+            )
+
+    def _check_caption_position(
+        self,
+        figure_captions: list[FigureCaption],
+        ctx: VerificationContext,
+        issues: list[VerificationIssue],
+    ) -> None:
+        """Verify each caption sits above its figure image (APA 7)."""
+        image_indices = [
+            i
+            for i, p in enumerate(ctx.docx.paragraphs)
+            if p._element.findall(f".//{qn('w:drawing')}")
+        ]
+        if not image_indices:
+            return
+
+        for caption_data in figure_captions:
+            caption_idx = caption_data["index"]
+            nearest_image = min(image_indices, key=lambda ii: abs(ii - caption_idx))
+            if nearest_image < caption_idx:
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.FIGURES}.caption_position",
+                        severity="error" if ctx.strict else "warning",
+                        expected="Figure number and title above the image",
+                        actual="Caption appears below the figure image",
+                        evidence=f"'{caption_data['text']}' must precede its figure",
+                    )
+                )

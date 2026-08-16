@@ -4,11 +4,13 @@ Verifies heading formatting meets APA 7th Edition requirements:
 - Level 1: Centered, Bold, Title Case (ALL CAPS in APA 7)
 - Level 2: Left-aligned, Bold, Title Case
 - Level 3: Left-aligned, Bold + Italic, Title Case
+- Levels 4-5: Indented run-in headings ending with a period
 - All headings: Times New Roman
 """
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 from .. import CheckCategory, VerificationIssue
@@ -179,6 +181,19 @@ class HeadingsCheck:
                                 actual=heading["text"],
                                 evidence=(
                                     f"Heading {level} run-in text lacks its terminating period"
+                                ),
+                            )
+                        )
+                    elif not re.search(r"\.\s+\S", heading["text"]):
+                        issues.append(
+                            VerificationIssue(
+                                check=f"{CheckCategory.HEADINGS}.level{level}_runin",
+                                severity="warning",
+                                expected="Body text continues on the heading line",
+                                actual="Heading stands alone on its line",
+                                evidence=(
+                                    f"Heading {level} must run in with the following text"
+                                    " after its period"
                                 ),
                             )
                         )

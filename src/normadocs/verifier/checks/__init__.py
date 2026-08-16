@@ -1,5 +1,6 @@
 """Checks package for APA 7th Edition verification."""
 
+from .citations import CitationsCheck
 from .cover_page import CoverPageCheck
 from .figures import FiguresCheck
 from .fonts import FontsCheck
@@ -14,6 +15,7 @@ from .structure import StructureCheck
 from .tables import TablesCheck
 
 __all__ = [
+    "CitationsCheck",
     "CoverPageCheck",
     "FiguresCheck",
     "FontsCheck",

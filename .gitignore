@@ -89,5 +89,6 @@ docs/site/
 .opencode/
 .specify/
 .gga
+.zcode/
 skills-lock.json
 scripts/bootstrap-sdd.sh

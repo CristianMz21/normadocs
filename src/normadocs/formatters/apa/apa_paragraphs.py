@@ -161,7 +161,7 @@ class APAParagraphsHandler:
                     in_abstract = False
                     in_toc = False
 
-                # Explicit APA heading alignment and bold on every heading
+                # Explicit APA heading alignment and emphasis on every heading
                 if style_name == "Heading 1":
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     for run in p.runs:
@@ -176,10 +176,8 @@ class APAParagraphsHandler:
                     for run in p.runs:
                         run.bold = True
                         run.italic = True
-                elif style_name in ("Heading 2", "Heading 3"):
-                    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                    for run in p.runs:
-                        run.bold = True
+                elif style_name in ("Heading 4", "Heading 5"):
+                    self._format_run_in_heading(p, italic=(style_name == "Heading 5"))
 
                 # Strip numbering property from headings (APA 7 doesn't use numbered headings)
                 p_pr = p._element.find(qn("w:pPr"))
@@ -187,7 +185,9 @@ class APAParagraphsHandler:
                     num_pr = p_pr.find(qn("w:numPr"))
                     if num_pr is not None:
                         p_pr.remove(num_pr)
-                p.paragraph_format.first_line_indent = Inches(0)
+                # Levels 4-5 keep their 0.5" run-in indent (APA 7)
+                if style_name not in ("Heading 4", "Heading 5"):
+                    p.paragraph_format.first_line_indent = Inches(0)
 
             # Line spacing
             spacing_line = self._get_spacing_line()
@@ -254,9 +254,10 @@ class APAParagraphsHandler:
                     if just_left_abstract:
                         self._set_page_break_before(p)
                         just_left_abstract = False
-                    # APA 7: First paragraph after heading has NO indent
-                    # Subsequent paragraphs have 0.5 inch first-line indent
-                    if first_paragraph_after_heading:
+                    # APA 8.27: quotations of 40+ words become block quotes
+                    if self._is_block_quote(text_strip):
+                        self._convert_block_quote(p, text_strip)
+                    elif first_paragraph_after_heading:
                         p.paragraph_format.first_line_indent = Inches(0)
                         first_paragraph_after_heading = False
                     else:
@@ -293,6 +294,117 @@ class APAParagraphsHandler:
         pPr = p._element.get_or_add_pPr()
         keepNext = OxmlElement("w:keepNext")
         pPr.append(keepNext)
+
+    def _format_run_in_heading(self, p: ParagraphType, italic: bool) -> None:
+        """Format a Level 4/5 heading as an APA 7 run-in heading.
+
+        Level 4: indented, bold, ends with a period, text begins on the
+        same line. Level 5 adds italics to the heading portion. The first
+        body paragraph after the heading is merged onto the heading line so
+        the text truly runs in, with explicit non-bold runs so the bold
+        heading style does not bleed into the body text.
+        """
+        from docx.text.paragraph import Paragraph
+
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p.paragraph_format.first_line_indent = Inches(0.5)
+        for run in p.runs:
+            run.bold = True
+            run.italic = italic
+
+        if not p.text.strip().endswith("."):
+            if p.runs:
+                p.runs[-1].text = f"{p.runs[-1].text.rstrip()}."
+            else:
+                p.add_run(".")
+
+        next_el = p._element.getnext()
+        if next_el is None or next_el.tag != qn("w:p"):
+            return
+        if next_el.findall(f".//{qn('w:drawing')}") or next_el.findall(f".//{qn('w:hyperlink')}"):
+            return
+
+        next_p = Paragraph(next_el, p._parent)
+        next_style = next_p.style.name if next_p.style else ""
+        if next_style not in ("Body Text", "Normal", "First Paragraph"):
+            return
+        if not next_p.text.strip():
+            return
+
+        runs = list(next_p.runs)
+        if runs:
+            runs[0].text = f" {runs[0].text.lstrip()}"
+        for run in runs:
+            run.bold = False
+            if italic and run.italic is None:
+                run.italic = False
+            p._element.append(run._element)
+        next_el.getparent().remove(next_el)
+
+    def _get_block_quote_config(self) -> dict[str, Any]:
+        """Get block-quote configuration with APA defaults."""
+        default_config: dict[str, Any] = {"min_words": 40, "indent_inches": 0.5}
+        return cast(dict[str, Any], self.config.get("block_quote", default_config))
+
+    def _is_block_quote(self, text: str) -> bool:
+        """Return whether a quoted paragraph qualifies as an APA block quote.
+
+        APA 8.27: quotations of 40+ words are formatted as a freestanding
+        block without quotation marks.
+        """
+        if not text or text[:1] not in ('"', "\u201c", "\u00ab"):
+            return False
+        min_words = cast(int, self._get_block_quote_config().get("min_words", 40))
+        return len(text.split()) >= min_words
+
+    def _convert_block_quote(self, p: ParagraphType, text: str) -> None:
+        """Convert a long quotation into an APA 8.27 block quote.
+
+        Removes the surrounding quotation marks, indents the whole block
+        0.5" from the left (no first-line indent), and moves the final
+        punctuation before the closing citation parenthesis.
+        """
+        indent = cast(float, self._get_block_quote_config().get("indent_inches", 0.5))
+        p.paragraph_format.left_indent = Inches(indent)
+        p.paragraph_format.first_line_indent = Inches(0)
+
+        stripped = text.strip()
+        quote_chars = ('"', "\u201c", "\u201d", "\u00ab", "\u00bb")
+        if stripped[:1] in quote_chars:
+            stripped = stripped[1:].lstrip()
+
+        # Closing quote may sit before the trailing citation, e.g.
+        # '…texto," (García, 2020).'
+        closing_re = rf"([{re.escape(''.join(quote_chars))}])\s*(\([^()]*\))?\.?\s*$"
+        closing = re.search(closing_re, stripped)
+        if closing is not None:
+            citation = closing.group(2)
+            body = stripped[: closing.start()].rstrip()
+            if body.endswith((",", ";", ":")):
+                body = f"{body[:-1]}."
+            if not body.endswith((".", "!", "?")):
+                body = f"{body}."
+            stripped = f"{body} {citation}" if citation else body
+
+        if stripped and stripped != text.strip():
+            self._replace_paragraph_text(p, stripped)
+
+    def _replace_paragraph_text(self, p: ParagraphType, text: str) -> None:
+        """Replace paragraph text with a single run, keeping the first run's font."""
+        keep_font = None
+        keep_size = None
+        for run in p.runs:
+            if run.text.strip():
+                keep_font = run.font.name
+                keep_size = run.font.size
+                break
+        for run in list(p.runs):
+            run._element.getparent().remove(run._element)
+        new_run = p.add_run(text)
+        if keep_font is not None:
+            new_run.font.name = keep_font
+        if keep_size is not None:
+            new_run.font.size = keep_size
 
     def _fix_citations(self, p: ParagraphType) -> None:
         """Replace 'y' citations with '&' per APA 7.
@@ -521,6 +633,12 @@ class APAParagraphsHandler:
             # Skip centered paragraphs (cover page)
             align = p.paragraph_format.alignment
             if align == WD_ALIGN_PARAGRAPH.CENTER:
+                continue
+
+            # Skip block quotes: their 0.5" left indent replaces the
+            # first-line indent (APA 8.27)
+            left_indent = p.paragraph_format.left_indent
+            if left_indent is not None and left_indent >= Inches(0.25):
                 continue
 
             # Skip lists, captions, compact (Pandoc lists), and other special styles

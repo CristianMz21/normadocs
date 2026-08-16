@@ -560,5 +560,83 @@ class TestBuildHeadingLevelMap(unittest.TestCase):
             os.unlink(temp_path)
 
 
+class TestRunInHeadings(unittest.TestCase):
+    """Tests for APA 7 Level 4/5 run-in heading formatting."""
+
+    def test_heading4_merges_following_paragraph(self):
+        """H4 ends with a period and the body text continues on its line."""
+        doc = Document()
+        doc.add_paragraph("Resultados experimentales", style="Heading 4")
+        doc.add_paragraph("El análisis de varianza muestra diferencias.", style="Body Text")
+
+        APAParagraphsHandler(doc).process()
+
+        heading = doc.paragraphs[0]
+        self.assertTrue(heading.text.startswith("Resultados experimentales."))
+        self.assertIn("diferencias", heading.text)
+        self.assertEqual(len([p for p in doc.paragraphs if p.text.strip()]), 1)
+        body_run = next(r for r in heading.runs if "diferencias" in r.text)
+        self.assertIsNotNone(body_run.bold)
+
+    def test_heading5_is_bold_italic_and_indented(self):
+        """H5 keeps bold+italic heading runs with a 0.5 inch indent."""
+        doc = Document()
+        doc.add_paragraph("Análisis secundario", style="Heading 5")
+        doc.add_paragraph("Los datos cualitativos respaldan el efecto.", style="Body Text")
+
+        APAParagraphsHandler(doc).process()
+
+        heading = doc.paragraphs[0]
+        self.assertTrue(heading.text.startswith("Análisis secundario."))
+        head_run = next(r for r in heading.runs if "Análisis" in r.text)
+        self.assertTrue(head_run.bold)
+        self.assertTrue(head_run.italic)
+        self.assertAlmostEqual(heading.paragraph_format.first_line_indent, Inches(0.5))
+
+    def test_heading4_does_not_merge_with_next_heading(self):
+        """A heading followed by another heading stays on its own line."""
+        doc = Document()
+        doc.add_paragraph("Categoría", style="Heading 4")
+        doc.add_paragraph("Sección siguiente", style="Heading 2")
+
+        APAParagraphsHandler(doc).process()
+
+        texts = [p.text.strip() for p in doc.paragraphs]
+        self.assertEqual(texts, ["Categoría.", "Sección siguiente"])
+
+
+class TestBlockQuotes(unittest.TestCase):
+    """Tests for APA 8.27 block-quote conversion."""
+
+    _LONG_TEXT = (
+        "El aprendizaje automático permite personalizar el contenido educativo "
+        "de forma que cada estudiante avanza según sus propias necesidades y "
+        "ritmo de aprendizaje, lo que a largo plazo mejora la retención y el "
+        "rendimiento académico medido en evaluaciones estandarizadas diversas"
+    )
+
+    def test_long_quotation_becomes_block_quote(self):
+        """A 40+ word quotation loses its quotes and gets a 0.5 inch indent."""
+        doc = Document()
+        doc.add_paragraph(f'"{self._LONG_TEXT}," (García, 2020).', style="Body Text")
+
+        APAParagraphsHandler(doc).process()
+
+        para = doc.paragraphs[0]
+        self.assertNotIn('"', para.text)
+        self.assertAlmostEqual(para.paragraph_format.left_indent, Inches(0.5))
+        self.assertEqual(para.paragraph_format.first_line_indent, Inches(0))
+        self.assertIn(". (García, 2020)", para.text)
+
+    def test_short_quotation_keeps_quotes(self):
+        """Short quotations stay in-line with quotation marks."""
+        doc = Document()
+        doc.add_paragraph('"cita breve" (García, 2020).', style="Body Text")
+
+        APAParagraphsHandler(doc).process()
+
+        self.assertIn('"cita breve"', doc.paragraphs[0].text)
+
+
 if __name__ == "__main__":
     unittest.main()

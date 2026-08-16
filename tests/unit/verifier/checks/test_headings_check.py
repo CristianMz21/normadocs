@@ -375,5 +375,56 @@ class TestHeadingsCheckLevel3Violation(unittest.TestCase):
         self.assertEqual(errors, [], f"Level 3 should be warning, not error: {issues}")
 
 
+class TestHeadingsCheckRunIn(unittest.TestCase):
+    """Tests for the Level 4/5 run-in requirement."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temp_dir = TemporaryDirectory()
+        cls.temp_path = Path(cls.temp_dir.name)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.temp_dir.cleanup()
+
+    def _run_check(self, heading_text: str) -> list:
+        path = self.temp_path / "runin.docx"
+        doc = Document()
+        h4 = doc.add_paragraph(style="Heading 4")
+        h4.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        h4.paragraph_format.first_line_indent = Inches(0.5)
+        run = h4.add_run(heading_text)
+        run.bold = True
+        doc.save(str(path))
+
+        pdf_path = self.temp_path / "output.pdf"
+        pdf_path.touch()
+        meta = DocumentMetadata(title="Test Document")
+        verifier = APAVerifier(pdf_path=pdf_path, docx_path=path, meta=meta)
+        ctx = VerificationContext(
+            pdf=verifier.pdf,
+            docx=verifier.docx,
+            meta=meta,
+            strict=False,
+        )
+        try:
+            return HeadingsCheck().run(ctx)
+        finally:
+            verifier.close()
+
+    def test_run_in_heading_with_text_passes(self):
+        """A level 4 heading followed by body text raises no run-in warning."""
+        issues = self._run_check("Resultados experimentales. El análisis confirma el efecto.")
+        run_in = [i for i in issues if "runin" in i.check]
+        self.assertEqual(run_in, [], f"Expected no run-in warning but got: {issues}")
+
+    def test_standalone_heading_raises_runin_warning(self):
+        """A level 4 heading standing alone raises the run-in warning."""
+        issues = self._run_check("Resultados experimentales.")
+        run_in = [i for i in issues if "level4_runin" in i.check]
+        self.assertEqual(len(run_in), 1)
+        self.assertEqual(run_in[0].severity, "warning")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock
 
 from docx import Document
+from docx.oxml import OxmlElement
 from docx.shared import Inches
 
 from normadocs.models import DocumentMetadata
@@ -231,6 +232,92 @@ class TestFiguresCheckNoCaptionsWithPDFEvidence(unittest.TestCase):
         issues = self._run_check_with_mock_pdf(docx_path, "Just regular text content")
         format_warnings = [i for i in issues if "caption_format" in i.check]
         self.assertEqual(format_warnings, [], f"Expected no caption warnings but got: {issues}")
+
+
+def _add_image_paragraph(doc: Document) -> None:
+    """Add a paragraph containing a bare w:drawing element."""
+    p = doc.add_paragraph()
+    p._element.append(OxmlElement("w:drawing"))
+
+
+def _add_caption(doc: Document, number: int) -> None:
+    """Add an APA-formatted figure caption paragraph."""
+    para = doc.add_paragraph()
+    run1 = para.add_run(f"Figure {number}. ")
+    run1.bold = True
+    run2 = para.add_run("Title of the Figure")
+    run2.italic = True
+
+
+class TestFiguresCheckPositionAndNumbering(unittest.TestCase):
+    """Tests for caption position (above image) and numbering sequence."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temp_dir = TemporaryDirectory()
+        cls.temp_path = Path(cls.temp_dir.name)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.temp_dir.cleanup()
+
+    def _run_check(self, doc: Document) -> list:
+        path = self.temp_path / "figures.docx"
+        doc.save(str(path))
+        pdf_path = self.temp_path / "output.pdf"
+        pdf_path.touch()
+        meta = DocumentMetadata(title="Test Document")
+        verifier = APAVerifier(pdf_path=pdf_path, docx_path=path, meta=meta)
+        ctx = VerificationContext(
+            pdf=MagicMock(),
+            docx=verifier.docx,
+            meta=meta,
+            strict=False,
+        )
+        try:
+            return FiguresCheck().run(ctx)
+        finally:
+            verifier.close()
+
+    def test_caption_above_image_passes(self):
+        """APA 7 caption above the figure image produces no position issue."""
+        doc = Document()
+        _add_caption(doc, 1)
+        _add_image_paragraph(doc)
+
+        issues = self._run_check(doc)
+        position = [i for i in issues if "caption_position" in i.check]
+        self.assertEqual(position, [], f"Expected no position issues but got: {issues}")
+
+    def test_caption_below_image_is_reported(self):
+        """A caption placed after the image is flagged."""
+        doc = Document()
+        _add_image_paragraph(doc)
+        _add_caption(doc, 1)
+
+        issues = self._run_check(doc)
+        position = [i for i in issues if "caption_position" in i.check]
+        self.assertEqual(len(position), 1)
+
+    def test_numbering_gap_is_reported(self):
+        """Non-consecutive figure numbers are flagged."""
+        doc = Document()
+        _add_caption(doc, 1)
+        _add_caption(doc, 3)
+
+        issues = self._run_check(doc)
+        sequence = [i for i in issues if "numbering_sequence" in i.check]
+        self.assertEqual(len(sequence), 1)
+
+    def test_sequential_numbering_passes(self):
+        """Consecutive figure numbers produce no sequence issue."""
+        doc = Document()
+        _add_caption(doc, 1)
+        _add_caption(doc, 2)
+
+        issues = self._run_check(doc)
+        sequence = [i for i in issues if "numbering_sequence" in i.check]
+        self.assertEqual(sequence, [], f"Expected no sequence issues but got: {issues}")
 
 
 if __name__ == "__main__":

@@ -21,6 +21,8 @@ PAGE_CONTENT_WIDTH = 6.5
 
 COMPANY_KEYWORDS = frozenset(["mackroph", "tecnoshop", "devsoft"])
 
+_SOURCE_CAPTION_RE = re.compile(r"^(?:Tabla|Table|Cuadro)\s+(\d+)\s*[.:\u2014\u2013-]?\s*(.*)$")
+
 
 class APATablesHandler:
     """Handles table formatting, borders, captions, and notes per APA 7th Edition."""
@@ -462,11 +464,24 @@ class APATablesHandler:
         for p_idx, p in enumerate(self.doc.paragraphs):
             para_by_pos[p_idx] = p
 
-        # Insert captions - offset increases with each insertion
+        # Insert captions - offset tracks insertions/removals relative to the
+        # original body children positions
         offset = 0
-        for idx, (orig_pos, tbl) in enumerate(table_positions):
-            table_num = idx + 1
+        max_used = 0
+        for _idx, (orig_pos, tbl) in enumerate(table_positions):
             current_pos = orig_pos + offset
+            source_title = ""
+            source = self._extract_source_caption(current_pos)
+            if source is not None:
+                source_el, source_num, source_title = source
+                body.remove(source_el)
+                offset -= 1
+                current_pos -= 1
+                max_used = max(max_used, source_num)
+                table_num = source_num
+            else:
+                max_used += 1
+                table_num = max_used
 
             # Try to extract title from the paragraph before the table
             # Convert CT_Tbl element to python-docx Table
@@ -475,7 +490,9 @@ class APATablesHandler:
             docx_table = Table(tbl, self.doc)
             # Try to get section heading context (look backwards for Heading style)
             # Use 'body' directly since children list is stale after insertions
-            title_text = self._get_nearest_section_heading(current_pos)
+            title_text = source_title
+            if not title_text:
+                title_text = self._get_nearest_section_heading(current_pos)
 
             # If no section heading found, try extracting from table
             if not title_text:
@@ -560,6 +577,40 @@ class APATablesHandler:
                 # Insert title after caption
                 body.insert(current_pos + 1, title_p)
                 offset += 1
+
+    def _extract_source_caption(self, pos: int) -> tuple[Any, int, str] | None:
+        """Find a Markdown-source caption immediately before a table.
+
+        Authors often number their tables in the source ("Tabla 3. Datos de
+        la encuesta"). APA 7 requires sequential numbering, so an explicit
+        source number is respected instead of renumbering by position; the
+        source paragraph is removed and replaced by the formatted caption.
+
+        Returns:
+            (element, number, title) of the caption paragraph, or None.
+        """
+        from docx.text.paragraph import Paragraph
+
+        body = self.doc._body._element
+        children = list(body)
+        for i in (pos - 1, pos - 2):
+            if i < 0 or i >= len(children):
+                continue
+            el = children[i]
+            if el.tag != qn("w:p"):
+                continue
+            p = Paragraph(el, self.doc)
+            text = p.text.strip()
+            if not text:
+                continue
+            match = _SOURCE_CAPTION_RE.match(text)
+            if match is None:
+                return None
+            style_name = p.style.name if p.style else ""
+            if style_name.startswith("Heading"):
+                return None
+            return (el, int(match.group(1)), match.group(2).strip())
+        return None
 
     def _extract_table_title(self, table: TableType) -> str:
         """Extract a descriptive title from the table content.

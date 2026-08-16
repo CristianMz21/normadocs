@@ -11,6 +11,7 @@ from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
 from ...models import DocumentMetadata
+from .apa_citations import APACitationsHandler
 from .apa_cover import APACoverHandler
 from .apa_figures import APAFiguresHandler
 from .apa_keywords import APAKeywordsHandler
@@ -50,6 +51,7 @@ class APADocxFormatter:
         self._tables = APATablesHandler(self._doc, self.config)
         self._figures = APAFiguresHandler(self._doc, self.config)
         self._keywords = APAKeywordsHandler(self._doc, self.config)
+        self._citations = APACitationsHandler(self._doc, self.config)
 
     def process(self, meta: DocumentMetadata) -> None:
         """Run the full formatting pipeline.
@@ -66,6 +68,7 @@ class APADocxFormatter:
         self._styles.create_styles()
         self._cover.add_cover_page(meta)
         self._paragraphs.process()
+        self._citations.fix_citations()
 
         self._tables.add_table_captions()
         self._tables.add_table_notes()
@@ -76,6 +79,7 @@ class APADocxFormatter:
         self._keywords.format_nota_italic()
         self._paragraphs.format_lists()
         self._paragraphs.apply_body_indent()
+        self._citations.format_references()
         self._keywords.format_keywords(meta)
         self._paragraphs.fix_text_spacing_global()
         # Add required section page breaks after paragraph cleanup so the
@@ -122,6 +126,7 @@ class APADocxFormatter:
         self._tables = APATablesHandler(self._doc, self.config)
         self._figures = APAFiguresHandler(self._doc, self.config)
         self._keywords = APAKeywordsHandler(self._doc, self.config)
+        self._citations = APACitationsHandler(self._doc, self.config)
 
     # ─────────────────── Delegate methods for backward compatibility ───────────────────
 
@@ -184,6 +189,15 @@ class APADocxFormatter:
     def _fix_citations(self, p: Paragraph) -> None:
         """Replace 'y' citations with '&' per APA 7."""
         self._paragraphs._fix_citations(p)
+
+    # Citations handler delegation
+    def _fix_citations_global(self) -> None:
+        """Delegate to APACitationsHandler to normalize in-text citations."""
+        self._citations.fix_citations()
+
+    def _format_references(self) -> None:
+        """Delegate to APACitationsHandler to format the reference list."""
+        self._citations.format_references()
 
     def _format_toc_entry(self, p: Paragraph, heading_levels: dict[str, int]) -> None:
         """Format Table of Contents entries with correct indentation."""

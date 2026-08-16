@@ -156,4 +156,99 @@ class TablesCheck:
                         )
                     )
 
+        self._check_numbering_sequence(table_numbers, issues)
+        self._check_table_notes(ctx, issues)
+
         return issues
+
+    def _check_numbering_sequence(
+        self, table_numbers: list[TableCaption], issues: list[VerificationIssue]
+    ) -> None:
+        """Verify table numbers run 1..N without gaps or duplicates."""
+        numbers: list[int] = []
+        for caption_data in table_numbers:
+            parts = caption_data["text"].split()
+            if len(parts) >= 2 and parts[1].rstrip(".").isdigit():
+                numbers.append(int(parts[1].rstrip(".")))
+
+        if numbers and sorted(numbers) != list(range(1, len(numbers) + 1)):
+            issues.append(
+                VerificationIssue(
+                    check=f"{CheckCategory.TABLES}.numbering_sequence",
+                    severity="error",
+                    expected=f"Sequential numbering 1..{len(numbers)}",
+                    actual=f"Table numbers found: {numbers}",
+                    evidence="Table numbers must be consecutive starting at 1",
+                )
+            )
+
+    def _check_table_notes(self, ctx: VerificationContext, issues: list[VerificationIssue]) -> None:
+        """Verify each table has an APA-formatted 'Nota.' below it."""
+        from docx.text.paragraph import Paragraph
+
+        body_children = list(ctx.docx.doc._body._element)
+
+        for t_idx, table in enumerate(ctx.docx.tables):
+            try:
+                t_pos = body_children.index(table._tbl)
+            except ValueError:
+                continue
+
+            note_para: Paragraph | None = None
+            for el in body_children[t_pos + 1 :]:
+                if el.tag == qn("w:tbl"):
+                    break
+                if el.tag != qn("w:p"):
+                    continue
+                para = Paragraph(el, ctx.docx.doc)
+                text = para.text.strip()
+                if not text:
+                    continue
+                if re.match(r"^(Tabla|Table|Figura|Figure)\s+\d+", text):
+                    break
+                style_name = para.style.name if para.style else ""
+                if style_name.startswith("Heading"):
+                    break
+                if re.match(r"^Not(a|e)\b", text):
+                    note_para = para
+                break
+
+            if note_para is None:
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.TABLES}.note_present",
+                        severity="info",
+                        expected="'Nota.' paragraph below the table",
+                        actual="No table note found",
+                        evidence=(
+                            f"Table {t_idx + 1} has no note; APA 7 only requires one when the"
+                            " table needs explanation"
+                        ),
+                    )
+                )
+                continue
+
+            note_text = note_para.text.strip()
+            if not (note_text.startswith("Nota.") or note_text.startswith("Note.")):
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.TABLES}.note_format",
+                        severity="warning",
+                        expected="'Nota.' label ending with a period",
+                        actual=note_text[:40],
+                        evidence=f"Table {t_idx + 1} note label must be 'Nota.'",
+                    )
+                )
+            nota_run = next(
+                (r for r in note_para.runs if r.text.strip().lower().startswith("nota")), None
+            )
+            if nota_run is not None and not nota_run.italic:
+                issues.append(
+                    VerificationIssue(
+                        check=f"{CheckCategory.TABLES}.note_italic",
+                        severity="warning",
+                        expected="'Nota.' label in italics",
+                        actual="Note label not italic",
+                        evidence=f"Table {t_idx + 1} note label should be italic",
+                    )
+                )

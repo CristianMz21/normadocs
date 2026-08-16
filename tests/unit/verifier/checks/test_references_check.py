@@ -3,6 +3,7 @@
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import MagicMock
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -394,6 +395,79 @@ class TestReferencesCheckEmptySection(unittest.TestCase):
         self.assertGreater(
             len(entries_errors), 0, f"Expected entries_present error but got: {issues}"
         )
+
+
+class TestReferencesCheckEntryFormat(unittest.TestCase):
+    """Tests for the internal format of reference entries."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temp_dir = TemporaryDirectory()
+        cls.temp_path = Path(cls.temp_dir.name)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.temp_dir.cleanup()
+
+    def _run_check(self, entry: str) -> list:
+        path = self.temp_path / "entry.docx"
+        doc = Document()
+        doc.add_paragraph("References", style="Heading 1")
+        ref = doc.add_paragraph(entry)
+        ref.paragraph_format.left_indent = Inches(0.5)
+        ref.paragraph_format.first_line_indent = Inches(-0.5)
+        doc.save(str(path))
+
+        pdf_path = self.temp_path / "output.pdf"
+        pdf_path.touch()
+        meta = DocumentMetadata(title="Test Document")
+        verifier = APAVerifier(pdf_path=pdf_path, docx_path=path, meta=meta)
+        ctx = VerificationContext(
+            pdf=MagicMock(),
+            docx=verifier.docx,
+            meta=meta,
+            strict=False,
+        )
+        try:
+            return ReferencesCheck().run(ctx)
+        finally:
+            verifier.close()
+
+    def test_spanish_conjunction_is_reported(self):
+        """Authors joined with 'y' in a reference entry are flagged."""
+        issues = self._run_check("García, A. y López, B. (2023). Machine learning en educación.")
+        ampersand = [i for i in issues if "entry_ampersand" in i.check]
+        self.assertEqual(len(ampersand), 1)
+
+    def test_ampersand_entry_passes(self):
+        """', & '-joined entries produce no entry-format issues."""
+        issues = self._run_check("García, A., & López, B. (2023). Machine learning en educación.")
+        ampersand = [i for i in issues if "entry_ampersand" in i.check]
+        self.assertEqual(ampersand, [])
+
+    def test_retrieved_from_is_reported(self):
+        """APA 6 'Recuperado de' retrieval phrases are flagged."""
+        issues = self._run_check(
+            "Sena, A. (2020). Guía de estilo. Recuperado de https://example.com/doc"
+        )
+        retrieved = [i for i in issues if "retrieved_from" in i.check]
+        self.assertEqual(len(retrieved), 1)
+
+    def test_legacy_doi_is_reported(self):
+        """'doi:' notation is flagged in favor of https://doi.org/."""
+        issues = self._run_check(
+            "García, A. (2023). Article. Journal of Testing, 12(1), 1-9. doi:10.1000/xyz"
+        )
+        doi = [i for i in issues if "doi_format" in i.check]
+        self.assertEqual(len(doi), 1)
+
+    def test_plain_journal_entry_without_italics_is_reported(self):
+        """Journal-style entries without italic runs are flagged."""
+        issues = self._run_check(
+            "García, A. (2023). Machine learning en educación. Revista Educación, 45(2), 112-130."
+        )
+        italic = [i for i in issues if "italic_source" in i.check]
+        self.assertEqual(len(italic), 1)
 
 
 if __name__ == "__main__":

@@ -36,6 +36,18 @@ page_setup:
   header: true
   first_page_number: 1
 
+citations:
+  et_al_min_authors: 3
+  ampersand: true
+
+block_quote:
+  min_words: 40
+  indent_inches: 0.5
+
+references:
+  sort: true
+  italicize_journals: true
+
 tables:
   borders: horizontal_only
   caption_prefix: "Table"
@@ -45,6 +57,7 @@ tables:
 
 figures:
   caption_prefix: "Figure"
+  caption_above: true
   title_above: true
   nota_prefix: "Nota."
 

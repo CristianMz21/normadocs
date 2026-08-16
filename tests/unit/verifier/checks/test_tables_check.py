@@ -3,6 +3,7 @@
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import MagicMock
 
 from docx import Document
 from docx.shared import Inches
@@ -404,6 +405,78 @@ class TestTablesCheckCaptionItalicSeparateParagraph(unittest.TestCase):
             [],
             f"'Tabla comparativa...' title must count as italic title: {issues}",
         )
+
+
+class TestTablesCheckNotesAndNumbering(unittest.TestCase):
+    """Tests for table note formatting and numbering sequence."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temp_dir = TemporaryDirectory()
+        cls.temp_path = Path(cls.temp_dir.name)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.temp_dir.cleanup()
+
+    def _run_check(self, doc: Document) -> list:
+        path = self.temp_path / "tables.docx"
+        doc.save(str(path))
+        pdf_path = self.temp_path / "output.pdf"
+        pdf_path.touch()
+        meta = DocumentMetadata(title="Test Document")
+        verifier = APAVerifier(pdf_path=pdf_path, docx_path=path, meta=meta)
+        ctx = VerificationContext(
+            pdf=MagicMock(),
+            docx=verifier.docx,
+            meta=meta,
+            strict=False,
+        )
+        try:
+            return TablesCheck().run(ctx)
+        finally:
+            verifier.close()
+
+    @staticmethod
+    def _add_table_with_caption(doc: Document, number: int) -> None:
+        caption = doc.add_paragraph()
+        caption.add_run(f"Table {number}").bold = True
+        doc.add_paragraph("Table title").runs[0].italic = True
+        doc.add_table(rows=2, cols=2)
+
+    def test_proper_nota_passes(self):
+        """An italic 'Nota.' below the table produces no note issues."""
+        doc = Document()
+        self._add_table_with_caption(doc, 1)
+        nota = doc.add_paragraph()
+        nota.add_run("Nota. ").italic = True
+        nota.add_run("Elaboración propia.")
+
+        issues = self._run_check(doc)
+        note_issues = [i for i in issues if "note_" in i.check]
+        self.assertEqual(note_issues, [], f"Expected no note issues but got: {note_issues}")
+
+    def test_malformed_nota_is_reported(self):
+        """A 'Nota' label without period or italics is flagged."""
+        doc = Document()
+        self._add_table_with_caption(doc, 1)
+        doc.add_paragraph("Nota Datos propios del autor")
+
+        issues = self._run_check(doc)
+        formats = [i for i in issues if "note_format" in i.check]
+        italics = [i for i in issues if "note_italic" in i.check]
+        self.assertEqual(len(formats), 1)
+        self.assertEqual(len(italics), 1)
+
+    def test_numbering_gap_is_reported(self):
+        """Non-consecutive table numbers are flagged."""
+        doc = Document()
+        self._add_table_with_caption(doc, 1)
+        self._add_table_with_caption(doc, 3)
+
+        issues = self._run_check(doc)
+        sequence = [i for i in issues if "numbering_sequence" in i.check]
+        self.assertEqual(len(sequence), 1)
 
 
 if __name__ == "__main__":

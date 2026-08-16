@@ -1,8 +1,18 @@
 citation_style: apa
+citations:
+  ampersand: true
+  et_al_min_authors: 3
+block_quote:
+  indent_inches: 0.5
+  min_words: 40
 figures:
+  caption_above: true
   caption_prefix: Figura
   nota_prefix: Nota.
   title_above: true
+references:
+  italicize_journals: true
+  sort: true
 fonts:
   body:
     name: Times New Roman

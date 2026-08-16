@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from . import CheckCategory, VerificationIssue, VerificationResult
 from .checks import (
+    CitationsCheck,
     CoverPageCheck,
     FiguresCheck,
     FontsCheck,
@@ -133,6 +134,7 @@ class APAVerifier:
             (CheckCategory.STRUCTURE, StructureCheck()),
             (CheckCategory.FIGURES, FiguresCheck()),
             (CheckCategory.REFERENCES, ReferencesCheck()),
+            (CheckCategory.CITATIONS, CitationsCheck()),
         ]
 
     def verify_all(self) -> VerificationResult:

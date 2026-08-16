@@ -157,12 +157,45 @@ class APAFiguresHandler:
     def add_figure_captions(self) -> None:
         """Ensure every figure has an APA 7 caption: 'Figura N.' bold + title italic.
 
-        Normalizes caption paragraphs already present in the document (produced by
-        Pandoc from alt-text or by manual '*Figura N. ...*' lines) into a single
-        APA 7 caption line. Idempotent: already-formatted captions are left intact.
+        APA 7 places the figure number and title ABOVE the image (the note
+        stays below), so caption paragraphs found directly below an image are
+        moved above it. Images without any caption get one inserted, numbered
+        after the highest number already present and titled from the image's
+        alt text. Already-formatted captions are normalized in place.
         """
+        from docx.text.paragraph import Paragraph
+
         caption_re = re.compile(r"^(Figura|Figure)\s+(\d+)\s*[.:]?\s*(.*)$")
 
+        image_paragraphs = [
+            p for p in self.doc.paragraphs if p._element.findall(f".//{qn('w:drawing')}")
+        ]
+
+        # Move captions sitting directly below their image to above it
+        for img_p in image_paragraphs:
+            nxt = img_p._element.getnext()
+            if nxt is None or nxt.tag != qn("w:p"):
+                continue
+            next_p = Paragraph(nxt, img_p._parent)
+            if caption_re.match(next_p.text.strip()):
+                img_p._element.addprevious(nxt)
+
+        # Number new captions after the highest existing figure number
+        max_used = 0
+        for p in self.doc.paragraphs:
+            match = caption_re.match(p.text.strip())
+            if match:
+                max_used = max(max_used, int(match.group(2)))
+
+        for img_p in image_paragraphs:
+            if self._has_adjacent_caption(img_p, caption_re) or self._has_manual_title(img_p):
+                continue
+            max_used += 1
+            alt_text = self._extract_alt_text(img_p)
+            caption_el = self._build_caption_element(max_used, alt_text)
+            img_p._element.addprevious(caption_el)
+
+        # Normalize caption paragraphs into bold label + italic title runs
         for para in self.doc.paragraphs:
             text = para.text.strip()
             m = caption_re.match(text)
@@ -186,3 +219,101 @@ class APAFiguresHandler:
                 title_run.italic = True
                 self._apply_font_style(title_run, italic=True)
             para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    def _has_adjacent_caption(self, img_p: Any, caption_re: re.Pattern[str]) -> bool:
+        """Return whether the paragraphs around an image contain its caption."""
+        from docx.text.paragraph import Paragraph
+
+        for el in (img_p._element.getprevious(), img_p._element.getnext()):
+            if el is None or el.tag != qn("w:p"):
+                continue
+            neighbor = Paragraph(el, img_p._parent)
+            if caption_re.match(neighbor.text.strip()):
+                return True
+        return False
+
+    def _has_manual_title(self, img_p: Any) -> bool:
+        """Return whether a short untitled line next to an image is its caption.
+
+        Authors may write a plain caption line below an image ("My Figure
+        Title") instead of a numbered "Figura N" label; auto-numbering over
+        it would duplicate the caption, so it is left untouched.
+        """
+        from docx.text.paragraph import Paragraph
+
+        for el in (img_p._element.getprevious(), img_p._element.getnext()):
+            if el is None or el.tag != qn("w:p"):
+                continue
+            neighbor = Paragraph(el, img_p._parent)
+            text = neighbor.text.strip()
+            if not text or text.startswith("Nota.") or text.startswith("Note."):
+                continue
+            style_name = neighbor.style.name if neighbor.style else ""
+            if style_name.startswith("Heading"):
+                continue
+            if len(text) < 80 and not text.endswith((".", ",", ";")):
+                return True
+        return False
+
+    def _build_caption_element(self, number: int, title: str) -> Element:
+        """Build a 'Figura N' (bold) + title (italic) caption paragraph."""
+        prefix = cast(str, self._get_figure_config().get("caption_prefix", "Figure"))
+
+        p_el = OxmlElement("w:p")
+        p_pr = OxmlElement("w:pPr")
+        jc = OxmlElement("w:jc")
+        jc.set(qn("w:val"), "left")
+        p_pr.append(jc)
+        spacing = OxmlElement("w:spacing")
+        spacing.set(qn("w:after"), "0")
+        spacing.set(qn("w:line"), "480")
+        spacing.set(qn("w:lineRule"), "auto")
+        p_pr.append(spacing)
+        p_el.append(p_pr)
+
+        label_run = OxmlElement("w:r")
+        label_rpr = OxmlElement("w:rPr")
+        label_rpr.append(OxmlElement("w:b"))
+        self._append_font_props(label_rpr)
+        label_run.append(label_rpr)
+        label_t = OxmlElement("w:t")
+        label_t.set(qn("xml:space"), "preserve")
+        label_t.text = f"{prefix} {number}. "
+        label_run.append(label_t)
+        p_el.append(label_run)
+
+        if title:
+            title_run = OxmlElement("w:r")
+            title_rpr = OxmlElement("w:rPr")
+            title_rpr.append(OxmlElement("w:i"))
+            self._append_font_props(title_rpr)
+            title_run.append(title_rpr)
+            title_t = OxmlElement("w:t")
+            title_t.set(qn("xml:space"), "preserve")
+            title_t.text = title
+            title_run.append(title_t)
+            p_el.append(title_run)
+
+        return p_el
+
+    def _append_font_props(self, rpr: Element) -> None:
+        """Append Times New Roman 12pt run properties to a w:rPr element."""
+        font = OxmlElement("w:rFonts")
+        font.set(qn("w:ascii"), "Times New Roman")
+        font.set(qn("w:hAnsi"), "Times New Roman")
+        rpr.append(font)
+        sz = OxmlElement("w:sz")
+        sz.set(qn("w:val"), "24")
+        rpr.append(sz)
+
+    @staticmethod
+    def _extract_alt_text(p: Any) -> str:
+        """Extract alt text from the first drawing of a paragraph."""
+        ns_wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+        for drawing in p._element.findall(f".//{qn('w:drawing')}"):
+            for docPr in drawing.iter(f"{{{ns_wp}}}docPr"):
+                return str((docPr.get("descr", "") or docPr.get("name", "")).strip())
+            ns_pic = "http://schemas.openxmlformats.org/drawingml/2006/picture"
+            for cNvPr in drawing.iter(f"{{{ns_pic}}}cNvPr"):
+                return str((cNvPr.get("descr", "") or cNvPr.get("name", "")).strip())
+        return ""
