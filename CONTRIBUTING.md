@@ -34,16 +34,20 @@ Run these locally before opening a PR:
 
 ```bash
 make test       # pytest tests/ -v
-make lint       # ruff check + ruff format --check + mypy --strict
+make lint       # ruff check + ruff format --check + mypy --strict + pyright
 make security   # bandit
+make semgrep    # semgrep p/python + p/security-audit (needs pip install -e ".[static]")
+make gitleaks   # secret scan over git history (needs the gitleaks binary)
 make check      # lint + test-cov + security
 make build      # python3 -m build
 ```
 
 The CI workflow at `.github/workflows/ci.yml` is the source of truth: it scopes
-lint to `src/` and `tests/`, runs mypy with `--strict`, enforces
+lint to `src/` and `tests/`, runs mypy with `--strict` and Pyright on `src/`,
+runs Semgrep (`p/python` + `p/security-audit`) and Gitleaks, enforces
 `--cov-fail-under=78`, and **fails on any inline suppression** (`# noqa`,
-`# type: ignore`, `# nosec`, etc.).
+`# type: ignore`, `# nosec`, etc.). Deep security analysis (CodeQL) and quality
+consolidation (SonarCloud) run in separate workflows.
 
 ## Submitting issues
 

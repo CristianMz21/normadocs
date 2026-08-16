@@ -13,6 +13,7 @@ from docx.shared import Cm, Inches, Pt, RGBColor
 from docx.text.paragraph import Paragraph
 
 from ..models import DocumentMetadata
+from ..utils.docx_helpers import paragraph_style, paragraph_style_name
 from .base import DocumentFormatter
 
 
@@ -130,7 +131,7 @@ class IcontecFormatter(DocumentFormatter):
         )
 
         # Normal
-        normal = styles["Normal"]
+        normal = paragraph_style(styles, "Normal")
         font = normal.font
         font.name = body_font
         font.size = Pt(body_size)
@@ -147,7 +148,7 @@ class IcontecFormatter(DocumentFormatter):
         body_font = self._get_font_name("body")
         body_size = self._get_font_size("body")
         if "Heading 1" in styles:
-            h1 = styles["Heading 1"]
+            h1 = paragraph_style(styles, "Heading 1")
             h1.font.name = body_font
             h1.font.size = Pt(body_size)
             h1.font.bold = True
@@ -174,7 +175,7 @@ class IcontecFormatter(DocumentFormatter):
         def add_line(text: str, bold: bool = False, space_after: int = 0) -> Paragraph:
             p = ref_p.insert_paragraph_before(text)
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            p.style = self.doc.styles["Normal"]
+            p.style = paragraph_style(self.doc.styles, "Normal")
             if bold and p.runs:
                 p.runs[0].bold = True
             p.paragraph_format.space_after = Pt(space_after)
@@ -211,7 +212,7 @@ class IcontecFormatter(DocumentFormatter):
         for p in self.doc.paragraphs:
             # Skip if cover page created just now...
             # Ideally we skip based on section or style
-            if p.style and p.style.name.startswith("Heading"):
+            if paragraph_style_name(p).startswith("Heading"):
                 continue
 
             p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY

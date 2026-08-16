@@ -11,6 +11,8 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 from lxml.etree import Element
 
+from ...utils.docx_helpers import paragraph_style_name
+
 if TYPE_CHECKING:
     from docx.document import Document as DocType
     from docx.text.run import Run as RunType
@@ -248,7 +250,7 @@ class APAFiguresHandler:
             text = neighbor.text.strip()
             if not text or text.startswith("Nota.") or text.startswith("Note."):
                 continue
-            style_name = neighbor.style.name if neighbor.style else ""
+            style_name = paragraph_style_name(neighbor)
             if style_name.startswith("Heading"):
                 continue
             if len(text) < 80 and not text.endswith((".", ",", ";")):

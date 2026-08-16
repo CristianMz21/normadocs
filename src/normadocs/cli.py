@@ -208,6 +208,7 @@ def convert(
     # Trackers for errors and docker container
     all_errors: list[tuple[str, list[LanguageToolError]]] = []
     docker_container: str | None = None
+    lt_client: LanguageToolClient | None = None
 
     # 2. LanguageTool pre-check
     if language_tool:

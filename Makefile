@@ -11,6 +11,7 @@ lint:
 	RUFF_NOQA=1 ruff check src/ tests/ --no-cache
 	ruff format --check src/ tests/ --no-cache
 	mypy --strict src/
+	pyright
 
 format:
 	ruff format src/ tests/
@@ -18,6 +19,21 @@ format:
 
 security:
 	bandit -r src/normadocs -c pyproject.toml
+
+semgrep:
+	SEMGREP_SEND_METRICS=off semgrep scan \
+		--config p/python --config p/security-audit --error src/
+
+gitleaks:
+	@command -v gitleaks >/dev/null 2>&1 || { \
+		echo "gitleaks no está instalado (brew install gitleaks)"; exit 1; }
+	gitleaks detect --source . --redact -v
+
+static-analysis: pyright semgrep security gitleaks
+	@echo "✅ Static analysis suite passed."
+
+pyright:
+	pyright
 
 build:
 	python3 -m build

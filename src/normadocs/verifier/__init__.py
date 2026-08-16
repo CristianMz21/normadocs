@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 __all__ = [
     "APAVerifier",
@@ -17,6 +17,9 @@ __all__ = [
     "VerificationIssue",
     "VerificationResult",
 ]
+
+if TYPE_CHECKING:
+    from .apa_verifier import APAVerifier
 
 
 @dataclass

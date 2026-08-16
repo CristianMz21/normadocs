@@ -53,7 +53,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev]" --python python3.13 --refresh
+        run: uv pip install -e ".[dev,pdf,codeimage]" --python python3.13 --refresh
 
       - name: Lint with Ruff (no noqa allowed)
         run: ruff check src/ tests/ --output-format=github --no-cache
@@ -65,6 +65,9 @@ jobs:
 
       - name: Type check with MyPy
         run: mypy --strict src/
+
+      - name: Type check with Pyright
+        run: pyright
 
   security:
     name: Security Scan
@@ -93,6 +96,25 @@ jobs:
 
       - name: Run Bandit
         run: bandit -r src/ -c pyproject.toml
+
+      - name: Run Semgrep (advanced SAST)
+        run: |
+          uv pip install semgrep --python python3.13
+          semgrep scan --config p/python --config p/security-audit --error --metrics off src/
+
+  gitleaks:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   tests:
     name: Tests (Python ${{ matrix.python-version }})
@@ -181,7 +203,7 @@ jobs:
 
   annotations-check:
     name: Ensure Zero Annotations
-    needs: [quality, security, tests, build-check]
+    needs: [quality, security, gitleaks, tests, build-check]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

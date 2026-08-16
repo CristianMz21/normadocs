@@ -85,7 +85,9 @@ class LanguageToolClient:
         self._server_process: Any = None
 
         # Combine default disabled rules with user-provided ones
-        self.disabled_rules = list(self.DEFAULT_DISABLED_RULES) if disable_spelling else []
+        self.disabled_rules: list[str] = (
+            list(self.DEFAULT_DISABLED_RULES) if disable_spelling else []
+        )
         if disabled_rules:
             self.disabled_rules.extend(disabled_rules)
 

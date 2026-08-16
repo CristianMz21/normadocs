@@ -11,6 +11,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches
 
+from ...utils.docx_helpers import paragraph_style_name
+
 if TYPE_CHECKING:
     from docx.document import Document as DocType
     from docx.table import Table as TableType
@@ -606,7 +608,7 @@ class APATablesHandler:
             match = _SOURCE_CAPTION_RE.match(text)
             if match is None:
                 return None
-            style_name = p.style.name if p.style else ""
+            style_name = paragraph_style_name(p)
             if style_name.startswith("Heading"):
                 return None
             return (el, int(match.group(1)), match.group(2).strip())
@@ -690,7 +692,7 @@ class APATablesHandler:
                 p_idx_map = {p._element: idx for idx, p in enumerate(self.doc.paragraphs)}
                 if elem in p_idx_map:
                     p = self.doc.paragraphs[p_idx_map[elem]]
-                    style_name = p.style.name if p.style else ""
+                    style_name = paragraph_style_name(p)
                     text = p.text.strip()
 
                     # Skip caption paragraphs (they belong to previous tables/figures)

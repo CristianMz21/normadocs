@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 from docx.shared import Inches
 
 from ...models import DocumentMetadata
+from ...utils.docx_helpers import paragraph_style_name
 
 if TYPE_CHECKING:
     from docx.document import Document as DocType
@@ -105,7 +106,7 @@ class APAKeywordsHandler:
         from .apa_page import APAPageHandler
 
         for p in self.doc.paragraphs:
-            if p.style and p.style.name.startswith("Heading"):
+            if paragraph_style_name(p).startswith("Heading"):
                 text = p.text.strip().lower()
                 if "introducción" in text or "introduction" in text:
                     if APAPageHandler._has_page_break_before(p):

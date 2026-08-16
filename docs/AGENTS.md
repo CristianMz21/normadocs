@@ -34,13 +34,15 @@ pytest tests/ -k "test_convert" -v
 
 ### Linting
 ```bash
-make lint            # ruff check + ruff format check + mypy
+make lint            # ruff check + ruff format check + mypy + pyright
 make format          # Auto-fix linting issues: ruff format . && ruff check --fix .
 ```
 
 ### Security
 ```bash
 make security        # Bandit scan (skips B404, B603, B607 for intentional subprocess calls)
+make semgrep         # Semgrep advanced SAST (p/python + p/security-audit)
+make gitleaks        # Secret scan over git history (needs gitleaks binary)
 ```
 
 ### Quality Gates

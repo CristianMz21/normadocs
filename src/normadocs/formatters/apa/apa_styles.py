@@ -9,6 +9,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
+from ...utils.docx_helpers import paragraph_style
+
 if TYPE_CHECKING:
     from docx.document import Document as DocType
     from docx.text.paragraph import Paragraph as ParagraphType
@@ -85,7 +87,7 @@ class APAStylesHandler:
         )
 
         # Normal - APA 7: Times New Roman 12pt, double spacing, left aligned
-        normal = styles["Normal"]
+        normal = paragraph_style(styles, "Normal")
         self._apply_font_style(normal, font_name=body_font, size=body_size)
         pf = normal.paragraph_format
         pf.line_spacing_rule = line_spacing
@@ -96,7 +98,7 @@ class APAStylesHandler:
         # Body Text
         for style_name in ["Body Text", "First Paragraph"]:
             try:
-                style = styles[style_name]
+                style = paragraph_style(styles, style_name)
                 self._apply_font_style(style, font_name=body_font, size=body_size)
                 style.paragraph_format.line_spacing_rule = line_spacing
                 style.paragraph_format.first_line_indent = Inches(0.5)
@@ -149,7 +151,7 @@ class APAStylesHandler:
         }
         for sn, cfg in configs.items():
             try:
-                h = styles[sn]
+                h = paragraph_style(styles, sn)
                 self._apply_font_style(
                     h,
                     font_name=body_font,

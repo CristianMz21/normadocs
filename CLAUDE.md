@@ -12,9 +12,11 @@ NormaDocs converts Markdown documents to academically-formatted DOCX/PDF files (
 make install      # Install with dev dependencies (requires Pandoc installed)
 make test         # Run pytest
 make test-cov     # Run tests with coverage (minimum 78%)
-make lint         # ruff check + format check + mypy
-make format       # Auto-format code
+make lint         # ruff check + format check + mypy + pyright
+make format       # Auto-fix code
 make security     # Bandit security scan
+make semgrep      # Semgrep advanced SAST (p/python + p/security-audit)
+make gitleaks     # Gitleaks secret scan (needs gitleaks binary)
 make check        # Full quality gate (lint + test-cov + security)
 make build        # Build wheel + sdist
 ```
@@ -55,10 +57,10 @@ normadocs document.md -b refs.bib -c apa.csl    # With bibliography
 
 ## Code Standards
 
-- **Type checking**: MyPy `strict = true` (configured in pyproject.toml)
+- **Type checking**: MyPy `strict = true` + Pyright `standard` mode (both configured in pyproject.toml)
 - **Linting**: Ruff (pycodestyle, pyflakes, isort, pyupgrade, bugbear). Scripts in `scripts/` are excluded.
 - **Testing**: pytest with pytest-cov, minimum 78% coverage
-- **Security**: Bandit (excludes B404, B603, B607 — subprocess calls to pandoc/libreoffice are intentional)
+- **Security**: Bandit (excludes B404, B603, B607 — subprocess calls to pandoc/libreoffice are intentional), Semgrep (`p/python` + `p/security-audit`), Gitleaks, CodeQL (separate workflow), SonarCloud (gated on `SONAR_TOKEN`)
 
 ## Version
 

@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any, cast
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from ...utils.docx_helpers import paragraph_style_name
+
 if TYPE_CHECKING:
     from docx.document import Document as DocType
     from docx.text.paragraph import Paragraph as ParagraphType
@@ -101,7 +103,7 @@ class APACitationsHandler:
         min_authors = cast(int, citations_cfg.get("et_al_min_authors", 3))
 
         for p in self.doc.paragraphs:
-            style_name = p.style.name if p.style else ""
+            style_name = paragraph_style_name(p)
             if style_name.startswith("Heading"):
                 if p.text.strip().lower().rstrip(".") in REFERENCE_HEADINGS:
                     break
@@ -172,7 +174,7 @@ class APACitationsHandler:
         entries: list[ParagraphType] = []
         in_references = False
         for p in self.doc.paragraphs:
-            style_name = p.style.name if p.style else ""
+            style_name = paragraph_style_name(p)
             text = p.text.strip()
             if style_name.startswith("Heading"):
                 if in_references:

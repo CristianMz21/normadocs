@@ -9,6 +9,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Inches, Pt
 
+from ...utils.docx_helpers import paragraph_style_name
+
 if TYPE_CHECKING:
     from docx.document import Document as DocType
     from docx.section import Section as SectionType
@@ -188,7 +190,7 @@ class APAPageHandler:
 
         # Find headings and add page breaks before them
         for _i, p in enumerate(self.doc.paragraphs):
-            if p.style and p.style.name.startswith("Heading"):
+            if paragraph_style_name(p).startswith("Heading"):
                 # Check if this heading is one of our target sections
                 heading_text = p.text.strip()
                 for section in new_page_sections:

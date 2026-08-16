@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+from docx.styles.style import BaseStyle, ParagraphStyle
 from docx.text.paragraph import Paragraph
 
 PageMargins = tuple[float, float, float, float]
@@ -94,8 +95,8 @@ class DOCXAnalyzer:
 
     @property
     def styles(self) -> dict[str, Any]:
-        """Get all styles from the document."""
-        return {s.name: s for s in self.doc.styles}
+        """Get all named styles from the document."""
+        return {s.name: s for s in self.doc.styles if s.name is not None}
 
     def get_page_info(self) -> DOCXPageInfo:
         """Extract page layout information.
@@ -236,20 +237,18 @@ class DOCXAnalyzer:
         Returns:
             DOCXStyleInfo or None if style not found.
         """
-        has_get_by_name = hasattr(self.doc.styles, "get_by_name")
-        style = self.doc.styles.get_by_name(style_name) if has_get_by_name else None
-        if style is None:
-            for s in self.doc.styles:
-                if s.name == style_name:
-                    style = s
-                    break
+        style: BaseStyle | None = None
+        for s in self.doc.styles:
+            if s.name == style_name:
+                style = s
+                break
 
         if style is None:
             return None
 
-        font = style.font
+        font = cast(ParagraphStyle, style).font
         return DOCXStyleInfo(
-            name=style.name,
+            name=style.name or "",
             font_name=font.name,
             font_size=font.size.pt if font.size else None,
             bold=font.bold or False,

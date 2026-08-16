@@ -1,0 +1,62 @@
+name: SonarCloud
+
+# Quality-gate consolidation (bugs, code smells, coverage, duplication).
+# Requires the SONAR_TOKEN secret; the job is skipped while it is unset so the
+# workflow can land before the SonarCloud project is provisioned.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sonar:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ secrets.SONAR_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # SonarCloud needs full history for blame/SCM metrics
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: "pip"
+          cache-dependency-path: "pyproject.toml"
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+
+      - name: Install dependencies
+        run: |
+          uv pip install -e ".[dev]" --python python3.13
+          uv pip install "pymupdf>=1.23.0" --python python3.13
+
+      - name: Run tests with coverage
+        run: pytest tests/ --cov=normadocs --cov-report=xml -q
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io

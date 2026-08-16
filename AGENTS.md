@@ -22,6 +22,10 @@ PEP 561 (`src/normadocs/py.typed`).
   or `pip install normadocs[pdf]` for the WeasyPrint fallback.
 - **LanguageTool** is opt-in: local server, Docker (`--lt-docker`), or
   download to `/opt/LanguageTool`.
+- **Semgrep** (optional locally): `pip install -e ".[static]"`. CI installs it
+  in the `security` job.
+- **Gitleaks** (optional locally): `brew install gitleaks` / release binary.
+  CI runs it via `gitleaks-action`.
 
 ## Commands
 
@@ -29,9 +33,12 @@ PEP 561 (`src/normadocs/py.typed`).
 make install      # pip install -e ".[dev]"   (assumes pandoc on PATH)
 make test         # pytest tests/ -v          (no coverage gate)
 make test-cov     # pytest + coverage; see CI gate table below
-make lint         # ruff check . && ruff format --check . && mypy src/normadocs
+make lint         # ruff + mypy --strict + pyright
 make format       # ruff format . && ruff check --fix .
 make security     # bandit -r src/normadocs -c pyproject.toml
+make semgrep      # semgrep p/python + p/security-audit (needs ".[static]")
+make gitleaks     # gitleaks detect over git history (needs gitleaks binary)
+make static-analysis  # pyright + semgrep + security + gitleaks
 make check        # lint + test-cov + security
 make build        # python3 -m build         (note: Makefile uses python3)
 ```
@@ -55,8 +62,16 @@ pytest tests/test_preprocessor_strict.py -q     # one file
 | Lint      | `ruff check .`            | `ruff check src/ tests/` (no `scripts/`, no `docs/`, no root files)                         |
 | Format    | `ruff format --check .`   | `ruff format --check src/ tests/`                                                           |
 | MyPy      | `mypy src/normadocs`      | `mypy --strict src/` (`--strict` passed explicitly; `pyproject.toml` already sets it)       |
+| Pyright   | `pyright` (via `make lint`) | `pyright` in the `quality` job; reads `[tool.pyright]` from `pyproject.toml`              |
+| Semgrep   | `make semgrep`            | `semgrep scan --config p/python --config p/security-audit --error src/` (security job)     |
+| Gitleaks  | `make gitleaks`           | `gitleaks-action@v2` job scanning full git history                                         |
 | Tests     | no coverage gate          | `pytest tests/ -W error --cov-fail-under=78` — warnings become errors                      |
 | Python    | local                     | matrix: 3.10, 3.11, 3.12, 3.13                                                             |
+
+Separate workflows (not part of `ci.yml`): **CodeQL**
+(`codeql.yml` — push/PR + weekly `security-extended` analysis) and
+**SonarCloud** (`sonarcloud.yml` — skipped until the `SONAR_TOKEN` secret is
+set; adjust `sonar-project.properties` keys when provisioning the project).
 
 `scripts/` is excluded from ruff (`pyproject.toml` → `exclude = ["scripts/"]`).
 Put one-off utilities there; they won't be linted.
@@ -66,7 +81,12 @@ Put one-off utilities there; they won't be linted.
 across all jobs. Practical implications:
 
 - **No** `# noqa`, `# type: ignore`, `# nosec`, `# mypy:`, `# RUF###`,
-  `# B###` comments anywhere in `src/` or `tests/`. Fix the underlying issue.
+  `# B###`, or `# pyright: ignore` comments anywhere in `src/` or `tests/`.
+  Fix the underlying issue.
+- **Pyright emits `::error`/`::warning` annotations natively** when running
+  under GitHub Actions (it auto-detects the `GITHUB_ACTIONS` env var). The
+  codebase must be pyright-clean — 0 errors **and** 0 warnings — not merely
+  exit-0. Same for semgrep: it runs with `--error`, so any finding fails CI.
 - Verify locally with `scripts/find_suppressions.sh [path]`.
 - A single Bandit low-severity warning fails CI. Subprocess calls to pandoc /
   libreoffice are intentional (`B404`, `B603`, `B607` are accepted in
@@ -87,6 +107,7 @@ src/normadocs/
 ├── config.py            # PAGEBREAK_OPENXML, DEFAULT_OUTPUT_DIR ("ExportDocs"), METADATA_FIELDS
 ├── models.py            # DocumentMetadata, ProcessOptions dataclasses
 ├── utils/subprocess.py  # ★ Subprocess wrapper (CommandNotFoundError, returncode check)
+├── utils/docx_helpers.py  # paragraph_style / paragraph_style_name (typed python-docx access)
 ├── standards/           # YAML configs: apa7.yaml, icontec.yaml, ieee.yaml + schema.py
 ├── formatters/
 │   ├── apa/             # ★ Real APA 7 implementation (subpackage)
@@ -136,6 +157,10 @@ in `src/normadocs/standards/__init__.py`).
 
 - **MyPy** `strict = true` + `ignore_missing_imports = true`. All public
   functions typed. Use `str | None`, not `Optional[str]`.
+- **Pyright** (`standard` mode, `src/` only) runs alongside mypy — both must
+  stay clean. python-docx lookups: use `utils/docx_helpers.py`
+  (`paragraph_style(styles, name)`, `paragraph_style_name(p)`) instead of raw
+  `styles["X"].font` / `p.style.name` (declared as `BaseStyle` / `str | None`).
 - **Ruff** line length 100; rules: E, F, W, I, UP, B, SIM, RUF.
 - **Typer**: use `Annotated[Param, typer.Argument(...)]` / `typer.Option(...)`,
   not the old `=typer.Option(...)` default syntax.

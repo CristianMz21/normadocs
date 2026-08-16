@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from docx.oxml.ns import qn
 
+from ...utils.docx_helpers import paragraph_style_name
 from .. import CheckCategory, VerificationIssue
 from ..docx_analyzer import DOCXParagraphInfo
 
@@ -206,7 +207,7 @@ class TablesCheck:
                     continue
                 if re.match(r"^(Tabla|Table|Figura|Figure)\s+\d+", text):
                     break
-                style_name = para.style.name if para.style else ""
+                style_name = paragraph_style_name(para)
                 if style_name.startswith("Heading"):
                     break
                 if re.match(r"^Not(a|e)\b", text):

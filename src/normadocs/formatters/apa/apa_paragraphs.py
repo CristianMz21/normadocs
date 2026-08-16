@@ -5,10 +5,17 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any, cast
 
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+from docx.enum.text import (
+    WD_ALIGN_PARAGRAPH,
+    WD_LINE_SPACING,
+    WD_TAB_ALIGNMENT,
+    WD_TAB_LEADER,
+)
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
+
+from ...utils.docx_helpers import paragraph_style_name
 
 if TYPE_CHECKING:
     from docx.document import Document as DocType
@@ -94,7 +101,7 @@ class APAParagraphsHandler:
         heading_levels = self._build_heading_level_map()
 
         for p in self.doc.paragraphs:
-            style_name = p.style.name if p.style else ""
+            style_name = paragraph_style_name(p)
             styles_handler._apply_font_to_paragraph(p)
 
             text_lower = p.text.lower()
@@ -474,9 +481,11 @@ class APAParagraphsHandler:
 
         # Tab stop at fixed 6.5in (right margin) for all entries,
         # ensuring page numbers are perfectly vertically aligned.
-        # leader=1 = DOTS (......), alignment=2 = RIGHT
+        # Dotted leader, right-aligned at the stop position.
         tab_stops = p.paragraph_format.tab_stops
-        tab_stops.add_tab_stop(Inches(6.5), alignment=2, leader=1)
+        tab_stops.add_tab_stop(
+            Inches(6.5), alignment=WD_TAB_ALIGNMENT.RIGHT, leader=WD_TAB_LEADER.DOTS
+        )
 
         run = p.add_run(title)
         styles_handler._apply_font_style(run)
@@ -496,7 +505,7 @@ class APAParagraphsHandler:
         """Build a map of heading text -> heading level from the document."""
         levels = {}
         for p in self.doc.paragraphs:
-            style_name = p.style.name if p.style else ""
+            style_name = paragraph_style_name(p)
             if style_name.startswith("Heading"):
                 parts = style_name.split()
                 if len(parts) >= 2 and parts[-1].isdigit():
@@ -519,7 +528,7 @@ class APAParagraphsHandler:
 
         for p in self.doc.paragraphs:
             # Track sections via headings
-            style_name = p.style.name if p.style else ""
+            style_name = paragraph_style_name(p)
             if style_name == "Heading 1":
                 text_lower = p.text.lower().strip().rstrip(".")
                 in_references = text_lower in (
@@ -556,7 +565,7 @@ class APAParagraphsHandler:
 
                 # Tab stop so tab after bullet snaps text into position
                 tab_stops = p.paragraph_format.tab_stops
-                tab_stops.add_tab_stop(Inches(0.75), alignment=0)
+                tab_stops.add_tab_stop(Inches(0.75), alignment=WD_TAB_ALIGNMENT.LEFT)
 
                 # Prepend bullet character
                 text = p.text
@@ -578,7 +587,7 @@ class APAParagraphsHandler:
         in_toc = False
         in_abstract = False
         for p in self.doc.paragraphs:
-            style_name = p.style.name if p.style else ""
+            style_name = paragraph_style_name(p)
             text = p.text.strip()
 
             # Track References, TOC, and Abstract sections
@@ -666,7 +675,7 @@ class APAParagraphsHandler:
     def fix_text_spacing_global(self) -> None:
         """Run merge_and_clean on all paragraphs."""
         for p in self.doc.paragraphs:
-            if not p.style or not p.style.name.startswith("Heading"):
+            if not paragraph_style_name(p).startswith("Heading"):
                 self._merge_and_clean_paragraph(p)
                 # Enforce left align
                 if p.paragraph_format.alignment != WD_ALIGN_PARAGRAPH.CENTER:

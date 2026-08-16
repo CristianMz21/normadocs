@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Static-analysis stack** on top of the existing Ruff/mypy/Bandit gates:
+  - **Pyright** as a second, blocking type checker (`[tool.pyright]` in
+    `pyproject.toml`, `make lint` / `make pyright`, CI `quality` job).
+  - **Semgrep** advanced SAST (`p/python` + `p/security-audit`) in the CI
+    `security` job and via `make semgrep` (install with
+    `pip install -e ".[static]"`).
+  - **Gitleaks** secret-scanning job in CI and `make gitleaks`.
+  - **CodeQL** workflow (`.github/workflows/codeql.yml`): push/PR plus a
+    weekly scheduled deep analysis (`security-extended` queries).
+  - **SonarCloud** workflow (`.github/workflows/sonarcloud.yml`) gated on
+    the `SONAR_TOKEN` secret, with `sonar-project.properties` (adjust
+    `sonar.organization` / `sonar.projectKey` once the project is
+    provisioned on SonarCloud).
+
+### Changed
+
+- Codebase made pyright-clean (0 errors / 0 warnings) without inline
+  suppressions:
+  - New typed helpers `normadocs.utils.docx_helpers`
+    (`paragraph_style`, `paragraph_style_name`) narrow python-docx's
+    `BaseStyle` lookups and `str | None` style names across the APA,
+    ICONTEC, and IEEE formatters and the verifier.
+  - `add_tab_stop` now receives `WD_TAB_ALIGNMENT` / `WD_TAB_LEADER`
+    enums instead of raw int literals.
+  - `lt_client` is explicitly initialized in the CLI (previously possibly
+    unbound when LanguageTool post-check ran).
+  - Removed the dead `Styles.get_by_name` branch in
+    `verifier/docx_analyzer.py` (python-docx has no such method; the
+    fallback scan was the real code path).
+
 ## [0.2.3] - 2026-08-05
 
 Stable release of the 0.2.3 beta (no code changes since 0.2.3b0; the

@@ -12,6 +12,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Cm, Emu, Inches, Pt, RGBColor
 
 from ..models import DocumentMetadata
+from ..utils.docx_helpers import paragraph_style, paragraph_style_name
 from .base import DocumentFormatter
 
 
@@ -138,7 +139,7 @@ class IEEEDocxFormatter(DocumentFormatter):
         body_size = self._get_font_size()
         line_spacing = WD_LINE_SPACING.SINGLE
 
-        normal = styles["Normal"]
+        normal = paragraph_style(styles, "Normal")
         normal.font.name = body_font
         normal.font.size = Pt(body_size)
         normal.font.color.rgb = RGBColor(0, 0, 0)
@@ -148,7 +149,7 @@ class IEEEDocxFormatter(DocumentFormatter):
         normal.paragraph_format.space_before = Pt(0)
 
         if "Heading 1" in styles:
-            h1 = styles["Heading 1"]
+            h1 = paragraph_style(styles, "Heading 1")
             h1.font.name = body_font
             h1.font.size = Pt(body_size)
             h1.font.bold = True
@@ -158,7 +159,7 @@ class IEEEDocxFormatter(DocumentFormatter):
             h1.paragraph_format.line_spacing_rule = line_spacing
 
         if "Heading 2" in styles:
-            h2 = styles["Heading 2"]
+            h2 = paragraph_style(styles, "Heading 2")
             h2.font.name = body_font
             h2.font.size = Pt(body_size)
             h2.font.bold = True
@@ -173,7 +174,7 @@ class IEEEDocxFormatter(DocumentFormatter):
         body_size = self._get_font_size()
 
         for p in self.doc.paragraphs:
-            if p.style and p.style.name.startswith("Heading"):
+            if paragraph_style_name(p).startswith("Heading"):
                 continue
 
             p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY

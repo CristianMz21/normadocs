@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 
 from ...models import DocumentMetadata
+from ...utils.docx_helpers import paragraph_style, paragraph_style_name
 
 if TYPE_CHECKING:
     from docx.document import Document as DocType
@@ -116,7 +117,7 @@ class APACoverHandler:
         for text, is_bold in elements:
             p = ref_p.insert_paragraph_before(text)
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            p.style = self.doc.styles["Normal"]
+            p.style = paragraph_style(self.doc.styles, "Normal")
             spacing_line = self._get_spacing_line()
             if spacing_line == "double":
                 p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
@@ -166,7 +167,7 @@ class APACoverHandler:
 
         # Add page break after cover page
         for p in self.doc.paragraphs:
-            style_name = p.style.name if p.style else ""
+            style_name = paragraph_style_name(p)
             if style_name.startswith("Heading"):
                 p.paragraph_format.page_break_before = True
                 break

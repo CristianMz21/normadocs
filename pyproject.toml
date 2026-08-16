@@ -55,9 +55,15 @@ ocr = [
   "pytesseract>=0.3.10",
   "opencv-python>=4.8.0",
 ]
+static = [
+  # Semgrep for the local advanced-SAST pass (CI installs it explicitly in
+  # the security job; Pyright ships in `dev` because it is a blocking gate).
+  "semgrep>=1.50.0",
+]
 dev = [
   "ruff",
   "mypy",
+  "pyright>=1.1.403",
   "types-setuptools",
   "types-requests",
   "types-PyYAML",
@@ -118,6 +124,17 @@ python_version = "3.10"
 strict = true
 warn_unused_configs = true
 ignore_missing_imports = true
+
+# ── Pyright ───────────────────────────────────────────────────────────
+# Complementary type checker (CI runs it alongside mypy). Keep it clean:
+# under GitHub Actions pyright emits ::error/::warning annotations, and the
+# annotations-check job fails CI on any annotation. No `venv`/`venvPath`
+# here on purpose: pyright resolves the interpreter from PATH — the
+# activated venv locally, the setup-python 3.13 env in CI.
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.10"
+typeCheckingMode = "standard"
 
 # ── Pytest ────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
