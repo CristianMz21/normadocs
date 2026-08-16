@@ -48,6 +48,12 @@ references:
   sort: true
   italicize_journals: true
 
+equations:
+  numbering: true
+  format: "({n})"
+  center_tab_inches: 3.25
+  right_tab_inches: 6.5
+
 tables:
   borders: horizontal_only
   caption_prefix: "Table"

@@ -13,6 +13,7 @@ from . import CheckCategory, VerificationIssue, VerificationResult
 from .checks import (
     CitationsCheck,
     CoverPageCheck,
+    EquationsCheck,
     FiguresCheck,
     FontsCheck,
     HeadingsCheck,
@@ -135,6 +136,7 @@ class APAVerifier:
             (CheckCategory.FIGURES, FiguresCheck()),
             (CheckCategory.REFERENCES, ReferencesCheck()),
             (CheckCategory.CITATIONS, CitationsCheck()),
+            (CheckCategory.EQUATIONS, EquationsCheck()),
         ]
 
     def verify_all(self) -> VerificationResult:

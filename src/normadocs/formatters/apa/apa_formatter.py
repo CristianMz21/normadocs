@@ -13,6 +13,7 @@ from docx.text.run import Run
 from ...models import DocumentMetadata
 from .apa_citations import APACitationsHandler
 from .apa_cover import APACoverHandler
+from .apa_equations import APAEquationsHandler
 from .apa_figures import APAFiguresHandler
 from .apa_keywords import APAKeywordsHandler
 from .apa_page import APAPageHandler
@@ -52,6 +53,7 @@ class APADocxFormatter:
         self._figures = APAFiguresHandler(self._doc, self.config)
         self._keywords = APAKeywordsHandler(self._doc, self.config)
         self._citations = APACitationsHandler(self._doc, self.config)
+        self._equations = APAEquationsHandler(self._doc, self.config)
 
     def process(self, meta: DocumentMetadata) -> None:
         """Run the full formatting pipeline.
@@ -69,6 +71,7 @@ class APADocxFormatter:
         self._cover.add_cover_page(meta)
         self._paragraphs.process()
         self._citations.fix_citations()
+        self._equations.format_equations()
 
         self._tables.add_table_captions()
         self._tables.add_table_notes()
@@ -127,6 +130,7 @@ class APADocxFormatter:
         self._figures = APAFiguresHandler(self._doc, self.config)
         self._keywords = APAKeywordsHandler(self._doc, self.config)
         self._citations = APACitationsHandler(self._doc, self.config)
+        self._equations = APAEquationsHandler(self._doc, self.config)
 
     # ─────────────────── Delegate methods for backward compatibility ───────────────────
 
@@ -198,6 +202,11 @@ class APADocxFormatter:
     def _format_references(self) -> None:
         """Delegate to APACitationsHandler to format the reference list."""
         self._citations.format_references()
+
+    # Equations handler delegation
+    def _format_equations(self) -> None:
+        """Delegate to APAEquationsHandler to number display equations."""
+        self._equations.format_equations()
 
     def _format_toc_entry(self, p: Paragraph, heading_levels: dict[str, int]) -> None:
         """Format Table of Contents entries with correct indentation."""

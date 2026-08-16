@@ -2,6 +2,7 @@
 
 from .citations import CitationsCheck
 from .cover_page import CoverPageCheck
+from .equations import EquationsCheck
 from .figures import FiguresCheck
 from .fonts import FontsCheck
 from .headings import HeadingsCheck
@@ -17,6 +18,7 @@ from .tables import TablesCheck
 __all__ = [
     "CitationsCheck",
     "CoverPageCheck",
+    "EquationsCheck",
     "FiguresCheck",
     "FontsCheck",
     "HeadingsCheck",

@@ -605,6 +605,36 @@ class TestRunInHeadings(unittest.TestCase):
         self.assertEqual(texts, ["Categoría.", "Sección siguiente"])
 
 
+class TestBreakSurvival(unittest.TestCase):
+    """Run consolidation must keep page/line breaks (w:br) intact."""
+
+    def test_page_break_paragraph_survives_consolidation(self):
+        """A paragraph holding only a page break keeps its <w:br/> element."""
+        doc = Document()
+        p = doc.add_paragraph()
+        run = p.add_run()
+        br = OxmlElement("w:br")
+        br.set(qn("w:type"), "page")
+        run._element.append(br)
+
+        APAParagraphsHandler(doc).fix_text_spacing_global()
+
+        breaks = doc.paragraphs[0]._element.findall(f".//{qn('w:br')}")
+        self.assertEqual(len(breaks), 1)
+        self.assertEqual(breaks[0].get(qn("w:type")), "page")
+
+    def test_hard_break_inside_text_survives_consolidation(self):
+        """An inline hard break inside a text run is kept after cleanup."""
+        doc = Document()
+        p = doc.add_paragraph()
+        run = p.add_run()
+        run.text = "primera\nsegunda"
+
+        APAParagraphsHandler(doc).fix_text_spacing_global()
+
+        self.assertIn("\n", doc.paragraphs[0].text)
+
+
 class TestBlockQuotes(unittest.TestCase):
     """Tests for APA 8.27 block-quote conversion."""
 

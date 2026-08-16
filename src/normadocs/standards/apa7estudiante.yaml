@@ -5,6 +5,11 @@ citations:
 block_quote:
   indent_inches: 0.5
   min_words: 40
+equations:
+  center_tab_inches: 3.25
+  format: "({n})"
+  numbering: true
+  right_tab_inches: 6.5
 figures:
   caption_above: true
   caption_prefix: Figura

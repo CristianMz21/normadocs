@@ -338,29 +338,102 @@ class MarkdownPreprocessor:
         return result
 
     @staticmethod
+    def _has_hard_line_break(line: str) -> bool:
+        """Return whether a source line ends with an intentional Markdown hard break.
+
+        Pandoc turns a trailing backslash or two trailing spaces into a real
+        line break (<w:br/>) in the DOCX; both must survive preprocessing.
+        """
+        raw = line.rstrip("\r")
+        if raw.endswith("  "):
+            return True
+        trailing_backslashes = len(raw) - len(raw.rstrip("\\"))
+        return trailing_backslashes % 2 == 1
+
+    @staticmethod
+    def _convert_math_fences(lines: list[str]) -> list[str]:
+        """Convert GitHub-style ```math fenced blocks to Pandoc $$ display math.
+
+        Pandoc's markdown reader does not understand ```math fences and would
+        render the equation as plain source code inside a code block.
+        """
+        result: list[str] = []
+        in_math_fence = False
+        fence_re = re.compile(r"^```\s*\{?math\}?\s*$")
+
+        for line in lines:
+            stripped = line.strip().replace("\r", "")
+            if not in_math_fence and fence_re.match(stripped):
+                in_math_fence = True
+                result.append("$$")
+                continue
+            if in_math_fence and stripped.startswith("```"):
+                in_math_fence = False
+                result.append("$$")
+                continue
+            result.append(line)
+
+        return result
+
+    @staticmethod
     def _join_wrapped_lines(lines: list[str]) -> list[str]:
         """
         Join consecutive non-special lines into single paragraphs.
-        This fixes the 'hard return' problem where text is wrapped at ~72 chars.
+
+        This fixes the 'hard return' problem where text is wrapped at ~72 chars,
+        while preserving intentional structure:
+
+        - Hard line breaks (trailing backslash or two trailing spaces) are kept
+          as real line breaks and normalized to the robust backslash form.
+        - Display math blocks delimited by ``$$`` on their own lines are never
+          joined (multi-line LaTeX such as ``aligned`` must stay verbatim), and
+          ``\\tag{n}`` markers are dropped because OMML does not carry them.
         """
         result: list[str] = []
         buffer: list[str] = []
         in_code_block = False
+        in_math_block = False
+        tag_re = re.compile(r"\\tag\{[^}]*\}")
 
         for line in lines:
             stripped = line.strip().replace("\r", "")
+            is_delim = stripped == "$$"
+            single_line_math = (
+                stripped.startswith("$$") and stripped.endswith("$$") and len(stripped) > 4
+            )
+            opens_math = is_delim and not in_math_block
 
-            # Track code block boundaries
             if stripped.startswith("```"):
                 in_code_block = not in_code_block
+            elif is_delim:
+                in_math_block = not in_math_block
+            elif not in_math_block and stripped.startswith("$$"):
+                # opener carrying content on the same line: "$$ x = 1"
+                in_math_block = True
 
-            # Inside code block: treat every line as special (don't join)
+            if is_delim or in_math_block or single_line_math:
+                if (opens_math or single_line_math) and buffer:
+                    result.append(" ".join(buffer))
+                    buffer = []
+                result.append(tag_re.sub("", line))
+                continue
+
             if in_code_block or MarkdownPreprocessor._is_special_line(stripped):
                 # Flush any buffered continuation text
                 if buffer:
                     result.append(" ".join(buffer))
                     buffer = []
                 result.append(line)
+            elif MarkdownPreprocessor._has_hard_line_break(line):
+                # Intentional break: flush the paragraph so far and keep this
+                # line as its own physical line ending with a backslash
+                if buffer:
+                    result.append(" ".join(buffer))
+                    buffer = []
+                normalized = line.rstrip("\r").rstrip(" \t")
+                if not normalized.endswith("\\"):
+                    normalized += "\\"
+                result.append(normalized)
             else:
                 # This is a continuation line — accumulate it
                 buffer.append(stripped)
@@ -421,6 +494,9 @@ class MarkdownPreprocessor:
         # Convert multiline dashed tables to pipe tables
         content_lines = self._convert_multiline_tables(content_lines)
 
+        # Convert GitHub-style ```math fences to Pandoc $$ display math
+        content_lines = self._convert_math_fences(content_lines)
+
         # Join hard-wrapped lines into proper paragraphs
         joined_lines = self._join_wrapped_lines(content_lines)
 
@@ -433,6 +509,12 @@ class MarkdownPreprocessor:
 
         for line in joined_lines:
             stripped = line.strip().replace("\r", "")
+
+            # Explicit page breaks: raw LaTeX commands are silently dropped by
+            # Pandoc for DOCX output, so they become raw OpenXML page breaks
+            if stripped in ("\\newpage", "\\pagebreak"):
+                output_parts.append(PAGEBREAK_OPENXML)
+                continue
 
             # Check for level 1 heading
             if re.match(r"^#\s+", stripped) and not re.match(r"^##", stripped):

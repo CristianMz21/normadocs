@@ -29,6 +29,12 @@ DEFAULT_APA7_CONFIG: dict[str, Any] = {
     "citations": {"et_al_min_authors": 3, "ampersand": True},
     "block_quote": {"min_words": 40, "indent_inches": 0.5},
     "references": {"sort": True, "italicize_journals": True},
+    "equations": {
+        "numbering": True,
+        "format": "({n})",
+        "center_tab_inches": 3.25,
+        "right_tab_inches": 6.5,
+    },
     "tables": {
         "borders": "horizontal_only",
         "caption_prefix": "Table",

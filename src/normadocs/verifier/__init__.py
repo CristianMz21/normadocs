@@ -69,6 +69,7 @@ class CheckCategory:
     PAGE_SETUP = "page_setup"
     STRUCTURE = "structure"
     CITATIONS = "citations"
+    EQUATIONS = "equations"
 
 
 def is_apa_caption_or_table_title(text: str) -> bool:

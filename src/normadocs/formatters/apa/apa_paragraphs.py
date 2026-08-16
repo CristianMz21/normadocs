@@ -672,6 +672,9 @@ class APAParagraphsHandler:
 
         Skips paragraphs containing embedded images (w:drawing) to avoid
         destroying their XML structure.
+        Skips paragraphs containing OMML math (m:oMath) — re-created runs are
+        appended at the end of the paragraph, which would reorder text around
+        the equation.
         Skips Source Code paragraphs to preserve ASCII art and code formatting.
         """
         from docx.shared import Pt
@@ -681,6 +684,16 @@ class APAParagraphsHandler:
 
         # Skip paragraphs with embedded images — clearing runs would destroy them
         if p._element.findall(f".//{qn('w:drawing')}"):
+            return
+
+        # Skip paragraphs with OMML equations — consolidation would reorder
+        # the runs around the equation element
+        if p._element.findall(f".//{qn('m:oMath')}"):
+            return
+
+        # Skip paragraphs holding line/page breaks (w:br) — a run containing
+        # only a break has empty text and would not survive consolidation
+        if p._element.findall(f".//{qn('w:br')}"):
             return
 
         # Skip Source Code paragraphs — newlines are meaningful in code blocks
