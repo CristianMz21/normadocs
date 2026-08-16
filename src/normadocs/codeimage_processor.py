@@ -8,6 +8,7 @@ Uses Pygments for syntax highlighting and imgkit for HTML-to-image rendering.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import logging
 import re
 from pathlib import Path
@@ -110,22 +111,12 @@ class CodeImageProcessor:
     @staticmethod
     def _check_imgkit() -> bool:
         """Check if imgkit is available."""
-        try:
-            import imgkit  # noqa: F401
-
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("imgkit") is not None
 
     @staticmethod
     def _check_pygments() -> bool:
         """Check if Pygments is available."""
-        try:
-            import pygments  # noqa: F401
-
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("pygments") is not None
 
     def is_available(self) -> bool:
         """Check if all required dependencies are installed."""
