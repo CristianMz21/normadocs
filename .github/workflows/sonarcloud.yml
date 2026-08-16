@@ -1,8 +1,10 @@
 name: SonarCloud
 
 # Quality-gate consolidation (bugs, code smells, coverage, duplication).
-# Requires the SONAR_TOKEN secret; the job is skipped while it is unset so the
-# workflow can land before the SonarCloud project is provisioned.
+# SONAR_TOKEN is stored as a secret of the "pypi" environment, so the job
+# references it. Environment secrets are NOT visible to a job-level `if`,
+# hence the availability gate as the first step: without the token (e.g.
+# fork PRs) the remaining steps are skipped and the job passes as a no-op.
 
 on:
   push:
@@ -23,13 +25,28 @@ jobs:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: ${{ secrets.SONAR_TOKEN != '' }}
+    environment: pypi
     steps:
-      - uses: actions/checkout@v6
+      - name: Check SONAR_TOKEN availability
+        id: sonar_gate
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "SONAR_TOKEN is not set; skipping SonarCloud analysis."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        if: steps.sonar_gate.outputs.available == 'true'
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # SonarCloud needs full history for blame/SCM metrics
 
       - name: Set up Python
+        if: steps.sonar_gate.outputs.available == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: "3.13"
@@ -37,25 +54,30 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
+        if: steps.sonar_gate.outputs.available == 'true'
         uses: astral-sh/setup-uv@v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install system deps
+        if: steps.sonar_gate.outputs.available == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y pandoc
 
       - name: Install dependencies
+        if: steps.sonar_gate.outputs.available == 'true'
         run: |
           uv pip install -e ".[dev]" --python python3.13
           uv pip install "pymupdf>=1.23.0" --python python3.13
 
       - name: Run tests with coverage
+        if: steps.sonar_gate.outputs.available == 'true'
         run: pytest tests/ --cov=normadocs --cov-report=xml -q
 
       - name: SonarCloud Scan
+        if: steps.sonar_gate.outputs.available == 'true'
         uses: SonarSource/sonarqube-scan-action@v4
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
