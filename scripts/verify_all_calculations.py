@@ -4,8 +4,12 @@ Script para verificar TODOS los cálculos del INFORME TÉCNICO ECONÓMICO.
 """
 
 import re
+from typing import Any
 import sys
 from pathlib import Path
+
+
+_SEP = "   ─────────────────────────────────"
 
 
 def extract_currency(value: str) -> int:
@@ -95,7 +99,7 @@ def main():
     p_sum = sum(t for _, t in personal_items)
     for name, total in personal_items:
         print(f"   - {name}: ${total:,}")
-    print("   ─────────────────────────────────")
+    print(_SEP)
     print(f"   TOTAL NÓMINA: ${p_sum:,}")
 
     if personal_total > 0 and p_sum == personal_total:
@@ -139,7 +143,7 @@ def main():
     hw_sum = sum(t for _, t in hw_items)
     for name, total in hw_items:
         print(f"   - {name}: ${total:,}")
-    print("   ─────────────────────────────────")
+    print(_SEP)
     print(f"   TOTAL HARDWARE: ${hw_sum:,}")
 
     if hw_total > 0:
@@ -180,7 +184,7 @@ def main():
     sw_sum = sum(t for _, t in sw_items)
     for name, total in sw_items:
         print(f"   - {name}: ${total:,}")
-    print("   ─────────────────────────────────")
+    print(_SEP)
     print(f"   TOTAL SOFTWARE: ${sw_sum:,}")
 
     if sw_total > 0:
@@ -221,7 +225,7 @@ def main():
     cost_sum = sum(t for _, t in cost_items)
     for name, total in cost_items:
         print(f"   - {name}: ${total:,}")
-    print("   ─────────────────────────────────")
+    print(_SEP)
     print(f"   TOTAL COSTOS DIRECTOS: ${cost_sum:,}")
 
     # Verify: Personal + HW + SW should equal direct costs
@@ -269,7 +273,7 @@ def main():
     total_c = direct_costs + aiu_c + iva_c
 
     print(f"   Base Imponible:     ${direct_costs:,}")
-    print("   ─────────────────────────────────")
+    print(_SEP)
 
     for label, key, calc in [
         ("Administración (5 %)", "a", admin_c),
@@ -464,14 +468,14 @@ def main():
             doc = Document(docx_path)
             ok_count = 0
             for i, table in enumerate(doc.tables):
-                rows_ok = sum(
-                    1
-                    for row in table.rows
-                    if row._tr.find(qn("w:trPr")) is not None
-                    and row._tr.find(qn("w:trPr")).find(qn("w:cantSplit")) is not None
-                    and row._tr.find(qn("w:trPr")).find(qn("w:cantSplit")).get(qn("w:val")) == "1"
-                    for row in table.rows
-                )
+                def _row_protected(row: Any) -> bool:
+                    tr_pr = row._tr.find(qn("w:trPr"))
+                    if tr_pr is None:
+                        return False
+                    cant_split = tr_pr.find(qn("w:cantSplit"))
+                    return cant_split is not None and cant_split.get(qn("w:val")) == "1"
+
+                rows_ok = sum(1 for row in table.rows if _row_protected(row))
                 if rows_ok == len(table.rows):
                     ok_count += 1
                     print(f"   Tabla {i + 1}: {len(table.rows)} filas ✓")

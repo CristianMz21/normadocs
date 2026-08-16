@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **SonarCloud findings resolved without suppressions** (security D →
+  target A, reliability C → target A, ~90 code smells):
+  - All GitHub Actions third-party actions pinned to full commit SHAs;
+    workflow-level permissions moved to job level (least privilege);
+    every CI install switched to locked resolution (`uv sync --frozen`
+    from `uv.lock`, new `docs/requirements.lock` with
+    `--only-binary :all:`).
+  - Dockerfile: explicit `COPY` instead of `COPY . .`, non-root `appuser`,
+    locked `uv sync --frozen --no-dev` install, sorted apt packages.
+  - `languagetool_client`: remote LanguageTool servers now default to
+    HTTPS; plain HTTP is kept only for loopback hosts (checked via
+    `ipaddress`, fixing Sonar S5332 and a Bandit B104 false positive in
+    one move).
+  - `icontec`: float equality on the configured 1.5 line spacing replaced
+    with `math.isclose` (S1244).
+  - `verify_pdf`/`verify_calculations` scripts: regex fixes (explicit
+    precedence groups, negated character classes instead of reluctant
+    quantifiers, simplified citation pattern), unused parameters removed.
+  - `verify_all_calculations`: fixed a duplicated `for row in table.rows`
+    clause in the row-protection check (real bug found by the cleanup).
+  - Naming: 141 camelCase XML-helper locals renamed to snake_case
+    (S117); duplicated literals extracted to constants (`DEFAULT_BODY_FONT`
+    in `config.py`, per-file OOXML qname constants, reference-heading
+    consolidation via `REFERENCE_HEADINGS`, `Nota.`/`et al.` prefixes).
+  - Tests: `assertGreater`/`assertFalse`/`assertGreaterEqual` instead of
+    boolean `assertTrue` comparisons; redundant try/except removed.
+
 ### Added
 
 - **Static-analysis stack** on top of the existing Ruff/mypy/Bandit gates:

@@ -8,9 +8,6 @@ on:
     types: [published]
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
@@ -23,6 +20,8 @@ jobs:
     name: Validate Version Tag
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.extract.outputs.VERSION }}
     steps:
@@ -55,6 +54,8 @@ jobs:
     needs: [validate-tag]
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     outputs:
       already_published: ${{ steps.check.outputs.already_published }}
     steps:
@@ -79,6 +80,8 @@ jobs:
     needs: [validate-tag]
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -90,30 +93,32 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@v8.3.2
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
-      - name: Install dependencies
-        run: uv pip install -e ".[dev]" --python python3.13
+      - name: Install dependencies (locked)
+        run: uv sync --frozen --extra dev --python 3.13
 
       - name: Lint with Ruff (no noqa allowed)
-        run: ruff check src/ tests/ --output-format=github --no-cache
+        run: uv run ruff check src/ tests/ --output-format=github --no-cache
         env:
           RUFF_NOQA: "1"
 
       - name: Format check with Ruff
-        run: ruff format --check src/ tests/ --output-format=github --no-cache
+        run: uv run ruff format --check src/ tests/ --output-format=github --no-cache
 
       - name: Type check with MyPy
-        run: mypy --strict src/
+        run: uv run mypy --strict src/
 
   security:
     name: Security Scan
     needs: [validate-tag]
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -125,22 +130,24 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@v8.3.2
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
-      - name: Install dependencies
-        run: uv pip install -e ".[dev]" --python python3.13
+      - name: Install dependencies (locked)
+        run: uv sync --frozen --extra dev --python 3.13
 
       - name: Run Bandit
-        run: bandit -r src/ -c pyproject.toml
+        run: uv run bandit -r src/ -c pyproject.toml
 
   tests:
     name: Tests (Python 3.13)
     needs: [quality, security]
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -152,7 +159,7 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@v8.3.2
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -162,17 +169,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pandoc
 
-      - name: Install dependencies
-        run: uv pip install -e ".[dev]" --python python3.13
+      - name: Install dependencies (locked)
+        run: uv sync --frozen --extra dev --python 3.13
 
       - name: Run tests with coverage (warnings as errors)
-        run: pytest tests/ -W error --cov=normadocs --cov-report=term-missing --cov-fail-under=78
+        run: >-
+          uv run pytest tests/ -W error --cov=normadocs
+          --cov-report=term-missing --cov-fail-under=78
 
   build-check:
     name: Build Distribution
     needs: [tests]
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -183,18 +194,18 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@v8.3.2
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
 
-      - name: Install build tools
-        run: uv pip install build twine
+      - name: Install dependencies (locked)
+        run: uv sync --frozen --extra dev --python 3.13
 
       - name: Build sdist and wheel
-        run: python -m build
+        run: uv run python -m build
 
       - name: Validate package metadata
-        run: twine check dist/*
+        run: uv run twine check dist/*
 
       - name: Upload dist artifacts
         uses: actions/upload-artifact@v6
@@ -253,18 +264,18 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@v8.3.2
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
 
-      - name: Install build tools
-        run: uv pip install build
+      - name: Install dependencies (locked)
+        run: uv sync --frozen --extra dev --python 3.13
 
       - name: Build package
-        run: python -m build
+        run: uv run python -m build
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.0
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
@@ -275,6 +286,8 @@ jobs:
     needs: [annotations-check, check-pypi]
     runs-on: ubuntu-latest
     if: needs.check-pypi.outputs.already_published == 'true'
+    permissions:
+      contents: read
     steps:
       - name: Version already published
         run: |

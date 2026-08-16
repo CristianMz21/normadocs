@@ -251,7 +251,7 @@ class TestConvertMultilineTables(unittest.TestCase):
             "--------------------",
         ]
         result = MarkdownPreprocessor._convert_multiline_tables(lines)
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
 
     def test_multiline_table_no_matching_end(self):
         """Table without matching end separator passes through."""
@@ -318,7 +318,7 @@ class TestParseMultilineTable(unittest.TestCase):
         inner_sep = "-- --"
         result = MarkdownPreprocessor._parse_multiline_table(table_lines, inner_sep)
         self.assertIsInstance(result, list)
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
 
     def test_parse_empty_separator_returns_original(self):
         """Empty separator returns original table lines."""

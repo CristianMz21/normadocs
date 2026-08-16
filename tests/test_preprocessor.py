@@ -55,7 +55,7 @@ Should not break.
         # Total breaks: 1
 
         breaks = processed.count('<w:br w:type="page"/>')
-        self.assertTrue(breaks >= 1)
+        self.assertGreaterEqual(breaks, 1)
 
 
 if __name__ == "__main__":

@@ -9,11 +9,16 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Inches, Pt
 
+from ...config import DEFAULT_BODY_FONT
 from ...utils.docx_helpers import paragraph_style_name
 
 if TYPE_CHECKING:
     from docx.document import Document as DocType
     from docx.section import Section as SectionType
+
+
+_FLD_CHAR = "w:fldChar"
+_FLD_CHAR_TYPE = "w:fldCharType"
 
 
 class APAPageHandler:
@@ -85,18 +90,17 @@ class APAPageHandler:
             for p in footer.paragraphs:
                 p.clear()
                 # Remove ALL child elements (runs, field codes, pPr, etc.)
-                for child in list(p._element):
-                    p._element.remove(child)
+                del p._element[:]
             # Also set footer distance to zero to suppress any residual space
-            sectPr = section._sectPr
-            existing_pgMar = sectPr.find(qn("w:pgMar"))
-            if existing_pgMar is not None:
-                existing_pgMar.set(qn("w:footer"), "0")
+            sect_pr = section._sectPr
+            existing_pg_mar = sect_pr.find(qn("w:pgMar"))
+            if existing_pg_mar is not None:
+                existing_pg_mar.set(qn("w:footer"), "0")
 
             # Remove the footerReference entirely to prevent LibreOffice
             # from rendering any footer content
-            for fref in list(sectPr.findall(qn("w:footerReference"))):
-                sectPr.remove(fref)
+            for fref in sect_pr.findall(qn("w:footerReference")):
+                sect_pr.remove(fref)
 
             # Student APA papers show the page number on the cover too.
             self._add_page_number(section)
@@ -118,10 +122,10 @@ class APAPageHandler:
         # Build PAGE field with begin/separate/end sequence
         # (LibreOffice requires the 'separate' marker to render page numbers)
         run_begin = hp.add_run()
-        fld_begin = OxmlElement("w:fldChar")
-        fld_begin.set(qn("w:fldCharType"), "begin")
+        fld_begin = OxmlElement(_FLD_CHAR)
+        fld_begin.set(qn(_FLD_CHAR_TYPE), "begin")
         run_begin._r.append(fld_begin)
-        run_begin.font.name = "Times New Roman"
+        run_begin.font.name = DEFAULT_BODY_FONT
         run_begin.font.size = Pt(12)
 
         run_instr = hp.add_run()
@@ -129,26 +133,26 @@ class APAPageHandler:
         instr.set(qn("xml:space"), "preserve")
         instr.text = " PAGE "
         run_instr._r.append(instr)
-        run_instr.font.name = "Times New Roman"
+        run_instr.font.name = DEFAULT_BODY_FONT
         run_instr.font.size = Pt(12)
 
         run_sep = hp.add_run()
-        fld_sep = OxmlElement("w:fldChar")
-        fld_sep.set(qn("w:fldCharType"), "separate")
+        fld_sep = OxmlElement(_FLD_CHAR)
+        fld_sep.set(qn(_FLD_CHAR_TYPE), "separate")
         run_sep._r.append(fld_sep)
-        run_sep.font.name = "Times New Roman"
+        run_sep.font.name = DEFAULT_BODY_FONT
         run_sep.font.size = Pt(12)
 
         # Placeholder text (will be replaced by actual page number)
         run_num = hp.add_run("1")
-        run_num.font.name = "Times New Roman"
+        run_num.font.name = DEFAULT_BODY_FONT
         run_num.font.size = Pt(12)
 
         run_end = hp.add_run()
-        fld_end = OxmlElement("w:fldChar")
-        fld_end.set(qn("w:fldCharType"), "end")
+        fld_end = OxmlElement(_FLD_CHAR)
+        fld_end.set(qn(_FLD_CHAR_TYPE), "end")
         run_end._r.append(fld_end)
-        run_end.font.name = "Times New Roman"
+        run_end.font.name = DEFAULT_BODY_FONT
         run_end.font.size = Pt(12)
 
         # Strip excessive paragraphs in header
@@ -254,8 +258,7 @@ class APAPageHandler:
             first_page_header.is_linked_to_previous = False
             for p in first_page_header.paragraphs:
                 p.clear()
-                for child in list(p._element):
-                    p._element.remove(child)
+                del p._element[:]
             self._add_page_number(section, first_page_header)
 
             # Set up the default header with running head (for pages 2+)
@@ -270,10 +273,10 @@ class APAPageHandler:
             hp = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
 
             # Set tab stops for left and right content
-            pPr = hp._p.find(qn("w:pPr"))
-            if pPr is None:
-                pPr = OxmlElement("w:pPr")
-                hp._p.insert(0, pPr)
+            p_pr = hp._p.find(qn("w:pPr"))
+            if p_pr is None:
+                p_pr = OxmlElement("w:pPr")
+                hp._p.insert(0, p_pr)
 
             # Add tab stop at center for left/right separation
             tabs = OxmlElement("w:tabs")
@@ -289,14 +292,14 @@ class APAPageHandler:
             tabs.append(tab2)
 
             # Remove existing tabs if any
-            existing_tabs = pPr.find(qn("w:tabs"))
+            existing_tabs = p_pr.find(qn("w:tabs"))
             if existing_tabs is not None:
-                pPr.remove(existing_tabs)
-            pPr.append(tabs)
+                p_pr.remove(existing_tabs)
+            p_pr.append(tabs)
 
             # Add the short title (left-aligned, uppercase)
             title_run = hp.add_run(display_title)
-            title_run.font.name = "Times New Roman"
+            title_run.font.name = DEFAULT_BODY_FONT
             title_run.font.size = Pt(12)
 
             # Add tab to center
@@ -307,10 +310,10 @@ class APAPageHandler:
 
             # Build PAGE field with begin/separate/end sequence
             run_begin = hp.add_run()
-            fld_begin = OxmlElement("w:fldChar")
-            fld_begin.set(qn("w:fldCharType"), "begin")
+            fld_begin = OxmlElement(_FLD_CHAR)
+            fld_begin.set(qn(_FLD_CHAR_TYPE), "begin")
             run_begin._r.append(fld_begin)
-            run_begin.font.name = "Times New Roman"
+            run_begin.font.name = DEFAULT_BODY_FONT
             run_begin.font.size = Pt(12)
 
             run_instr = hp.add_run()
@@ -318,25 +321,25 @@ class APAPageHandler:
             instr.set(qn("xml:space"), "preserve")
             instr.text = " PAGE "
             run_instr._r.append(instr)
-            run_instr.font.name = "Times New Roman"
+            run_instr.font.name = DEFAULT_BODY_FONT
             run_instr.font.size = Pt(12)
 
             run_sep = hp.add_run()
-            fld_sep = OxmlElement("w:fldChar")
-            fld_sep.set(qn("w:fldCharType"), "separate")
+            fld_sep = OxmlElement(_FLD_CHAR)
+            fld_sep.set(qn(_FLD_CHAR_TYPE), "separate")
             run_sep._r.append(fld_sep)
-            run_sep.font.name = "Times New Roman"
+            run_sep.font.name = DEFAULT_BODY_FONT
             run_sep.font.size = Pt(12)
 
             run_num = hp.add_run("1")
-            run_num.font.name = "Times New Roman"
+            run_num.font.name = DEFAULT_BODY_FONT
             run_num.font.size = Pt(12)
 
             run_end = hp.add_run()
-            fld_end = OxmlElement("w:fldChar")
-            fld_end.set(qn("w:fldCharType"), "end")
+            fld_end = OxmlElement(_FLD_CHAR)
+            fld_end.set(qn(_FLD_CHAR_TYPE), "end")
             run_end._r.append(fld_end)
-            run_end.font.name = "Times New Roman"
+            run_end.font.name = DEFAULT_BODY_FONT
             run_end.font.size = Pt(12)
 
             # Strip excessive paragraphs

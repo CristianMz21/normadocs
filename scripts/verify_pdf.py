@@ -124,7 +124,7 @@ class APA7Verifier:
             self.errors.append("Portada contiene YAML frontmatter sin procesar")
 
         # Verificar que no haya Markdown residual
-        if re.search(r"!\[.*?\]\(.*?\)", page1):
+        if re.search(r"!\[[^\]]*\]\([^)]*\)", page1):
             self.warnings.append("Portada contiene sintaxis Markdown sin procesar")
 
     def verify_resumen(self):
@@ -164,7 +164,7 @@ class APA7Verifier:
         for page_num, text in self.pages_text.items():
             # Buscar inicio del cuerpo
             if re.search(
-                r"^\s*1\.\s*DESCRIPCIÓN|INTRODUCCIÓN|Este documento",
+                r"(?:^\s*1\.\s*DESCRIPCIÓN)|INTRODUCCIÓN|Este documento",
                 text,
                 re.MULTILINE | re.IGNORECASE,
             ):
@@ -222,7 +222,7 @@ class APA7Verifier:
 
                 # Buscar patrones de entradas de referencias (Apellido, N.)
                 ref_entries = re.findall(
-                    r"^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\s*,?\s*[A-Z]\.", text, re.MULTILINE
+                    r"^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+,?\s+[A-Z]\.", text, re.MULTILINE
                 )
                 if len(ref_entries) >= 2:
                     self.passed.append(
@@ -292,7 +292,7 @@ class APA7Verifier:
             self.passed.append(f"Citas parentéticas detectadas: {len(parentetic_cites)}")
 
         # Buscar "et al."
-        et_al_cites = re.findall(r"\(.*?et\s+al\..*?\)", self.all_text)
+        et_al_cites = re.findall(r"\([^)]*et\s+al\.[^)]*\)", self.all_text)
         if et_al_cites:
             self.passed.append(f"Citas con 'et al.' detectadas: {len(et_al_cites)}")
 

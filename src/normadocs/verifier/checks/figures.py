@@ -48,7 +48,7 @@ class FiguresCheck:
         figure_captions: list[FigureCaption] = []
         for i, p_info in enumerate(paragraphs_info):
             text = p_info.text.strip()
-            if text.startswith("Figure ") or text.startswith("Figura "):
+            if text.startswith(("Figure ", "Figura ")):
                 parts = text.split()
                 if len(parts) >= 2 and parts[1].replace(".", "").isdigit():
                     figure_captions.append(
@@ -148,7 +148,11 @@ class FiguresCheck:
 
         for caption_data in figure_captions:
             caption_idx = caption_data["index"]
-            nearest_image = min(image_indices, key=lambda ii: abs(ii - caption_idx))
+
+            def distance_to_caption(index: int, caption: int = caption_idx) -> int:
+                return abs(index - caption)
+
+            nearest_image = min(image_indices, key=distance_to_caption)
             if nearest_image < caption_idx:
                 issues.append(
                     VerificationIssue(

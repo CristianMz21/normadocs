@@ -6,14 +6,16 @@ Defines the structure and default values for all supported standards.
 
 from typing import Any, cast
 
+from ..config import DEFAULT_BODY_FONT
+
 DEFAULT_APA7_CONFIG: dict[str, Any] = {
     "name": "APA 7th Edition",
     "version": "7.0",
     "citation_style": "apa",
     "fonts": {
-        "body": {"name": "Times New Roman", "size": 12},
+        "body": {"name": DEFAULT_BODY_FONT, "size": 12},
         "headings": {
-            "name": "Times New Roman",
+            "name": DEFAULT_BODY_FONT,
             "level1": {"alignment": "center", "bold": True},
             "level2": {"alignment": "left", "bold": True},
             "level3": {"alignment": "left", "bold": True, "italic": True},
@@ -81,9 +83,9 @@ DEFAULT_IEEE_CONFIG: dict[str, Any] = {
     "version": "8.0",
     "citation_style": "ieee",
     "fonts": {
-        "body": {"name": "Times New Roman", "size": 10},
+        "body": {"name": DEFAULT_BODY_FONT, "size": 10},
         "headings": {
-            "name": "Times New Roman",
+            "name": DEFAULT_BODY_FONT,
             "level1": {"alignment": "center", "bold": True},
         },
     },

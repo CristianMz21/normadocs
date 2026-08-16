@@ -80,7 +80,7 @@ class APADocxFormatter:
         self._paragraphs.format_lists()
         self._paragraphs.apply_body_indent()
         self._citations.format_references()
-        self._keywords.format_keywords(meta)
+        self._keywords.format_keywords()
         self._paragraphs.fix_text_spacing_global()
         # Add required section page breaks after paragraph cleanup so the
         # OpenXML break paragraphs are not removed by run consolidation.
@@ -275,7 +275,7 @@ class APADocxFormatter:
     # Keywords handler delegation
     def _format_keywords(self, meta: DocumentMetadata) -> None:
         """Delegate to APAKeywordsHandler to format keywords section."""
-        self._keywords.format_keywords(meta)
+        self._keywords.format_keywords()
 
     def _add_page_break_before_introduction(self) -> None:
         """Add page break before the introduction section."""

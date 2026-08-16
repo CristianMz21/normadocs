@@ -284,8 +284,9 @@ class TestEndToEndAPA(unittest.TestCase):
         for section in self.doc.sections:
             header = section.header
             # Header should have a paragraph with a PAGE field
-            self.assertTrue(
-                len(header.paragraphs) > 0,
+            self.assertGreater(
+                len(header.paragraphs),
+                0,
                 "No header paragraphs found (APA requires page numbers)",
             )
 

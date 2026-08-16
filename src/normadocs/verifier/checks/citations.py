@@ -29,6 +29,9 @@ QUOTE_OPEN = ('"', "\u201c", "\u00ab")
 BLOCK_QUOTE_MIN_WORDS = 40
 
 
+_ET_AL = "et al."
+
+
 class CitationsCheck:
     """Check in-text citations against APA 7th Edition requirements."""
 
@@ -79,7 +82,7 @@ class CitationsCheck:
                 if year is None:
                     continue
                 authors = segment[: year.start()].strip()
-                if "et al." in authors or " y " not in authors:
+                if _ET_AL in authors or " y " not in authors:
                     continue
                 if self._author_count(authors) >= 2:
                     issues.append(
@@ -98,7 +101,7 @@ class CitationsCheck:
         """Flag citations listing three or more authors without 'et al.'."""
         for match in _NARRATIVE_CITATION.finditer(text):
             authors = match.group(1)
-            if "et al." in authors:
+            if _ET_AL in authors:
                 continue
             count = self._author_count(authors)
             if count >= 3:
@@ -119,7 +122,7 @@ class CitationsCheck:
                 if year is None:
                     continue
                 authors = segment[: year.start()].strip()
-                if "et al." in authors:
+                if _ET_AL in authors:
                     continue
                 count = self._author_count(authors)
                 if count >= 3:
@@ -151,6 +154,6 @@ class CitationsCheck:
     @staticmethod
     def _author_count(segment: str) -> int:
         """Count author-like tokens in a citation segment."""
-        tokens = re.split(r"\s*,\s*|\s+(?:y|&)\s+", segment.strip())
+        tokens = re.split(r"\s*,\s*|\s+[y&]\s+", segment.strip())
         matched = [t for t in tokens if re.fullmatch(_AUTHOR, t)]
         return len(matched) if tokens and len(matched) == len(tokens) else 0

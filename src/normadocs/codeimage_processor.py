@@ -186,8 +186,8 @@ class CodeImageProcessor:
         try:
             imgkit.from_string(html, str(image_path), options=options)
             return True
-        except Exception as e:
-            logger.error("Failed to generate image: %s", e)
+        except Exception:
+            logger.exception("Failed to generate image")
             return False
 
     def _extract_code_blocks(self, text: str) -> list[CodeBlock]:

@@ -90,5 +90,7 @@ docs/site/
 .specify/
 .gga
 .zcode/
+.claude/
+.kiro/
 skills-lock.json
 scripts/bootstrap-sdd.sh

@@ -4,6 +4,7 @@ Applies ICONTEC formatting standards including Arial 12pt font,
 1.5 line spacing, and specific margin requirements.
 """
 
+import math
 from typing import Any, cast
 
 from docx import Document
@@ -127,7 +128,9 @@ class IcontecFormatter(DocumentFormatter):
         body_size = self._get_font_size("body")
         spacing_line = self._get_spacing_line()
         line_spacing = (
-            WD_LINE_SPACING.ONE_POINT_FIVE if spacing_line == 1.5 else WD_LINE_SPACING.SINGLE
+            WD_LINE_SPACING.ONE_POINT_FIVE
+            if math.isclose(spacing_line, 1.5)
+            else WD_LINE_SPACING.SINGLE
         )
 
         # Normal

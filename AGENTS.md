@@ -177,6 +177,14 @@ in `src/normadocs/standards/__init__.py`).
 
 ## Things easy to miss
 
+- **Agent skills are local-only, installed with `npx autoskills`** (from
+  <https://autoskills.sh/>). They land in `.agents/skills/` (read natively by
+  ZCode/OpenCode; `.claude/skills/` and `.kiro/skills/` are symlinks), tracked
+  by `skills-lock.json`. All of it is gitignored — re-run `npx autoskills` in a
+  fresh checkout. Keep only `bash-defensive-patterns`, `python-patterns`,
+  `python-testing-patterns`: skip `python-executor` (registry security flag),
+  `machine-learning` / `pandas-data-analysis` (numpy here is an opencv transitive,
+  not data science) and the frontend skills (detected off MkDocs build output).
 - **OpenCode config** lives at `.opencode/opencode.json` (not the user-level
   one) and pulls three instruction files into every session: `AGENTS.md` (this
   file), `.specify/memory/constitution.md`, and `.opencode/MANDATORY_SKILLS.md`.

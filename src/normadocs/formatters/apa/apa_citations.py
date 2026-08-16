@@ -85,7 +85,7 @@ class APACitationsHandler:
         Tokens that are not capitalized words (e.g. "p < 0.05") make the
         segment non-authorish, returning 0 so it is never rewritten.
         """
-        tokens = re.split(r"\s*,\s*|\s+(?:y|&)\s+", segment.strip())
+        tokens = re.split(r"\s*,\s*|\s+[y&]\s+", segment.strip())
         matched = [t for t in tokens if re.fullmatch(_AUTHOR, t)]
         return len(matched) if len(matched) == len(tokens) and tokens else 0
 
@@ -140,7 +140,7 @@ class APACitationsHandler:
             return f"{authors}, {year_text}"
         count = self._author_count(authors)
         if count >= min_authors:
-            first = re.split(r"\s*,\s*|\s+(?:y|&)\s+", authors)[0].strip()
+            first = re.split(r"\s*,\s*|\s+[y&]\s+", authors)[0].strip()
             return f"{first} et al., {year_text}"
         if count == 2 and " y " in authors:
             return f"{authors.replace(' y ', ' & ')}, {year_text}"
@@ -202,7 +202,7 @@ class APACitationsHandler:
         if not matches:
             return
         offset = 0
-        for run in list(p.runs):
+        for run in p.runs:
             run_text = run.text or ""
             start = offset
             end = offset + len(run_text)

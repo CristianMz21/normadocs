@@ -15,11 +15,24 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 
+from ...config import DEFAULT_BODY_FONT
 from ...utils.docx_helpers import paragraph_style_name
+from .apa_citations import REFERENCE_HEADINGS
 
 if TYPE_CHECKING:
     from docx.document import Document as DocType
     from docx.text.paragraph import Paragraph as ParagraphType
+
+_HEADING_1 = "Heading 1"
+_HEADING_5 = "Heading 5"
+_RUN_IN_HEADINGS = ("Heading 4", _HEADING_5)
+
+
+def _is_references_heading(stripped_lower: str) -> bool:
+    """Return whether a stripped, lowercased heading title starts the references."""
+    return stripped_lower in REFERENCE_HEADINGS or stripped_lower.startswith(
+        ("referencias ", "references ", "lista de referencias")
+    )
 
 
 def _clear_paragraph(p: ParagraphType) -> ParagraphType:
@@ -50,7 +63,7 @@ class APAParagraphsHandler:
         """Get body font name from config."""
         fonts: dict[str, Any] = {}
         return cast(
-            str, self.config.get("fonts", fonts).get("body", {}).get("name", "Times New Roman")
+            str, self.config.get("fonts", fonts).get("body", {}).get("name", DEFAULT_BODY_FONT)
         )
 
     @staticmethod
@@ -114,18 +127,7 @@ class APAParagraphsHandler:
                 # (e.g. "Slide 4 — Well-being, teamwork and references")
                 # must NOT trigger it.
                 heading_stripped = text_lower.strip().rstrip(".")
-                is_references_heading = heading_stripped in (
-                    "referencias",
-                    "referencia",
-                    "bibliografía",
-                    "bibliografia",
-                    "bibliography",
-                    "references",
-                    "reference",
-                    "lista de referencias",
-                ) or heading_stripped.startswith(
-                    ("referencias ", "references ", "lista de referencias")
-                )
+                is_references_heading = _is_references_heading(heading_stripped)
                 if is_references_heading:
                     in_references = True
                     in_toc = False
@@ -150,7 +152,7 @@ class APAParagraphsHandler:
                     # new page. The cover handler and explicit section breaks
                     # handle pages that must be separated; ordinary headings
                     # should flow with their following content.
-                    if style_name == "Heading 1":
+                    if style_name == _HEADING_1:
                         # Clear stale page-break formatting inherited from a
                         # previously formatted DOCX, except for the first
                         # content heading used to separate the cover page.
@@ -169,7 +171,7 @@ class APAParagraphsHandler:
                     in_toc = False
 
                 # Explicit APA heading alignment and emphasis on every heading
-                if style_name == "Heading 1":
+                if style_name == _HEADING_1:
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     for run in p.runs:
                         run.bold = True
@@ -183,8 +185,8 @@ class APAParagraphsHandler:
                     for run in p.runs:
                         run.bold = True
                         run.italic = True
-                elif style_name in ("Heading 4", "Heading 5"):
-                    self._format_run_in_heading(p, italic=(style_name == "Heading 5"))
+                elif style_name in _RUN_IN_HEADINGS:
+                    self._format_run_in_heading(p, italic=(style_name == _HEADING_5))
 
                 # Strip numbering property from headings (APA 7 doesn't use numbered headings)
                 p_pr = p._element.find(qn("w:pPr"))
@@ -193,7 +195,7 @@ class APAParagraphsHandler:
                     if num_pr is not None:
                         p_pr.remove(num_pr)
                 # Levels 4-5 keep their 0.5" run-in indent (APA 7)
-                if style_name not in ("Heading 4", "Heading 5"):
+                if style_name not in _RUN_IN_HEADINGS:
                     p.paragraph_format.first_line_indent = Inches(0)
 
             # Line spacing
@@ -247,9 +249,7 @@ class APAParagraphsHandler:
                         # Abstract block format (no indent per APA 7)
                         p.paragraph_format.first_line_indent = Inches(0)
                     # End abstract after keywords paragraph
-                    if text_strip.lower().startswith(
-                        "palabras clave"
-                    ) or text_strip.lower().startswith("keywords"):
+                    if text_strip.lower().startswith(("palabras clave", "keywords")):
                         in_abstract = False
                         just_left_abstract = True
                 elif (
@@ -284,23 +284,23 @@ class APAParagraphsHandler:
         APA 7 requires widow/orphan control to prevent single lines
         at the top or bottom of a page.
         """
-        pPr = p._element.get_or_add_pPr()
-        widowOrphan = OxmlElement("w:widowControl")
-        pPr.append(widowOrphan)
+        p_pr = p._element.get_or_add_pPr()
+        widow_orphan = OxmlElement("w:widowControl")
+        p_pr.append(widow_orphan)
         # Set adjustment for document grid (ensures consistent line height)
-        docGrid = OxmlElement("w:docGrid")
-        docGrid.set(qn("w:type"), "lines")
-        docGrid.set(qn("w:linePitch"), "360")
-        pPr.append(docGrid)
+        doc_grid = OxmlElement("w:docGrid")
+        doc_grid.set(qn("w:type"), "lines")
+        doc_grid.set(qn("w:linePitch"), "360")
+        p_pr.append(doc_grid)
 
     def _apply_keep_with_next(self, p: ParagraphType) -> None:
         """Apply keep-with-next to heading paragraphs per APA 7.
 
         Headings should stay on the same page as the following paragraph.
         """
-        pPr = p._element.get_or_add_pPr()
-        keepNext = OxmlElement("w:keepNext")
-        pPr.append(keepNext)
+        p_pr = p._element.get_or_add_pPr()
+        keep_next = OxmlElement("w:keepNext")
+        p_pr.append(keep_next)
 
     def _format_run_in_heading(self, p: ParagraphType, italic: bool) -> None:
         """Format a Level 4/5 heading as an APA 7 run-in heading.
@@ -405,7 +405,7 @@ class APAParagraphsHandler:
                 keep_font = run.font.name
                 keep_size = run.font.size
                 break
-        for run in list(p.runs):
+        for run in p.runs:
             run._element.getparent().remove(run._element)
         new_run = p.add_run(text)
         if keep_font is not None:
@@ -422,7 +422,7 @@ class APAParagraphsHandler:
             p: The paragraph to process.
         """
         citation_re = re.compile(
-            r"\(([A-ZÁ-Ú][a-záéíóúñ]+(?:\s+(?:et\s+al\.))?)\s+y\s+([A-ZÁ-Ú][a-záéíóúñ]+),\s*(\d{4})\)"
+            r"\(([A-ZÁ-Ú][a-záéíóúñ]+(?:\s+et\s+al\.)?)\s+y\s+([A-ZÁ-Ú][a-záéíóúñ]+),\s*(\d{4})\)"
         )
         for run in p.runs:
             if " y " in run.text and "(" in run.text:
@@ -529,30 +529,21 @@ class APAParagraphsHandler:
         for p in self.doc.paragraphs:
             # Track sections via headings
             style_name = paragraph_style_name(p)
-            if style_name == "Heading 1":
+            if style_name == _HEADING_1:
                 text_lower = p.text.lower().strip().rstrip(".")
-                in_references = text_lower in (
-                    "referencias",
-                    "referencia",
-                    "bibliografía",
-                    "bibliografia",
-                    "bibliography",
-                    "references",
-                    "reference",
-                    "lista de referencias",
-                ) or text_lower.startswith(("referencias ", "references ", "lista de referencias"))
+                in_references = _is_references_heading(text_lower)
                 continue
 
-            pPr = p._element.find(qn("w:pPr"))
-            if pPr is None:
+            p_pr = p._element.find(qn("w:pPr"))
+            if p_pr is None:
                 continue
 
-            numPr = pPr.find(qn("w:numPr"))
-            if numPr is None:
+            num_pr = p_pr.find(qn("w:numPr"))
+            if num_pr is None:
                 continue
 
             # Remove Pandoc's numbering reference
-            pPr.remove(numPr)
+            p_pr.remove(num_pr)
 
             if in_references:
                 # APA 7 reference: hanging indent, NO bullet
@@ -593,16 +584,7 @@ class APAParagraphsHandler:
             # Track References, TOC, and Abstract sections
             if style_name.startswith("Heading"):
                 text_lower = text.lower().strip().rstrip(".")
-                if text_lower in (
-                    "referencias",
-                    "referencia",
-                    "bibliografía",
-                    "bibliografia",
-                    "bibliography",
-                    "references",
-                    "reference",
-                    "lista de referencias",
-                ) or text_lower.startswith(("referencias ", "references ", "lista de referencias")):
+                if _is_references_heading(text_lower):
                     in_references = True
                     in_toc = False
                     in_abstract = False
@@ -630,7 +612,7 @@ class APAParagraphsHandler:
             # Skip abstract paragraphs (block format, no indent per APA 7)
             if in_abstract:
                 # End abstract section after keywords paragraph
-                if text.lower().startswith("palabras clave") or text.lower().startswith("keywords"):
+                if text.lower().startswith(("palabras clave", "keywords")):
                     in_abstract = False
                 continue
 
@@ -655,7 +637,7 @@ class APAParagraphsHandler:
                 continue
 
             # Skip table/figure caption labels and Nota paragraphs
-            if (text.startswith("Tabla ") or text.startswith("Figura ")) and len(text.split()) <= 2:
+            if text.startswith(("Tabla ", "Figura ")) and len(text.split()) <= 2:
                 continue
             if text.startswith("Nota."):
                 continue
@@ -734,7 +716,7 @@ class APAParagraphsHandler:
                 groups.append((is_bold, is_italic, t, font_name, font_size))
 
         # Clear all existing runs
-        for run in list(p.runs):
+        for run in p.runs:
             run._r.getparent().remove(run._r)
 
         # Re-create one clean run per formatting group, preserving boundary spaces
@@ -753,7 +735,7 @@ class APAParagraphsHandler:
                 continue
 
             new_run = p.add_run(text)
-            new_run.font.name = font_name or "Times New Roman"
+            new_run.font.name = font_name or DEFAULT_BODY_FONT
             new_run.font.size = font_size or Pt(12)
             if is_bold:
                 new_run.bold = True

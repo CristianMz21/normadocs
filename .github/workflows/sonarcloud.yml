@@ -55,7 +55,7 @@ jobs:
 
       - name: Install UV
         if: steps.sonar_gate.outputs.available == 'true'
-        uses: astral-sh/setup-uv@v8.3.2
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -66,19 +66,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pandoc
 
-      - name: Install dependencies
+      - name: Install dependencies (locked)
         if: steps.sonar_gate.outputs.available == 'true'
-        run: |
-          uv pip install -e ".[dev]" --python python3.13
-          uv pip install "pymupdf>=1.23.0" --python python3.13
+        run: uv sync --frozen --extra dev --python 3.13
 
       - name: Run tests with coverage
         if: steps.sonar_gate.outputs.available == 'true'
-        run: pytest tests/ --cov=normadocs --cov-report=xml -q
+        run: uv run pytest tests/ --cov=normadocs --cov-report=xml -q
 
       - name: SonarCloud Scan
         if: steps.sonar_gate.outputs.available == 'true'
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@689fb39b34b9aa95ebc5f8f119343ddd51542402 # v4
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io

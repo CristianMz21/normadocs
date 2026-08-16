@@ -595,10 +595,7 @@ class TestProcessMethod(unittest.TestCase):
     def test_process_completes_without_error(self):
         """process() should complete without raising exceptions."""
         formatter = IEEEDocxFormatter(str(self.docx_path))
-        try:
-            formatter.process(self.meta)
-        except Exception as e:
-            self.fail(f"process() raised an exception: {e}")
+        formatter.process(self.meta)
 
     def test_process_applies_all_formatting(self):
         """process() should apply margins, styles, headers, paragraphs, tables, figures."""

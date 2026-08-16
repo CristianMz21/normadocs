@@ -70,13 +70,10 @@ We used integration testing.
         self.assertTrue(success, "Pandoc conversion failed")
 
         # 3. Formatting
-        try:
-            formatter = get_formatter(style, str(output_docx))
-            formatter.process(meta)
-            formatter.save(str(output_docx))
-            print(f"  [Integration] {style.upper()} Formatting applied successfully.")
-        except Exception as e:
-            self.fail(f"{style.upper()} Formatting crashed: {e}")
+        formatter = get_formatter(style, str(output_docx))
+        formatter.process(meta)
+        formatter.save(str(output_docx))
+        print(f"  [Integration] {style.upper()} Formatting applied successfully.")
 
         # 4. PDF Generation (Optional, mimics CLI behavior)
         # We try strict fallback if LibreOffice isn't there, or just skip if neither work.

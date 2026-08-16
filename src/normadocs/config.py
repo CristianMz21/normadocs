@@ -19,5 +19,8 @@ PAGEBREAK_OPENXML = """
 # Default output directory
 DEFAULT_OUTPUT_DIR = Path("ExportDocs")
 
+# Default body font for the academic standards (APA 7, ICONTEC, IEEE)
+DEFAULT_BODY_FONT = "Times New Roman"
+
 # Metadata field order for extraction
 METADATA_FIELDS = ["author", "program", "ficha", "institution", "center", "instructor", "date"]

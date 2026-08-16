@@ -11,6 +11,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches
 
+from ...config import DEFAULT_BODY_FONT
 from ...utils.docx_helpers import paragraph_style_name
 
 if TYPE_CHECKING:
@@ -20,6 +21,16 @@ if TYPE_CHECKING:
 
 
 PAGE_CONTENT_WIDTH = 6.5
+
+_W_VAL = "w:val"
+_W_TYPE = "w:type"
+_W_SPACING = "w:spacing"
+_W_LINE = "w:line"
+_W_LINE_RULE = "w:lineRule"
+_W_AFTER = "w:after"
+_W_PPR = "w:pPr"
+_W_RPR = "w:rPr"
+
 
 COMPANY_KEYWORDS = frozenset(["mackroph", "tecnoshop", "devsoft"])
 
@@ -54,7 +65,7 @@ class APATablesHandler:
         """Get body font name from config."""
         fonts: dict[str, Any] = {}
         return cast(
-            str, self.config.get("fonts", fonts).get("body", {}).get("name", "Times New Roman")
+            str, self.config.get("fonts", fonts).get("body", {}).get("name", DEFAULT_BODY_FONT)
         )
 
     def _apply_font_style(
@@ -93,7 +104,7 @@ class APATablesHandler:
                 if existing_layout is not None:
                     tbl_pr.remove(existing_layout)
                 layout = OxmlElement("w:tblLayout")
-                layout.set(qn("w:type"), "fixed")
+                layout.set(qn(_W_TYPE), "fixed")
                 tbl_pr.append(layout)
 
                 # Set table width to 100% of page
@@ -101,7 +112,7 @@ class APATablesHandler:
                 if tbl_w is None:
                     tbl_w = OxmlElement("w:tblW")
                     tbl_pr.append(tbl_w)
-                tbl_w.set(qn("w:type"), "pct")
+                tbl_w.set(qn(_W_TYPE), "pct")
                 tbl_w.set(qn("w:w"), "5000")  # 100% in fifths of a percent
 
                 # Set table-level cell margins
@@ -112,7 +123,7 @@ class APATablesHandler:
                 for side in ("top", "bottom", "start", "end"):
                     el = OxmlElement(f"w:{side}")
                     el.set(qn("w:w"), "57")  # ~1mm padding
-                    el.set(qn("w:type"), "dxa")
+                    el.set(qn(_W_TYPE), "dxa")
                     tbl_cell_mar.append(el)
                 tbl_pr.append(tbl_cell_mar)
 
@@ -129,7 +140,7 @@ class APATablesHandler:
                     if existing_valign is not None:
                         tc_pr.remove(existing_valign)
                     v_align = OxmlElement("w:vAlign")
-                    v_align.set(qn("w:val"), "top")
+                    v_align.set(qn(_W_VAL), "top")
                     tc_pr.append(v_align)
 
                     # Remove existing margins
@@ -140,7 +151,7 @@ class APATablesHandler:
                     for side in ("top", "bottom", "start", "end"):
                         el = OxmlElement(f"w:{side}")
                         el.set(qn("w:w"), "28")  # small margin (~0.5mm)
-                        el.set(qn("w:type"), "dxa")
+                        el.set(qn(_W_TYPE), "dxa")
                         tc_mar.append(el)
                     tc_pr.append(tc_mar)
 
@@ -149,10 +160,10 @@ class APATablesHandler:
                         p.alignment = WD_ALIGN_PARAGRAPH.LEFT
                         p_pr = p._element.get_or_add_pPr()
                         jc = p_pr.get_or_add_jc()
-                        jc.set(qn("w:val"), "left")
+                        jc.set(qn(_W_VAL), "left")
                         # Prevent word breaking in paragraphs - set overflow behavior
                         overflow = OxmlElement("w:overflow")
-                        overflow.set(qn("w:val"), "continue")
+                        overflow.set(qn(_W_VAL), "continue")
                         p_pr.append(overflow)
 
                     # Add noWrap to cell properties to prevent LibreOffice from breaking words
@@ -232,8 +243,8 @@ class APATablesHandler:
             # Repeat table headers across pages
             if len(table.rows) > 0:
                 tr = table.rows[0]._tr
-                tblHeader = OxmlElement("w:tblHeader")
-                tr.get_or_add_trPr().append(tblHeader)
+                tbl_header = OxmlElement("w:tblHeader")
+                tr.get_or_add_trPr().append(tbl_header)
 
             # Prevent table rows from being split across pages
             # w:cantSplit: la fila completa debe estar en una página (no se corta a mitad)
@@ -245,7 +256,7 @@ class APATablesHandler:
                     tr_pr.remove(existing)
                 # Add cantSplit with value "1" (true - row cannot be split)
                 cant_split = OxmlElement("w:cantSplit")
-                cant_split.set(qn("w:val"), "1")
+                cant_split.set(qn(_W_VAL), "1")
                 tr_pr.append(cant_split)
 
             # Add table-level properties to prevent table splitting
@@ -256,7 +267,7 @@ class APATablesHandler:
 
             # Add tblLook element to control widow/orphan behavior at table level
             tbl_look = OxmlElement("w:tblLook")
-            tbl_look.set(qn("w:val"), "04A0")
+            tbl_look.set(qn(_W_VAL), "04A0")
             tbl_look.set(qn("w:first"), "1")
             tbl_look.set(qn("w:last"), "1")
             tbl_look.set(qn("w:hBand"), "1")
@@ -269,7 +280,7 @@ class APATablesHandler:
             if existing_split is not None:
                 tbl_pr_elem.remove(existing_split)
             tbl_split = OxmlElement("w:tblSplit")
-            tbl_split.set(qn("w:val"), "0")  # 0 = don't split rows
+            tbl_split.set(qn(_W_VAL), "0")  # 0 = don't split rows
             tbl_pr_elem.append(tbl_split)
 
             # Clean and merge cell text
@@ -327,7 +338,7 @@ class APATablesHandler:
                             new_run.bold = True
 
                         # Remove extra paragraphs from the cell
-                        for extra_p in list(cell.paragraphs[1:]):
+                        for extra_p in cell.paragraphs[1:]:
                             extra_p._element.getparent().remove(extra_p._element)
 
             # FINAL PASS: Force left alignment + single spacing on ALL cell
@@ -342,18 +353,18 @@ class APATablesHandler:
                         if old_jc is not None:
                             p_pr.remove(old_jc)
                         new_jc = OxmlElement("w:jc")
-                        new_jc.set(qn("w:val"), "left")
+                        new_jc.set(qn(_W_VAL), "left")
                         p_pr.append(new_jc)
 
                         # --- Single line spacing (APA 7 exception for tables) ---
                         old_spacing = p_pr.find(qn("w:spacing"))
                         if old_spacing is not None:
                             p_pr.remove(old_spacing)
-                        spacing_el = OxmlElement("w:spacing")
-                        spacing_el.set(qn("w:line"), "240")  # single spacing
-                        spacing_el.set(qn("w:lineRule"), "auto")
+                        spacing_el = OxmlElement(_W_SPACING)
+                        spacing_el.set(qn(_W_LINE), "240")  # single spacing
+                        spacing_el.set(qn(_W_LINE_RULE), "auto")
                         spacing_el.set(qn("w:before"), "0")
-                        spacing_el.set(qn("w:after"), "40")  # tiny gap between rows
+                        spacing_el.set(qn(_W_AFTER), "40")  # tiny gap between rows
                         p_pr.append(spacing_el)
 
                         # --- Widow/Orphan control: prevent single lines at page break ---
@@ -373,12 +384,12 @@ class APATablesHandler:
             # Add spacing paragraph after table (APA 7: double-space gap)
             table_element = table._tbl
             spacing_p = OxmlElement("w:p")
-            spacing_pPr = OxmlElement("w:pPr")
-            spacing_spacing = OxmlElement("w:spacing")
-            spacing_spacing.set(qn("w:line"), "480")
-            spacing_spacing.set(qn("w:lineRule"), "auto")
-            spacing_pPr.append(spacing_spacing)
-            spacing_p.append(spacing_pPr)
+            spacing_p_pr = OxmlElement(_W_PPR)
+            spacing_spacing = OxmlElement(_W_SPACING)
+            spacing_spacing.set(qn(_W_LINE), "480")
+            spacing_spacing.set(qn(_W_LINE_RULE), "auto")
+            spacing_p_pr.append(spacing_spacing)
+            spacing_p.append(spacing_p_pr)
             table_element.addnext(spacing_p)
 
     def _apply_apa_table_borders(self, table: TableType) -> None:
@@ -422,18 +433,18 @@ class APATablesHandler:
     def _set_cell_border(self, cell: CellType, **kwargs: Any) -> None:
         """Set border on a table cell (OpenXML). Clears existing first."""
         tc = cell._tc
-        tcPr = tc.get_or_add_tcPr()
+        tc_pr = tc.get_or_add_tcPr()
         # Remove any existing cell borders
-        for old in tcPr.findall(qn("w:tcBorders")):
-            tcPr.remove(old)
-        tcBorders = OxmlElement("w:tcBorders")
+        for old in tc_pr.findall(qn("w:tcBorders")):
+            tc_pr.remove(old)
+        tc_borders = OxmlElement("w:tcBorders")
         for edge_name in ("start", "top", "end", "bottom", "insideH", "insideV"):
             if edge_name in kwargs:
                 el = OxmlElement(f"w:{edge_name}")
                 for attr, val in kwargs[edge_name].items():
                     el.set(qn(f"w:{attr}"), str(val))
-                tcBorders.append(el)
-        tcPr.append(tcBorders)
+                tc_borders.append(el)
+        tc_pr.append(tc_borders)
 
     def add_table_captions(self) -> None:
         """Add APA 7 captions to tables: 'Tabla N' (bold) + title (italic).
@@ -502,36 +513,36 @@ class APATablesHandler:
 
             # Create caption paragraph with "Tabla N" (bold)
             caption_p = OxmlElement("w:p")
-            caption_pPr = OxmlElement("w:pPr")
+            caption_p_pr = OxmlElement(_W_PPR)
 
             # Left alignment
             jc = OxmlElement("w:jc")
-            jc.set(qn("w:val"), "left")
-            caption_pPr.append(jc)
+            jc.set(qn(_W_VAL), "left")
+            caption_p_pr.append(jc)
 
             # No space after
-            spacing = OxmlElement("w:spacing")
-            spacing.set(qn("w:after"), "0")
-            spacing.set(qn("w:line"), "240")
-            spacing.set(qn("w:lineRule"), "auto")
-            caption_pPr.append(spacing)
+            spacing = OxmlElement(_W_SPACING)
+            spacing.set(qn(_W_AFTER), "0")
+            spacing.set(qn(_W_LINE), "240")
+            spacing.set(qn(_W_LINE_RULE), "auto")
+            caption_p_pr.append(spacing)
 
-            caption_p.append(caption_pPr)
+            caption_p.append(caption_p_pr)
 
             # Run with "Tabla N" bold
             run = OxmlElement("w:r")
-            rPr = OxmlElement("w:rPr")
+            r_pr = OxmlElement(_W_RPR)
             bold = OxmlElement("w:b")
-            rPr.append(bold)
+            r_pr.append(bold)
             # Font
             font = OxmlElement("w:rFonts")
-            font.set(qn("w:ascii"), "Times New Roman")
-            font.set(qn("w:hAnsi"), "Times New Roman")
-            rPr.append(font)
+            font.set(qn("w:ascii"), DEFAULT_BODY_FONT)
+            font.set(qn("w:hAnsi"), DEFAULT_BODY_FONT)
+            r_pr.append(font)
             sz = OxmlElement("w:sz")
-            sz.set(qn("w:val"), "24")  # 12pt
-            rPr.append(sz)
-            run.append(rPr)
+            sz.set(qn(_W_VAL), "24")  # 12pt
+            r_pr.append(sz)
+            run.append(r_pr)
             t = OxmlElement("w:t")
             table_config = self._get_table_config()
             caption_prefix = table_config.get("caption_prefix", "Table")
@@ -546,30 +557,30 @@ class APATablesHandler:
             # If we have a title, add a second paragraph with the title in italics
             if title_text:
                 title_p = OxmlElement("w:p")
-                title_pPr = OxmlElement("w:pPr")
+                title_p_pr = OxmlElement(_W_PPR)
                 jc2 = OxmlElement("w:jc")
-                jc2.set(qn("w:val"), "left")
-                title_pPr.append(jc2)
-                spacing2 = OxmlElement("w:spacing")
-                spacing2.set(qn("w:after"), "120")
-                spacing2.set(qn("w:line"), "240")
-                spacing2.set(qn("w:lineRule"), "auto")
-                title_pPr.append(spacing2)
-                title_p.append(title_pPr)
+                jc2.set(qn(_W_VAL), "left")
+                title_p_pr.append(jc2)
+                spacing2 = OxmlElement(_W_SPACING)
+                spacing2.set(qn(_W_AFTER), "120")
+                spacing2.set(qn(_W_LINE), "240")
+                spacing2.set(qn(_W_LINE_RULE), "auto")
+                title_p_pr.append(spacing2)
+                title_p.append(title_p_pr)
 
                 # Run with title in italics
                 title_run = OxmlElement("w:r")
-                title_rPr = OxmlElement("w:rPr")
+                title_r_pr = OxmlElement(_W_RPR)
                 italic = OxmlElement("w:i")
-                title_rPr.append(italic)
+                title_r_pr.append(italic)
                 font2 = OxmlElement("w:rFonts")
-                font2.set(qn("w:ascii"), "Times New Roman")
-                font2.set(qn("w:hAnsi"), "Times New Roman")
-                title_rPr.append(font2)
+                font2.set(qn("w:ascii"), DEFAULT_BODY_FONT)
+                font2.set(qn("w:hAnsi"), DEFAULT_BODY_FONT)
+                title_r_pr.append(font2)
                 sz2 = OxmlElement("w:sz")
-                sz2.set(qn("w:val"), "24")
-                title_rPr.append(sz2)
-                title_run.append(title_rPr)
+                sz2.set(qn(_W_VAL), "24")
+                title_r_pr.append(sz2)
+                title_run.append(title_r_pr)
                 title_t = OxmlElement("w:t")
                 title_t.text = title_text
                 title_t.set(qn("xml:space"), "preserve")
@@ -845,42 +856,42 @@ class APATablesHandler:
                 continue
             table_idx = parent.index(table._tbl)
             nota_p = OxmlElement("w:p")
-            nota_pPr = OxmlElement("w:pPr")
-            nota_spacing = OxmlElement("w:spacing")
-            nota_spacing.set(qn("w:after"), "0")
-            nota_pPr.append(nota_spacing)
-            nota_p.append(nota_pPr)
+            nota_p_pr = OxmlElement(_W_PPR)
+            nota_spacing = OxmlElement(_W_SPACING)
+            nota_spacing.set(qn(_W_AFTER), "0")
+            nota_p_pr.append(nota_spacing)
+            nota_p.append(nota_p_pr)
 
             nota_r1 = OxmlElement("w:r")
-            nota_rPr1 = OxmlElement("w:rPr")
+            nota_r_pr1 = OxmlElement(_W_RPR)
             nota_i1 = OxmlElement("w:i")
-            nota_rPr1.append(nota_i1)
+            nota_r_pr1.append(nota_i1)
             nota_sz1 = OxmlElement("w:sz")
-            nota_sz1.set(qn("w:val"), "24")
-            nota_rPr1.append(nota_sz1)
-            nota_r1.append(nota_rPr1)
+            nota_sz1.set(qn(_W_VAL), "24")
+            nota_r_pr1.append(nota_sz1)
+            nota_r1.append(nota_r_pr1)
             nota_t1 = OxmlElement("w:t")
             nota_t1.text = "Nota. "
             nota_r1.append(nota_t1)
             nota_p.append(nota_r1)
 
             nota_r2 = OxmlElement("w:r")
-            nota_rPr2 = OxmlElement("w:rPr")
+            nota_r_pr2 = OxmlElement(_W_RPR)
             nota_sz2 = OxmlElement("w:sz")
-            nota_sz2.set(qn("w:val"), "24")
-            nota_rPr2.append(nota_sz2)
-            nota_r2.append(nota_rPr2)
+            nota_sz2.set(qn(_W_VAL), "24")
+            nota_r_pr2.append(nota_sz2)
+            nota_r2.append(nota_r_pr2)
             nota_t2 = OxmlElement("w:t")
             nota_t2.text = table_descriptions[i] if i < len(table_descriptions) else ""
             nota_r2.append(nota_t2)
             nota_p.append(nota_r2)
 
             nota_r3 = OxmlElement("w:r")
-            nota_rPr3 = OxmlElement("w:rPr")
+            nota_r_pr3 = OxmlElement(_W_RPR)
             nota_sz3 = OxmlElement("w:sz")
-            nota_sz3.set(qn("w:val"), "24")
-            nota_rPr3.append(nota_sz3)
-            nota_r3.append(nota_rPr3)
+            nota_sz3.set(qn(_W_VAL), "24")
+            nota_r_pr3.append(nota_sz3)
+            nota_r3.append(nota_r_pr3)
             nota_t3 = OxmlElement("w:t")
             table_config = self._get_table_config()
             note_suffix = table_config.get("note_suffix", " Author's elaboration.")

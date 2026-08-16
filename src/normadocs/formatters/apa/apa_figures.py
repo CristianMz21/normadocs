@@ -11,11 +11,17 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 from lxml.etree import Element
 
+from ...config import DEFAULT_BODY_FONT
 from ...utils.docx_helpers import paragraph_style_name
 
 if TYPE_CHECKING:
     from docx.document import Document as DocType
     from docx.text.run import Run as RunType
+
+
+_W_RPR = "w:rPr"
+_W_VAL = "w:val"
+_XML_SPACE = "xml:space"
 
 
 class APAFiguresHandler:
@@ -38,7 +44,7 @@ class APAFiguresHandler:
         """Get body font name from config."""
         fonts: dict[str, Any] = {}
         return cast(
-            str, self.config.get("fonts", fonts).get("body", {}).get("name", "Times New Roman")
+            str, self.config.get("fonts", fonts).get("body", {}).get("name", DEFAULT_BODY_FONT)
         )
 
     def _apply_font_style(self, run: RunType, bold: bool = False, italic: bool = False) -> None:
@@ -62,19 +68,19 @@ class APAFiguresHandler:
         p_el.append(p_pr)
 
         run = OxmlElement("w:r")
-        rPr = OxmlElement("w:rPr")
+        r_pr = OxmlElement("w:rPr")
         if bold:
-            rPr.append(OxmlElement("w:b"))
+            r_pr.append(OxmlElement("w:b"))
         if italic:
-            rPr.append(OxmlElement("w:i"))
+            r_pr.append(OxmlElement("w:i"))
         rn = OxmlElement("w:rFonts")
-        rn.set(qn("w:ascii"), "Times New Roman")
-        rn.set(qn("w:hAnsi"), "Times New Roman")
-        rPr.append(rn)
+        rn.set(qn("w:ascii"), DEFAULT_BODY_FONT)
+        rn.set(qn("w:hAnsi"), DEFAULT_BODY_FONT)
+        r_pr.append(rn)
         sz = OxmlElement("w:sz")
         sz.set(qn("w:val"), "24")
-        rPr.append(sz)
-        run.append(rPr)
+        r_pr.append(sz)
+        run.append(r_pr)
         t = OxmlElement("w:t")
         t.set(qn("xml:space"), "preserve")
         t.text = text
@@ -99,13 +105,13 @@ class APAFiguresHandler:
             if drawings:
                 alt_text = ""
                 for drawing in drawings:
-                    for docPr in drawing.iter(f"{{{ns_wp}}}docPr"):
-                        alt_text = docPr.get("descr", "") or docPr.get("name", "")
+                    for doc_pr in drawing.iter(f"{{{ns_wp}}}docPr"):
+                        alt_text = doc_pr.get("descr", "") or doc_pr.get("name", "")
                         break
                     if not alt_text:
                         ns_pic = "http://schemas.openxmlformats.org/drawingml/2006/picture"
-                        for cNvPr in drawing.iter(f"{{{ns_pic}}}cNvPr"):
-                            alt_text = cNvPr.get("descr", "") or cNvPr.get("name", "")
+                        for c_nv_pr in drawing.iter(f"{{{ns_pic}}}cNvPr"):
+                            alt_text = c_nv_pr.get("descr", "") or c_nv_pr.get("name", "")
                             break
                 image_paragraphs.append((p, alt_text.strip()))
 
@@ -209,7 +215,7 @@ class APAFiguresHandler:
             italic_ok = not title or any(r.italic for r in runs)
             if label_ok and italic_ok:
                 continue
-            for r in list(runs):
+            for r in runs:
                 parent = r._element.getparent()
                 if parent is not None:
                     parent.remove(r._element)
@@ -301,8 +307,8 @@ class APAFiguresHandler:
     def _append_font_props(self, rpr: Element) -> None:
         """Append Times New Roman 12pt run properties to a w:rPr element."""
         font = OxmlElement("w:rFonts")
-        font.set(qn("w:ascii"), "Times New Roman")
-        font.set(qn("w:hAnsi"), "Times New Roman")
+        font.set(qn("w:ascii"), DEFAULT_BODY_FONT)
+        font.set(qn("w:hAnsi"), DEFAULT_BODY_FONT)
         rpr.append(font)
         sz = OxmlElement("w:sz")
         sz.set(qn("w:val"), "24")
@@ -313,9 +319,9 @@ class APAFiguresHandler:
         """Extract alt text from the first drawing of a paragraph."""
         ns_wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
         for drawing in p._element.findall(f".//{qn('w:drawing')}"):
-            for docPr in drawing.iter(f"{{{ns_wp}}}docPr"):
-                return str((docPr.get("descr", "") or docPr.get("name", "")).strip())
+            for doc_pr in drawing.iter(f"{{{ns_wp}}}docPr"):
+                return str((doc_pr.get("descr", "") or doc_pr.get("name", "")).strip())
             ns_pic = "http://schemas.openxmlformats.org/drawingml/2006/picture"
-            for cNvPr in drawing.iter(f"{{{ns_pic}}}cNvPr"):
-                return str((cNvPr.get("descr", "") or cNvPr.get("name", "")).strip())
+            for c_nv_pr in drawing.iter(f"{{{ns_pic}}}cNvPr"):
+                return str((c_nv_pr.get("descr", "") or c_nv_pr.get("name", "")).strip())
         return ""

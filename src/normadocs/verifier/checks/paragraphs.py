@@ -86,9 +86,7 @@ class ParagraphsCheck:
                 continue
 
             # End abstract after keywords paragraph
-            if in_abstract and (
-                text_lower.startswith("palabras clave") or text_lower.startswith("keywords")
-            ):
+            if in_abstract and text_lower.startswith(("palabras clave", "keywords")):
                 in_abstract = False
                 continue
 

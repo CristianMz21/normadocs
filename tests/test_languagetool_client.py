@@ -44,10 +44,13 @@ class TestLanguageToolClient(unittest.TestCase):
         self.assertIsNone(client._server_process)
 
     def test_client_initialization_custom(self):
-        """Test client initialization with custom values."""
+        """Remote hosts must use HTTPS; loopback keeps plain HTTP."""
         client = LanguageToolClient(host="192.168.1.1", port=9000, language="en")
-        self.assertEqual(client.base_url, "http://192.168.1.1:9000")
+        self.assertEqual(client.base_url, "https://192.168.1.1:9000")
         self.assertEqual(client.language, "en")
+
+        loopback = LanguageToolClient(host="127.0.0.1", port=8081)
+        self.assertEqual(loopback.base_url, "http://127.0.0.1:8081")
 
     @patch("normadocs.languagetool_client.requests")
     def test_is_server_running_true(self, mock_requests):

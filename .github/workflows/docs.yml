@@ -14,8 +14,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: "pages"
@@ -29,6 +27,8 @@ jobs:
     name: Build documentation
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -40,16 +40,18 @@ jobs:
         with:
           python-version: "3.13"
           cache: "pip"
-          cache-dependency-path: "docs/requirements.txt"
+          cache-dependency-path: "docs/requirements.lock"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@v8.3.2
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
-          cache-dependency-glob: "docs/requirements.txt"
+          cache-dependency-glob: "docs/requirements.lock"
 
-      - name: Install documentation dependencies
-        run: uv pip install -r docs/requirements.txt --python python3.13
+      - name: Install documentation dependencies (locked)
+        run: >-
+          uv pip install --only-binary :all:
+          -r docs/requirements.lock --python python3.13
 
       - name: Build documentation
         run: mkdocs build --strict
@@ -67,6 +69,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

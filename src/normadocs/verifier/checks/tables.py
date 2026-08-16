@@ -50,7 +50,7 @@ class TablesCheck:
         table_numbers: list[TableCaption] = []
         for i, p_info in enumerate(paragraphs_info):
             text = p_info.text.strip()
-            if text.startswith("Table ") or text.startswith("Tabla "):
+            if text.startswith(("Table ", "Tabla ")):
                 parts = text.split()
                 if len(parts) >= 2 and parts[1].replace(".", "").isdigit():
                     table_numbers.append(
@@ -210,7 +210,7 @@ class TablesCheck:
                 style_name = paragraph_style_name(para)
                 if style_name.startswith("Heading"):
                     break
-                if re.match(r"^Not(a|e)\b", text):
+                if re.match(r"^Not[ae]\b", text):
                     note_para = para
                 break
 
@@ -230,7 +230,7 @@ class TablesCheck:
                 continue
 
             note_text = note_para.text.strip()
-            if not (note_text.startswith("Nota.") or note_text.startswith("Note.")):
+            if not note_text.startswith(("Nota.", "Note.")):
                 issues.append(
                     VerificationIssue(
                         check=f"{CheckCategory.TABLES}.note_format",

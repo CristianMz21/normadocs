@@ -150,7 +150,7 @@ class ReferencesCheck:
                 )
                 break
 
-        issues.extend(self._check_entry_format(ref_paragraphs, ctx))
+        issues.extend(self._check_entry_format(ref_paragraphs))
 
         return issues
 
@@ -158,9 +158,7 @@ class ReferencesCheck:
     _YEAR_MARKER = re.compile(r"\((?:s\.\s*f\.|n\.\s*d\.|\d{4})")
     _SPANISH_CONJUNCTION = re.compile(r"\.\s*y\s+[A-ZÁÉÍÓÚÑ]")
 
-    def _check_entry_format(
-        self, ref_paragraphs: list[Any], ctx: VerificationContext
-    ) -> list[VerificationIssue]:
+    def _check_entry_format(self, ref_paragraphs: list[Any]) -> list[VerificationIssue]:
         """Verify the internal format of each reference entry."""
         issues: list[VerificationIssue] = []
 

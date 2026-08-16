@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 from docx.shared import Inches
 
-from ...models import DocumentMetadata
 from ...utils.docx_helpers import paragraph_style_name
+
+_NOTA_PREFIX = "Nota."
 
 if TYPE_CHECKING:
     from docx.document import Document as DocType
@@ -52,7 +53,7 @@ class APAKeywordsHandler:
         default_config: dict[str, Any] = {
             "caption_prefix": "Figure",
             "title_above": True,
-            "nota_prefix": "Nota.",
+            "nota_prefix": _NOTA_PREFIX,
         }
         return cast(dict[str, Any], self.config.get("figures", default_config))
 
@@ -63,7 +64,7 @@ class APAKeywordsHandler:
         handler = APAStylesHandler(self.doc)
         handler._apply_font_style(run, italic=italic)
 
-    def format_keywords(self, meta: DocumentMetadata) -> None:
+    def format_keywords(self) -> None:
         """Format 'Palabras clave' per APA 7.
 
         APA 7 requires:
@@ -131,7 +132,7 @@ class APAKeywordsHandler:
 
         for p in self.doc.paragraphs:
             text = p.text.strip()
-            if not text.startswith("Nota."):
+            if not text.startswith(_NOTA_PREFIX):
                 continue
 
             # Get full text and rebuild with italic "Nota."
@@ -146,7 +147,7 @@ class APAKeywordsHandler:
             self._apply_font_style(nota_run, italic=True)
 
             # Add the rest as regular text
-            rest = full_text[len("Nota.") :].strip()
+            rest = full_text[len(_NOTA_PREFIX) :].strip()
             if rest:
                 rest_run = p.add_run(rest)
                 self._apply_font_style(rest_run)

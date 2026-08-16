@@ -20,7 +20,7 @@ def extract_currency(value: str) -> int:
     return int(cleaned) if cleaned else 0
 
 
-def verify_personal_costs(lines: list[str]) -> dict:
+def verify_personal_costs() -> dict:
     """Verifica la tabla de costos de personal."""
     print("\n" + "=" * 70)
     print("VERIFICACIÓN: COSTOS DE PERSONAL")
@@ -40,7 +40,7 @@ def verify_personal_costs(lines: list[str]) -> dict:
     return {"expected": total_expected, "passed": True}
 
 
-def verify_direct_costs(lines: list[str]) -> dict:
+def verify_direct_costs() -> dict:
     """Verifica el consolidado de costos directos."""
     print("\n" + "=" * 70)
     print("VERIFICACIÓN: COSTOS DIRECTOS")
@@ -74,7 +74,7 @@ def verify_direct_costs(lines: list[str]) -> dict:
     return {"calculated": subtotal, "expected": expected, "passed": passed}
 
 
-def verify_comparison_table(lines: list[str]) -> dict:
+def verify_comparison_table() -> dict:
     """Verifica la tabla comparativa de costos."""
     print("\n" + "=" * 70)
     print("VERIFICACIÓN: TABLA COMPARATIVA DE COSTOS")
@@ -189,9 +189,9 @@ def verify_markdown_calculations(md_path: str) -> dict:
         content = f.read()
 
     results = {
-        "personal_costs": verify_personal_costs(content.split("\n")),
-        "direct_costs": verify_direct_costs(content.split("\n")),
-        "comparison": verify_comparison_table(content.split("\n")),
+        "personal_costs": verify_personal_costs(),
+        "direct_costs": verify_direct_costs(),
+        "comparison": verify_comparison_table(),
     }
 
     # Verificar AIU para Mackroph (base 68,550,000)

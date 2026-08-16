@@ -9,6 +9,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
+from ...config import DEFAULT_BODY_FONT
 from ...utils.docx_helpers import paragraph_style
 
 if TYPE_CHECKING:
@@ -45,7 +46,7 @@ class APAStylesHandler:
         """
         fonts: dict[str, Any] = {}
         return cast(
-            str, self.config.get("fonts", fonts).get(key, {}).get("name", "Times New Roman")
+            str, self.config.get("fonts", fonts).get(key, {}).get("name", DEFAULT_BODY_FONT)
         )
 
     def _get_font_size(self, key: str = "body") -> int:
@@ -177,24 +178,24 @@ class APAStylesHandler:
             style_id = style_el.get(f"{{{ns}}}styleId", "")
             if style_id == "Compact":
                 # Replace pPr with single spacing + left alignment
-                old_pPr = style_el.find(f"{{{ns}}}pPr")
-                if old_pPr is not None:
-                    style_el.remove(old_pPr)
-                pPr = OxmlElement("w:pPr")
+                old_p_pr = style_el.find(f"{{{ns}}}pPr")
+                if old_p_pr is not None:
+                    style_el.remove(old_p_pr)
+                p_pr = OxmlElement("w:pPr")
                 spacing = OxmlElement("w:spacing")
                 spacing.set(qn("w:line"), "240")
                 spacing.set(qn("w:lineRule"), "auto")
                 spacing.set(qn("w:before"), "36")
                 spacing.set(qn("w:after"), "36")
-                pPr.append(spacing)
+                p_pr.append(spacing)
                 jc = OxmlElement("w:jc")
                 jc.set(qn("w:val"), "left")
-                pPr.append(jc)
+                p_pr.append(jc)
                 # Remove first-line indent inherited from BodyText
                 ind = OxmlElement("w:ind")
                 ind.set(qn("w:firstLine"), "0")
-                pPr.append(ind)
-                style_el.append(pPr)
+                p_pr.append(ind)
+                style_el.append(p_pr)
                 break
 
         # Remove Pandoc Table Style borders
@@ -206,10 +207,10 @@ class APAStylesHandler:
         for style_el in self.doc.styles.element.findall(f"{{{ns}}}style"):
             style_id = style_el.get(f"{{{ns}}}styleId", "")
             if style_id == "Table":
-                tblPr_el = style_el.find(f"{{{ns}}}tblPr")
-                if tblPr_el is not None:
-                    for old_b in tblPr_el.findall(f"{{{ns}}}tblBorders"):
-                        tblPr_el.remove(old_b)
+                tbl_pr_el = style_el.find(f"{{{ns}}}tblPr")
+                if tbl_pr_el is not None:
+                    for old_b in tbl_pr_el.findall(f"{{{ns}}}tblBorders"):
+                        tbl_pr_el.remove(old_b)
 
                     # Set explicit no borders
                     brd = OxmlElement("w:tblBorders")
@@ -219,52 +220,52 @@ class APAStylesHandler:
                         e.set(qn("w:sz"), "0")
                         e.set(qn("w:space"), "0")
                         brd.append(e)
-                    tblPr_el.append(brd)
+                    tbl_pr_el.append(brd)
 
                 # Add paragraph properties to the Table style (left align + single spacing)
                 # This is authoritative for LibreOffice's style inheritance
-                old_pPr = style_el.find(f"{{{ns}}}pPr")
-                if old_pPr is not None:
-                    style_el.remove(old_pPr)
-                pPr = OxmlElement("w:pPr")
+                old_p_pr = style_el.find(f"{{{ns}}}pPr")
+                if old_p_pr is not None:
+                    style_el.remove(old_p_pr)
+                p_pr = OxmlElement("w:pPr")
                 jc = OxmlElement("w:jc")
                 jc.set(qn("w:val"), "left")
-                pPr.append(jc)
+                p_pr.append(jc)
                 spacing = OxmlElement("w:spacing")
                 spacing.set(qn("w:line"), "240")
                 spacing.set(qn("w:lineRule"), "auto")
                 spacing.set(qn("w:before"), "0")
                 spacing.set(qn("w:after"), "0")
-                pPr.append(spacing)
-                style_el.append(pPr)
+                p_pr.append(spacing)
+                style_el.append(p_pr)
 
                 # Add run properties (font) to the Table style
-                old_rPr = style_el.find(f"{{{ns}}}rPr")
-                if old_rPr is not None:
-                    style_el.remove(old_rPr)
-                rPr = OxmlElement("w:rPr")
-                rFonts = OxmlElement("w:rFonts")
-                rFonts.set(qn("w:ascii"), self._get_font_name("body"))
-                rFonts.set(qn("w:hAnsi"), self._get_font_name("body"))
-                rPr.append(rFonts)
+                old_r_pr = style_el.find(f"{{{ns}}}rPr")
+                if old_r_pr is not None:
+                    style_el.remove(old_r_pr)
+                r_pr = OxmlElement("w:rPr")
+                r_fonts = OxmlElement("w:rFonts")
+                r_fonts.set(qn("w:ascii"), self._get_font_name("body"))
+                r_fonts.set(qn("w:hAnsi"), self._get_font_name("body"))
+                r_pr.append(r_fonts)
                 sz = OxmlElement("w:sz")
                 sz.set(
                     qn("w:val"), str(self._get_font_size("body") * 2)
                 )  # body_size in points, stored as half-points
-                rPr.append(sz)
-                style_el.append(rPr)
+                r_pr.append(sz)
+                style_el.append(r_pr)
 
                 # Fix the firstRow tblStylePr: change vAlign from bottom to top
                 for tsp in style_el.findall(f"{{{ns}}}tblStylePr"):
                     if tsp.get(f"{{{ns}}}type") == "firstRow":
-                        tcPr = tsp.find(f"{{{ns}}}tcPr")
-                        if tcPr is not None:
-                            old_va = tcPr.find(f"{{{ns}}}vAlign")
+                        tc_pr = tsp.find(f"{{{ns}}}tcPr")
+                        if tc_pr is not None:
+                            old_va = tc_pr.find(f"{{{ns}}}vAlign")
                             if old_va is not None:
-                                tcPr.remove(old_va)
+                                tc_pr.remove(old_va)
                             va = OxmlElement("w:vAlign")
                             va.set(qn("w:val"), "top")
-                            tcPr.append(va)
+                            tc_pr.append(va)
 
     def _apply_font_style(
         self,

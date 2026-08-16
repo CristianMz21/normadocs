@@ -115,90 +115,72 @@ def create_cotizacion():
     row_height = 20
     y = table_start_y + header_height + 2
 
-    # COMPLETE breakdown based on actual analysis
+    # COMPLETE breakdown based on actual analysis.
+    # Prices are numeric COP; totals are derived (qty × unit price).
+    def _money(cop: int) -> str:
+        return f"${cop:,}".replace(",", ".")
+
+    def _duration(days: float = 0.0, months: int = 0) -> str:
+        if months:
+            return f"{months} mes"
+        if days >= 7:
+            return f"{days / 7:g} sem"
+        return f"{days:g} día" if days == 1 else f"{days:g} días"
+
+    def _item(
+        desc: str, qty: int, unit: str, cop: int, duration: str
+    ) -> tuple[str, str, str, str, str, str]:
+        return (desc, str(qty), unit, _money(cop), _money(cop * qty), duration)
+
+    _spacer = ("", "", "", "", "", "")
+
     items = [
         # Project 1: Backend Django (95% complete - small adaptations)
         ("PROYECTO 1: BACKEND DJANGO (95% completo)", "", "", "", "", ""),
-        (
-            "Análisis de requisitos y ajustes de atributos",
-            "1",
-            "Global",
-            "$200.000",
-            "$200.000",
-            "2 días",
-        ),
-        (
-            "Personalización de modelos (tallas, anchos)",
-            "1",
-            "Global",
-            "$250.000",
-            "$250.000",
-            "2 días",
-        ),
-        ("Integración WhatsApp (NO existe)", "1", "Global", "$1.500.000", "$1.500.000", "2 sem"),
-        ("Ajustes de API para shoe store", "1", "Global", "$150.000", "$150.000", "1 día"),
-        ("", "", "", "", "", ""),
+        _item("Análisis de requisitos y ajustes de atributos", 1, "Global", 200_000, _duration(2)),
+        _item("Personalización de modelos (tallas, anchos)", 1, "Global", 250_000, _duration(2)),
+        _item("Integración WhatsApp (NO existe)", 1, "Global", 1_500_000, _duration(14)),
+        _item("Ajustes de API para shoe store", 1, "Global", 150_000, _duration(1)),
+        _spacer,
         # Project 2: Dashboard Next.js (85% complete - some stubs)
         ("PROYECTO 2: DASHBOARD NEXT.JS (85% completo)", "", "", "", "", ""),
-        (
-            "Completar páginas stub (reviews, settings)",
-            "1",
-            "Global",
-            "$300.000",
-            "$300.000",
-            "3 días",
-        ),
-        ("Métricas específicas para calzado", "1", "Global", "$200.000", "$200.000", "2 días"),
-        ("Reportes personalizados de ventas", "1", "Global", "$250.000", "$250.000", "2 días"),
-        ("Integración con WhatsApp (frontend)", "1", "Global", "$200.000", "$200.000", "2 días"),
-        ("", "", "", "", "", ""),
+        _item("Completar páginas stub (reviews, settings)", 1, "Global", 300_000, _duration(3)),
+        _item("Métricas específicas para calzado", 1, "Global", 200_000, _duration(2)),
+        _item("Reportes personalizados de ventas", 1, "Global", 250_000, _duration(2)),
+        _item("Integración con WhatsApp (frontend)", 1, "Global", 200_000, _duration(2)),
+        _spacer,
         # Project 3: Storefront React (60% COMPLETE - MOST WORK NEEDED)
         ("PROYECTO 3: STOREFRONT REACT (60% - MUCHO POR HACER)", "", "", "", "", ""),
-        ("Completar CHECKOUT flow completo", "1", "Global", "$1.200.000", "$1.200.000", "2 sem"),
-        ("Integrar UI de pagos (Stripe/Wompi)", "1", "Global", "$800.000", "$800.000", "1.5 sem"),
-        ("Implementar página de búsqueda", "1", "Global", "$400.000", "$400.000", "4 días"),
-        (
-            "Completar detalle producto (galería, tallas)",
-            "1",
-            "Global",
-            "$500.000",
-            "$500.000",
-            "4 días",
-        ),
-        ("Carrito persistencia y sincronización", "1", "Global", "$300.000", "$300.000", "2 días"),
-        ("Sistema de cupones/descuentos", "1", "Global", "$250.000", "$250.000", "2 días"),
-        ("Rastreo de pedidos para cliente", "1", "Global", "$350.000", "$350.000", "3 días"),
-        ("Políticas de envío configurables", "1", "Global", "$150.000", "$150.000", "1 día"),
-        ("Responsive mobile optimizations", "1", "Global", "$400.000", "$400.000", "3 días"),
-        ("", "", "", "", "", ""),
+        _item("Completar CHECKOUT flow completo", 1, "Global", 1_200_000, _duration(14)),
+        _item("Integrar UI de pagos (Stripe/Wompi)", 1, "Global", 800_000, _duration(10.5)),
+        _item("Implementar página de búsqueda", 1, "Global", 400_000, _duration(4)),
+        _item("Completar detalle producto (galería, tallas)", 1, "Global", 500_000, _duration(4)),
+        _item("Carrito persistencia y sincronización", 1, "Global", 300_000, _duration(2)),
+        _item("Sistema de cupones/descuentos", 1, "Global", 250_000, _duration(2)),
+        _item("Rastreo de pedidos para cliente", 1, "Global", 350_000, _duration(3)),
+        _item("Políticas de envío configurables", 1, "Global", 150_000, _duration(1)),
+        _item("Responsive mobile optimizations", 1, "Global", 400_000, _duration(3)),
+        _spacer,
         # Integration & Deploy
         ("INTEGRACIÓN DE LOS 3 PROYECTOS", "", "", "", "", ""),
-        ("Configurar CORS y API connections", "1", "Global", "$150.000", "$150.000", "1 día"),
-        ("Integrar frontend con backend APIs", "1", "Global", "$300.000", "$300.000", "3 días"),
-        ("Despliegue producción (3 ambientes)", "1", "Global", "$400.000", "$400.000", "2 días"),
-        ("SSL + Dominio + CDN Cloudflare", "1", "Global", "$150.000", "$150.000", "1 día"),
-        ("", "", "", "", "", ""),
+        _item("Configurar CORS y API connections", 1, "Global", 150_000, _duration(1)),
+        _item("Integrar frontend con backend APIs", 1, "Global", 300_000, _duration(3)),
+        _item("Despliegue producción (3 ambientes)", 1, "Global", 400_000, _duration(2)),
+        _item("SSL + Dominio + CDN Cloudflare", 1, "Global", 150_000, _duration(1)),
+        _spacer,
         # QA & Docs
         ("QA, PRUEBAS Y DOCUMENTACIÓN", "", "", "", "", ""),
-        ("Pruebas de integración completas", "1", "Global", "$500.000", "$500.000", "4 días"),
-        ("Manuales de usuario (3 docs)", "1", "Global", "$250.000", "$250.000", "2 días"),
-        ("Documentación técnica de cambios", "1", "Global", "$150.000", "$150.000", "1 día"),
-        ("Capacitación (4 sesiones 2h)", "4", "Sesión", "$150.000", "$600.000", "2 días"),
-        ("", "", "", "", "", ""),
+        _item("Pruebas de integración completas", 1, "Global", 500_000, _duration(4)),
+        _item("Manuales de usuario (3 docs)", 1, "Global", 250_000, _duration(2)),
+        _item("Documentación técnica de cambios", 1, "Global", 150_000, _duration(1)),
+        _item("Capacitación (4 sesiones 2h)", 4, "Sesión", 150_000, _duration(2)),
+        _spacer,
         # Support
         ("SOPORTE POST-LANZAMIENTO", "", "", "", "", ""),
-        ("Soporte 90 días (ajustes, debugging)", "3", "Mes", "$400.000", "$1.200.000", "3 mes"),
+        _item("Soporte 90 días (ajustes, debugging)", 3, "Mes", 400_000, _duration(months=3)),
     ]
 
-    section_headers = [
-        "PROYECTO 1: BACKEND DJANGO (95% completo)",
-        "PROYECTO 2: DASHBOARD NEXT.JS (85% completo)",
-        "PROYECTO 3: STOREFRONT REACT (60% - MUCHO POR HACER)",
-        "INTEGRACIÓN DE LOS 3 PROYECTOS",
-        "QA, PRUEBAS Y DOCUMENTACIÓN",
-        "SOPORTE POST-LANZAMIENTO",
-    ]
-
+    section_headers = [item[0] for item in items if item[0] and not item[1]]
     for i, item in enumerate(items):
         if item[0] in section_headers:
             # Different colors for different projects

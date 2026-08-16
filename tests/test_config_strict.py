@@ -68,7 +68,7 @@ class TestConfigMergeEdgeCases(unittest.TestCase):
         }
         result = merge_with_defaults(config, "apa7")
         self.assertEqual(result["fonts"]["headings"]["name"], "Helvetica")
-        self.assertEqual(result["fonts"]["headings"]["level1"]["bold"], False)
+        self.assertFalse(result["fonts"]["headings"]["level1"]["bold"])
         self.assertEqual(result["fonts"]["headings"]["level1"]["alignment"], "left")
 
 

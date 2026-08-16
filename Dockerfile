@@ -11,31 +11,42 @@ LABEL build-date="${BUILD_DATE}"
 # Install System dependencies
 # Pandoc (Core), LibreOffice (PDF), and WeasyPrint deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    pandoc \
-    libreoffice-writer \
-    libreoffice-java-common \
-    default-jre-headless \
-    curl \
     ca-certificates \
-    libpango-1.0-0 \
-    libpangoft2-1.0-0 \
+    curl \
+    default-jre-headless \
     libcairo2 \
+    libffi-dev \
     libjpeg62-turbo \
     libopenjp2-7 \
-    libffi-dev \
-    shared-mime-info \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libreoffice-java-common \
+    libreoffice-writer \
     make \
+    pandoc \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Copy project files
-COPY . .
+# uv binary from a pinned upstream release
+COPY --from=ghcr.io/astral-sh/uv:0.9.16 /uv /uvx /bin/
 
-# Install the package
-# This installs dependencies from pyproject.toml and creates the 'apa-format' command
-RUN pip install --no-cache-dir .
+# Copy only what the locked install needs; keeps local artifacts out
+COPY pyproject.toml uv.lock README.md LICENSE ./
+COPY src ./src
+
+# Install the project and its runtime dependencies, pinned by uv.lock.
+# Runs as a non-root user: the CLI writes its output into the CWD.
+ENV UV_PYTHON_DOWNLOADS=never
+RUN useradd --create-home --uid 1000 appuser \
+    && uv sync --frozen --no-dev --python /usr/local/bin/python3 \
+    && mkdir -p /app/ExportDocs \
+    && chown -R appuser:appuser /app
+
+ENV PATH="/app/.venv/bin:$PATH"
+USER appuser
 
 # Default command: Show help
 CMD ["normadocs", "--help"]

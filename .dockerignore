@@ -35,7 +35,6 @@ env
 .playwright-mcp
 Makefile
 requirements.txt
-uv.lock
 scripts
 tests
 docs

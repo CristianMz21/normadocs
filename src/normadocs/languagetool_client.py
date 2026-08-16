@@ -2,6 +2,7 @@
 LanguageTool client for grammar and spell checking.
 """
 
+import ipaddress
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,16 @@ from typing import Any
 import requests
 
 from .utils.subprocess import get_command_path, run_background_command
+
+
+def _is_loopback_host(host: str) -> bool:
+    """Return whether the host points at the local machine."""
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 @dataclass
@@ -76,7 +87,10 @@ class LanguageToolClient:
             prefer_comma: Whether to prefer comma over other punctuation
             disable_spelling: Whether to disable spelling rules (default: True)
         """
-        self.base_url = f"http://{host}:{port}"
+        # LanguageTool's local and Docker servers are plain HTTP; a remote
+        # deployment must be reached over TLS instead.
+        scheme = "https" if not _is_loopback_host(host) else "http"
+        self.base_url = f"{scheme}://{host}:{port}"
         self.language = language
         self.enabled_rules = enabled_rules or []
         self.ignore_words = ignore_words or []

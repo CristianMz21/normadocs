@@ -116,18 +116,18 @@ class IEEEDocxFormatter(DocumentFormatter):
 
             run = header_para.add_run()
 
-            fldChar1 = OxmlElement("w:fldChar")
-            fldChar1.set(qn("w:fldCharType"), "begin")
-            run._r.append(fldChar1)
+            fld_char1 = OxmlElement("w:fldChar")
+            fld_char1.set(qn("w:fldCharType"), "begin")
+            run._r.append(fld_char1)
 
-            instrText = OxmlElement("w:instrText")
-            instrText.set(qn("xml:space"), "preserve")
-            instrText.text = "PAGE"
-            run._r.append(instrText)
+            instr_text = OxmlElement("w:instrText")
+            instr_text.set(qn("xml:space"), "preserve")
+            instr_text.text = "PAGE"
+            run._r.append(instr_text)
 
-            fldChar2 = OxmlElement("w:fldChar")
-            fldChar2.set(qn("w:fldCharType"), "end")
-            run._r.append(fldChar2)
+            fld_char2 = OxmlElement("w:fldChar")
+            fld_char2.set(qn("w:fldCharType"), "end")
+            run._r.append(fld_char2)
 
             run.font.name = self._get_font_name()
             run.font.size = Pt(self._get_font_size())
