@@ -347,6 +347,37 @@ class TestAddFigureCaptions(unittest.TestCase):
         full_text = "\n".join(p.text for p in doc.paragraphs)
         self.assertNotIn("Figure 1", full_text)
 
+    def test_untitled_image_gets_generated_caption(self):
+        """A bare image gets a caption above it built from its alt text."""
+        doc = Document()
+        _add_paragraph_with_drawing(doc, descr="Arquitectura del sistema")
+
+        handler = APAFiguresHandler(doc)
+        handler.add_figure_captions()
+
+        texts = [p.text.strip() for p in doc.paragraphs]
+        self.assertEqual(texts[0], "Figure 1. Arquitectura del sistema")
+        caption_runs = doc.paragraphs[0].runs
+        self.assertTrue(caption_runs[0].bold)
+        self.assertTrue(caption_runs[1].italic)
+
+    def test_caption_below_image_moves_above_it(self):
+        """A caption placed below the image is moved above it (APA 7)."""
+        doc = Document()
+        _add_paragraph_with_drawing(doc, descr="Test image")
+        caption = doc.add_paragraph()
+        caption.add_run("Figure 1. Title").bold = True
+
+        handler = APAFiguresHandler(doc)
+        handler.add_figure_captions()
+
+        body = doc._body._element
+        caption_pos = list(body).index(caption._element)
+        image_pos = next(
+            i for i, el in enumerate(list(body)) if el.findall(f".//{qn('w:drawing')}")
+        )
+        self.assertLess(caption_pos, image_pos)
+
     def test_add_figure_captions_with_nota(self):
         """Caption paragraph is normalized to 'Figure N. Title' when Nota follows."""
         doc = Document()
