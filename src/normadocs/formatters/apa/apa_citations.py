@@ -89,6 +89,17 @@ class APACitationsHandler:
         matched = [t for t in tokens if re.fullmatch(_AUTHOR, t)]
         return len(matched) if len(matched) == len(tokens) and tokens else 0
 
+    def _is_reference_heading(self, p: ParagraphType) -> bool:
+        return p.text.strip().lower().rstrip(".") in REFERENCE_HEADINGS
+
+    def _is_heading(self, p: ParagraphType) -> bool:
+        return paragraph_style_name(p).startswith("Heading")
+
+    def _process_citation_paragraph(self, p: ParagraphType, min_authors: int) -> None:
+        for run in p.runs:
+            if "(" in run.text:
+                run.text = self._fix_run_text(run.text, min_authors)
+
     def fix_citations(self) -> None:
         """Normalize in-text citations in the document body.
 
@@ -103,15 +114,11 @@ class APACitationsHandler:
         min_authors = cast(int, citations_cfg.get("et_al_min_authors", 3))
 
         for p in self.doc.paragraphs:
-            style_name = paragraph_style_name(p)
-            if style_name.startswith("Heading"):
-                if p.text.strip().lower().rstrip(".") in REFERENCE_HEADINGS:
+            if self._is_heading(p):
+                if self._is_reference_heading(p):
                     break
-                continue
-            for run in p.runs:
-                if "(" not in run.text:
-                    continue
-                run.text = self._fix_run_text(run.text, min_authors)
+            else:
+                self._process_citation_paragraph(p, min_authors)
 
     def _fix_run_text(self, text: str, min_authors: int) -> str:
         """Apply citation fixes to a single run's text."""
@@ -174,15 +181,12 @@ class APACitationsHandler:
         entries: list[ParagraphType] = []
         in_references = False
         for p in self.doc.paragraphs:
-            style_name = paragraph_style_name(p)
-            text = p.text.strip()
-            if style_name.startswith("Heading"):
+            if self._is_heading(p):
                 if in_references:
                     break
-                if text.lower().rstrip(".") in REFERENCE_HEADINGS:
+                if self._is_reference_heading(p):
                     in_references = True
-                continue
-            if in_references and text:
+            elif in_references and p.text.strip():
                 entries.append(p)
         return entries
 

@@ -46,10 +46,10 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: PR3 — Verifier (15, ~360)
 
-- [ ] 3.1 Split `verifier/checks/cover_page.py:26` `F(46)` → `_check_*` dispatch <15
-- [ ] 3.2 Refactor `verifier/checks/structure.py`, `tables.py`, `headings.py`, `citations.py`, `spacing.py` → `CHECKS` dict dispatch; fix S8786
-- [ ] 3.3 Split `apa_verifier.py:142`+`324` + `docx_analyzer.py:180` → helpers <15; keep `get_config()`/`docx_helpers`
-- [ ] 3.4 Verify PR3: `radon cc --max 15 verifier/`; `ruff/mypy/pyright` 0; `pytest -W error --cov-fail-under=78` `unit/verifier*`+`docx_analyzer*`; `find_suppressions.sh` 0; sonar 42→12
+- [x] 3.1 Split `verifier/checks/cover_page.py:26` `F(46)` → `_check_*` dispatch <15
+- [x] 3.2 Refactor `verifier/checks/structure.py`, `tables.py`, `headings.py`, `citations.py`, `spacing.py` → `CHECKS` dict dispatch; fix S8786
+- [x] 3.3 Split `apa_verifier.py:142`+`324` + `docx_analyzer.py:180` → helpers <15; keep `get_config()`/`docx_helpers`
+- [x] 3.4 Verify PR3: `radon cc --max 15 verifier/`; `ruff/mypy/pyright` 0; `pytest -W error --cov-fail-under=78` `unit/verifier*`+`docx_analyzer*`; `find_suppressions.sh` 0; sonar 42→12
 
 ## Phase 4: PR4 — Cleanup (12, ~200)
 

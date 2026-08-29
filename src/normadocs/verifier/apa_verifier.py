@@ -242,12 +242,13 @@ class APAVerifier:
         Returns:
             Formatted report string.
         """
-        if format == "markdown":
-            return self._generate_markdown_report(result)
-        elif format == "html":
-            return self._generate_html_report(result)
-        else:
-            return self._generate_text_report(result)
+        generators = {
+            "markdown": self._generate_markdown_report,
+            "html": self._generate_html_report,
+            "text": self._generate_text_report,
+        }
+        generator = generators.get(format, self._generate_text_report)
+        return generator(result)
 
     def _generate_text_report(self, result: VerificationResult) -> str:
         """Generate plain text report."""

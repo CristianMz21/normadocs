@@ -183,50 +183,52 @@ class DOCXAnalyzer:
         Returns:
             List of DOCXParagraphInfo for each paragraph.
         """
-        paragraphs_info: list[DOCXParagraphInfo] = []
+        return [self._build_paragraph_info(p) for p in self.paragraphs]
 
-        for p in self.paragraphs:
-            runs_data: list[dict[str, Any]] = []
-            style_font = p.style.font if p.style is not None else None
-            for run in p.runs:
-                runs_data.append(
-                    {
-                        "text": run.text,
-                        "font_name": run.font.name or (style_font.name if style_font else None),
-                        "font_size": run.font.size or (style_font.size if style_font else None),
-                        "bold": run.bold,
-                        "italic": run.italic,
-                    }
-                )
+    def _build_paragraph_info(self, p: Paragraph) -> DOCXParagraphInfo:
+        return DOCXParagraphInfo(
+            text=p.text,
+            style_name=p.style.name if p.style else None,
+            alignment=self._resolve_alignment(p),
+            first_line_indent=self._effective_indent(p),
+            space_before=self._effective_spacing(p, "space_before"),
+            space_after=self._effective_spacing(p, "space_after"),
+            line_spacing=self._effective_line_spacing(p),
+            runs=self._extract_runs_data(p),
+        )
 
-            alignment_value = p.alignment
-            if alignment_value is None and p.style is not None:
-                alignment_value = p.style.paragraph_format.alignment
-
-            alignment = None
-            if alignment_value == WD_ALIGN_PARAGRAPH.LEFT:
-                alignment = "left"
-            elif alignment_value == WD_ALIGN_PARAGRAPH.CENTER:
-                alignment = "center"
-            elif alignment_value == WD_ALIGN_PARAGRAPH.RIGHT:
-                alignment = "right"
-            elif alignment_value == WD_ALIGN_PARAGRAPH.JUSTIFY:
-                alignment = "justify"
-
-            paragraphs_info.append(
-                DOCXParagraphInfo(
-                    text=p.text,
-                    style_name=p.style.name if p.style else None,
-                    alignment=alignment,
-                    first_line_indent=self._effective_indent(p),
-                    space_before=self._effective_spacing(p, "space_before"),
-                    space_after=self._effective_spacing(p, "space_after"),
-                    line_spacing=self._effective_line_spacing(p),
-                    runs=runs_data,
-                )
+    def _extract_runs_data(self, p: Paragraph) -> list[dict[str, Any]]:
+        style_font = p.style.font if p.style is not None else None
+        runs_data: list[dict[str, Any]] = []
+        for run in p.runs:
+            runs_data.append(
+                {
+                    "text": run.text,
+                    "font_name": run.font.name or (style_font.name if style_font else None),
+                    "font_size": run.font.size or (style_font.size if style_font else None),
+                    "bold": run.bold,
+                    "italic": run.italic,
+                }
             )
+        return runs_data
 
-        return paragraphs_info
+    def _resolve_alignment(self, p: Paragraph) -> str | None:
+        alignment_value = p.alignment
+        if alignment_value is None and p.style is not None:
+            alignment_value = p.style.paragraph_format.alignment
+        return self._alignment_to_str(alignment_value)
+
+    @staticmethod
+    def _alignment_to_str(alignment_value: object) -> str | None:
+        if alignment_value == WD_ALIGN_PARAGRAPH.LEFT:
+            return "left"
+        if alignment_value == WD_ALIGN_PARAGRAPH.CENTER:
+            return "center"
+        if alignment_value == WD_ALIGN_PARAGRAPH.RIGHT:
+            return "right"
+        if alignment_value == WD_ALIGN_PARAGRAPH.JUSTIFY:
+            return "justify"
+        return None
 
     def get_style_info(self, style_name: str) -> DOCXStyleInfo | None:
         """Get detailed information about a specific style.
