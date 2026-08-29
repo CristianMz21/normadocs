@@ -164,7 +164,7 @@ class APA7Verifier:
         for page_num, text in self.pages_text.items():
             # Buscar inicio del cuerpo
             if re.search(
-                r"(?:^\s*1\.\s*DESCRIPCIÓN)|INTRODUCCIÓN|Este documento",
+                r"^\s*1\.\s*DESCRIPCIÓN|INTRODUCCIÓN|Este documento",
                 text,
                 re.MULTILINE | re.IGNORECASE,
             ):
@@ -284,7 +284,7 @@ class APA7Verifier:
         """
         # Buscar citas parentéticas
         parentetic_cites = re.findall(
-            r"\([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+(?:et\s+al\.|[A-ZÁÉÍÓÚÑ]\.))?,?\s*\d{4}[a-z]?(?:\s*,\s*p\.\s*\d+)?\)",
+            r"\([^)]*\d{4}[a-z]?[^)]*\)",
             self.all_text,
         )
 
@@ -292,7 +292,7 @@ class APA7Verifier:
             self.passed.append(f"Citas parentéticas detectadas: {len(parentetic_cites)}")
 
         # Buscar "et al."
-        et_al_cites = re.findall(r"\([^)]*et\s+al\.[^)]*\)", self.all_text)
+        et_al_cites = [m for m in re.findall(r"\([^)]+\)", self.all_text) if "et al." in m]
         if et_al_cites:
             self.passed.append(f"Citas con 'et al.' detectadas: {len(et_al_cites)}")
 
@@ -331,6 +331,53 @@ class APA7Verifier:
                     self.errors.append(f"Palabra duplicada consecutivas: '{words[i]}'")
                     break
 
+    def _is_cutoff_pair(self, current: str, next_line: str) -> bool:
+        if not current or not next_line:
+            return False
+        if current.endswith("-"):
+            return True
+        return bool(
+            re.match(r"^\$[\d,]+,\d{1,2}\s*$", current) and re.match(r"^\d{1,3}\s*$", next_line)
+        )
+
+    def _collect_cutoff_words(self, lines: list[str]) -> list[tuple[int, str, str]]:
+        cutoff = []
+        for i in range(len(lines) - 1):
+            cur = lines[i].strip()
+            nxt = lines[i + 1].strip()
+            if not self._is_cutoff_pair(cur, nxt):
+                continue
+            if cur.endswith("-"):
+                cutoff.append((i + 1, cur[-30:], nxt[:30]))
+            else:
+                cutoff.append((i + 1, cur, nxt))
+        return cutoff
+
+    def _is_monetary_split(self, current: str, next_line: str) -> bool:
+        if not re.match(r"^\$[\d,]+\,\d{1,2}\s*$", current):
+            return False
+        if not re.match(r"^\d{1,3}\s*$", next_line):
+            return False
+        combined = current.replace(",", "") + next_line
+        digits = re.sub(r"[^\d]", "", combined)
+        return len(digits) >= 8
+
+    def _collect_monetary_issues(self, lines: list[str]) -> list[tuple[int, str, str]]:
+        issues = []
+        for i in range(len(lines) - 1):
+            cur = lines[i].strip()
+            nxt = lines[i + 1].strip()
+            if self._is_monetary_split(cur, nxt):
+                issues.append((i + 1, cur, nxt))
+        return issues
+
+    def _collect_long_lines(self, lines: list[str]) -> list[tuple[int, int]]:
+        result = []
+        for i, line in enumerate(lines):
+            if len(line) > 120 and not re.search(r"\|\s*\S+\s*\|", line):
+                result.append((i + 1, len(line)))
+        return result
+
     def verify_text_wrapping(self):
         """Verifica problemas de envoltura de texto.
 
@@ -341,68 +388,20 @@ class APA7Verifier:
 
         Las referencias [a], [b], [c] son notación APA válida y no se reportan como errores.
         """
-        issues_found = []
-
         lines = self.all_text.split("\n")
-
-        # 1. Detectar texto cortado con guión (palabra incompleta al final)
-        cutoff_words = []
-        for i in range(len(lines) - 1):
-            current = lines[i].strip()
-            next_line = lines[i + 1].strip()
-
-            if current and next_line:
-                # Patrón: línea termina con guión
-                if current.endswith("-"):
-                    cutoff_words.append((i + 1, current[-30:], next_line[:30]))
-                # Patrón: valor monetario dividido (ej: "$25,000,00" + "0")
-                elif re.match(r"^\$[\d,]+,\d{1,2}\s*$", current) and re.match(
-                    r"^\d{1,3}\s*$", next_line
-                ):
-                    cutoff_words.append((i + 1, current, next_line))
-
+        cutoff_words = self._collect_cutoff_words(lines)
         if cutoff_words:
-            issues_found.append(f"Texto cortado detectado: {len(cutoff_words)}")
             for line_num, before, after in cutoff_words[:5]:
                 self.errors.append(f"  Línea {line_num}: Texto cortado - '{before}' + '{after}'")
-
-        # 2. Detectar valores monetarios mal divididos
-        # Patrones como "$25,000,00" seguido de "0" o "000"
-        monetary_issues = []
-        for i in range(len(lines) - 1):
-            current = lines[i].strip()
-            next_line = lines[i + 1].strip()
-
-            # Detectar splits en valores monetarios grandes
-            # Ej: "$105,488,0" + "00" o "$25,000,00" + "0"
-            if re.match(r"^\$[\d,]+\,\d{1,2}\s*$", current) and re.match(
-                r"^\d{1,3}\s*$", next_line
-            ):
-                combined = current.replace(",", "") + next_line
-                # Verificar que el valor combinado tiene sentido (muchos dígitos)
-                digits = re.sub(r"[^\d]", "", combined)
-                if len(digits) >= 8:  # Valores >= $1,000,000
-                    monetary_issues.append((i + 1, current, next_line))
-
+        monetary_issues = self._collect_monetary_issues(lines)
         if monetary_issues:
-            issues_found.append(f"Valores monetarios divididos: {len(monetary_issues)}")
             for line_num, before, after in monetary_issues[:5]:
                 self.errors.append(f"  Línea {line_num}: Valor dividido - '{before}' + '{after}'")
-
-        # 3. Detectar texto muy largo sin saltos (posible problema de interlineado)
-        very_long_lines = []
-        for i, line in enumerate(lines):
-            # Excluir líneas de tabla que son legítimamente largas
-            if len(line) > 120 and not re.search(r"\|\s*\S+\s*\|", line):
-                very_long_lines.append((i + 1, len(line)))
-
+        very_long_lines = self._collect_long_lines(lines)
         if very_long_lines:
             self.warnings.append(
                 f"Líneas muy largas detectadas ({len(very_long_lines)}): verificar interlineado"
             )
-
-        # No reportar líneas cortas o notas [a], [b], [c] como errores -
-        # son parte normal del flujo de texto con ajuste automático
 
     def print_report(self):
         """Imprime reporte completo de verificación."""

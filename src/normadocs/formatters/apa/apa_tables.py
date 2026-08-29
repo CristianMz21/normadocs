@@ -33,12 +33,35 @@ _W_RPR = "w:rPr"
 
 COMPANY_KEYWORDS = frozenset(["mackroph", "tecnoshop", "devsoft"])
 
-_SOURCE_CAPTION_RE = re.compile(r"^(?:Tabla|Table|Cuadro)\s+(\d+)\s*[.:\u2014\u2013-]?\s*(.*)$")
 _GRID_TABLE_RE = re.compile(r"[+|][-=]{3,}[+|]?")
 _EQUALS_RE = re.compile(r"={3,}")
 _CAMEL_SPLIT_RE = re.compile(r"([a-záéíóúñ])([A-ZÁÉÍÓÚÑ])")
 _MONEY_SPLIT_RE = re.compile(r"(\$\d+,\d+,\d+)\s+(\d{1,2})")
 _MULTI_SPACE_RE = re.compile(r"\s{2,}")
+_CAPTION_LABEL_RE = re.compile(r"^(Tabla|Figura)\s+\d+")
+
+
+def _parse_source_caption(text: str) -> tuple[int, str] | None:
+    stripped = text.strip()
+    lower = stripped.lower()
+    prefix = ""
+    for cand in ("tabla", "table", "cuadro"):
+        if lower.startswith(cand):
+            prefix = cand
+            break
+    if not prefix:
+        return None
+    rest = stripped[len(prefix) :].lstrip()
+    if not rest or not rest[0].isdigit():
+        return None
+    idx = 0
+    while idx < len(rest) and rest[idx].isdigit():
+        idx += 1
+    num = int(rest[:idx])
+    tail = rest[idx:].lstrip()
+    if tail and tail[0] in ".:-\u2014\u2013":
+        tail = tail[1:].lstrip()
+    return num, tail.strip()
 
 
 class APATablesHandler:
@@ -432,7 +455,7 @@ class APATablesHandler:
         self._apply_font_style(new_run, size=font_size)
         if is_header:
             new_run.bold = True
-        for extra_p in list(cell.paragraphs[1:]):
+        for extra_p in cell.paragraphs[1:]:
             parent = extra_p._element.getparent()
             if parent is not None:
                 parent.remove(extra_p._element)
@@ -538,7 +561,7 @@ class APATablesHandler:
         """Add APA 7 captions to tables: 'Tabla N' (bold) + title (italic)."""
         body = self.doc._body._element
         table_positions = [
-            (pos, child) for pos, child in enumerate(list(body)) if child.tag == qn("w:tbl")
+            (pos, child) for pos, child in enumerate(tuple(body)) if child.tag == qn("w:tbl")
         ]
         offset = 0
         max_used = 0
@@ -643,7 +666,7 @@ class APATablesHandler:
         from docx.text.paragraph import Paragraph
 
         body = self.doc._body._element
-        children = list(body)
+        children = tuple(body)
         for i in (pos - 1, pos - 2):
             if i < 0 or i >= len(children):
                 continue
@@ -654,13 +677,14 @@ class APATablesHandler:
             text = p.text.strip()
             if not text:
                 continue
-            match = _SOURCE_CAPTION_RE.match(text)
-            if match is None:
+            parsed = _parse_source_caption(text)
+            if parsed is None:
                 return None
             style_name = paragraph_style_name(p)
             if style_name.startswith("Heading"):
                 return None
-            return (el, int(match.group(1)), match.group(2).strip())
+            num, title = parsed
+            return (el, num, title)
         return None
 
     def _extract_table_title(self, table: TableType) -> str:
@@ -706,7 +730,7 @@ class APATablesHandler:
     def _get_nearest_section_heading(self, table_pos: int) -> str:
         """Find the nearest section heading before a table."""
         body = self.doc._body._element
-        body_children = list(body)
+        body_children = tuple(body)
         for i in range(table_pos - 1, -1, -1):
             if i >= len(body_children):
                 continue
@@ -726,7 +750,7 @@ class APATablesHandler:
             return None
         p = self.doc.paragraphs[p_idx_map[elem]]
         text = p.text.strip()
-        if re.match(r"^(Tabla|Figura)\s+\d+", text):
+        if _CAPTION_LABEL_RE.match(text):
             return None
         style_name = paragraph_style_name(p)
         if not style_name.startswith("Heading"):
@@ -745,11 +769,11 @@ class APATablesHandler:
 
     def add_table_notes(self) -> None:
         """Add table notes after each table (APA 7 requirement)."""
-        tables = list(self.doc.tables)
+        tables = tuple(self.doc.tables)
         descriptions = self._build_all_descriptions(tables)
         self._insert_notes(tables, descriptions)
 
-    def _build_all_descriptions(self, tables: list[TableType]) -> list[str]:
+    def _build_all_descriptions(self, tables: tuple[TableType, ...] | list[TableType]) -> list[str]:
         """Build note descriptions for all tables."""
         return [self._describe_table(t) for t in tables]
 
@@ -882,7 +906,9 @@ class APATablesHandler:
             return "Matriz de evaluación técnica y ponderación de criterios por proveedor."
         return "Comparación de costos directos entre proveedores evaluados."
 
-    def _insert_notes(self, tables: list[TableType], descriptions: list[str]) -> None:
+    def _insert_notes(
+        self, tables: tuple[TableType, ...] | list[TableType], descriptions: list[str]
+    ) -> None:
         """Insert nota paragraphs after each table."""
         for idx, table in enumerate(tables):
             parent = table._tbl.getparent()
@@ -947,11 +973,14 @@ class APATablesHandler:
         r3.append(t3)
         return r3
 
+    def _bold_row(self, row: Any) -> None:
+        for cell in row.cells:
+            for p in cell.paragraphs:
+                for run in p.runs:
+                    run.bold = True
+
     def add_table_header_bold(self) -> None:
         """Set bold on all table header rows (APA 7 requirement)."""
         for table in self.doc.tables:
             for row in table.rows[:1]:
-                for cell in row.cells:
-                    for p in cell.paragraphs:
-                        for run in p.runs:
-                            run.bold = True
+                self._bold_row(row)

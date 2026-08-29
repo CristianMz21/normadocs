@@ -37,16 +37,80 @@ _HEADING_1 = HEADING_1_STYLE
 _HEADING_5 = HEADING_5_STYLE
 _RUN_IN_HEADINGS = (HEADING_4_STYLE, _HEADING_5)
 
-_TOC_DOTS_RE = re.compile(r"\.{3,}\s*\d+\s*$")
-_TOC_SPACES_RE = re.compile(r"\s{2,}\d+\s*$")
-_BLOCK_CLOSING_RE = re.compile(r'["\u201c\u201d\u00ab\u00bb]\s*(\([^()]*\))?\.?\s*$')
 _CITATION_RE = re.compile(
-    r"\(([A-ZÁ-Ú][a-záéíóúñ]+(?:\s+et\s+al\.)?)\s+y\s+([A-ZÁ-Ú][a-záéíóúñ]+),\s*(\d{4})\)"
+    r"\(([A-ZÁ-Ú][a-záéíóúñ]+(?: et al\.)?)\s+y\s+([A-ZÁ-Ú][a-záéíóúñ]+),\s*(\d{4})\)"
 )
 _GRID_TABLE_RE = re.compile(r"[+|][-=]{3,}[+|]?")
 _EQUALS_RE = re.compile(r"={3,}")
 _MULTI_SPACE_RE = re.compile(r"\s{2,}")
-_HEADING_NUMBER_RE = re.compile(r"^\d+(\.\d+)*\s*")
+
+
+def _has_toc_dots_suffix(text: str) -> bool:
+    trimmed = text.rstrip()
+    if not trimmed or not trimmed[-1].isdigit():
+        return False
+    idx = len(trimmed) - 1
+    while idx >= 0 and trimmed[idx].isdigit():
+        idx -= 1
+    while idx >= 0 and trimmed[idx].isspace():
+        idx -= 1
+    cnt = 0
+    while idx >= 0 and trimmed[idx] == ".":
+        cnt += 1
+        idx -= 1
+    return cnt >= 3
+
+
+def _has_toc_spaces_suffix(text: str) -> bool:
+    trimmed = text.rstrip()
+    if not trimmed or not trimmed[-1].isdigit():
+        return False
+    idx = len(trimmed) - 1
+    while idx >= 0 and trimmed[idx].isdigit():
+        idx -= 1
+    cnt = 0
+    while idx >= 0 and trimmed[idx].isspace():
+        cnt += 1
+        idx -= 1
+    return cnt >= 2
+
+
+def _extract_trailing_digits(text: str) -> str:
+    trimmed = text.rstrip()
+    if not trimmed or not trimmed[-1].isdigit():
+        return ""
+    idx = len(trimmed) - 1
+    while idx >= 0 and trimmed[idx].isdigit():
+        idx -= 1
+    return trimmed[idx + 1 :].strip()
+
+
+def _find_closing_quote_index(text: str) -> int:
+    quotes = ('"', "\u201c", "\u201d", "\u00ab", "\u00bb")
+    for i in range(len(text) - 1, -1, -1):
+        if text[i] in quotes:
+            return i
+    return -1
+
+
+def _extract_citation_from_tail(tail: str) -> tuple[str | None, str]:
+    stripped = tail.lstrip()
+    if not stripped.startswith("("):
+        if stripped.startswith("."):
+            stripped = stripped[1:].lstrip()
+        return None, stripped
+    end = stripped.find(")")
+    if end == -1:
+        return None, tail
+    candidate = stripped[: end + 1]
+    if "(" in candidate[1:-1] or ")" in candidate[1:-1]:
+        return None, tail
+    rest = stripped[end + 1 :].lstrip()
+    if rest.startswith("."):
+        rest = rest[1:].lstrip()
+    if rest:
+        return None, tail
+    return candidate, ""
 
 
 @dataclass
@@ -419,7 +483,7 @@ class APAParagraphsHandler:
             return
         if not next_p.text.strip():
             return
-        runs = list(next_p.runs)
+        runs = tuple(next_p.runs)
         if runs:
             runs[0].text = f" {runs[0].text.lstrip()}"
         for run in runs:
@@ -466,12 +530,15 @@ class APAParagraphsHandler:
             self._replace_paragraph_text(p, stripped)
 
     def _fix_block_quote_closing(self, stripped: str) -> str:
-        """Move closing quote and punctuation before citation."""
-        closing = _BLOCK_CLOSING_RE.search(stripped)
-        if closing is None:
+        """Move closing quote and punctuation before citation without super-linear regex."""
+        idx = _find_closing_quote_index(stripped)
+        if idx == -1:
             return stripped
-        citation = closing.group(1)
-        body = stripped[: closing.start()].rstrip()
+        tail = stripped[idx + 1 :]
+        citation, rest = _extract_citation_from_tail(tail)
+        if rest != "":
+            return stripped
+        body = stripped[:idx].rstrip()
         if body.endswith((",", ";", ":")):
             body = f"{body[:-1]}."
         if not body.endswith((".", "!", "?")):
@@ -552,26 +619,38 @@ class APAParagraphsHandler:
         return None, None
 
     def _parse_toc_dots(self, normalized: str) -> tuple[str | None, str | None]:
-        """Try dot-separated TOC entry with linear regex."""
+        """Try dot-separated TOC entry with linear checks."""
         if "..." not in normalized:
             return None, None
-        match = _TOC_DOTS_RE.search(normalized)
-        if match is None:
+        if not _has_toc_dots_suffix(normalized):
             return None, None
-        # Extract page digits at end
-        page_match = re.search(r"\d+\s*$", match.group(0))
-        page = page_match.group(0).strip() if page_match else ""
-        title = normalized[: match.start()].strip()
+        # linear page extraction
+        page = _extract_trailing_digits(normalized)
+        if not page:
+            return None, None
+        # find start of dots
+        idx = normalized.rstrip().rfind("...")
+        # backtrack to first dot of sequence
+        while idx > 0 and normalized[idx - 1] == ".":
+            idx -= 1
+        title = normalized[:idx].strip()
         return (title, page) if title and page else (None, None)
 
     def _parse_toc_spaces(self, text: str) -> tuple[str | None, str | None]:
-        """Try space-separated TOC entry with linear regex."""
-        match = _TOC_SPACES_RE.search(text)
-        if match is None:
+        """Try space-separated TOC entry with linear checks."""
+        if not _has_toc_spaces_suffix(text):
             return None, None
-        page_match = re.search(r"\d+\s*$", match.group(0))
-        page = page_match.group(0).strip() if page_match else ""
-        title = text[: match.start()].strip()
+        page = _extract_trailing_digits(text)
+        if not page:
+            return None, None
+        trimmed = text.rstrip()
+        # remove trailing digits and spaces
+        idx = len(trimmed) - 1
+        while idx >= 0 and trimmed[idx].isdigit():
+            idx -= 1
+        while idx >= 0 and trimmed[idx].isspace():
+            idx -= 1
+        title = trimmed[: idx + 1].strip()
         return (title, page) if title and page else (None, None)
 
     def _populate_toc_runs(
@@ -647,7 +726,7 @@ class APAParagraphsHandler:
         tab_stops = p.paragraph_format.tab_stops
         tab_stops.add_tab_stop(Inches(0.75), alignment=WD_TAB_ALIGNMENT.LEFT)
         text = p.text
-        if text.startswith("\u2022") or text.startswith("-"):
+        if text.startswith(("\u2022", "-")):
             return
         first_run = p.runs[0] if p.runs else None
         if first_run:
@@ -823,7 +902,7 @@ class APAParagraphsHandler:
 
     def _clear_runs(self, p: ParagraphType) -> None:
         """Clear all runs from paragraph."""
-        for run in list(p.runs):
+        for run in tuple(p.runs):
             parent = run._r.getparent()
             if parent is not None:
                 parent.remove(run._r)

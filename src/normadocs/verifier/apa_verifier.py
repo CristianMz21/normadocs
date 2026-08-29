@@ -162,50 +162,10 @@ class APAVerifier:
         infos: list[VerificationIssue] = []
 
         for category, check in self._init_checks():
-            try:
-                issues = check.run(ctx)
-                for issue in issues:
-                    if "." not in issue.check:
-                        issue.check = f"{category}.{issue.check.split('.')[-1]}"
-                    all_issues.append(issue)
+            self._run_single_check(category, check, ctx, all_issues, errors, warnings, infos)
 
-                    # Strict APA validation promotes every warning to a hard
-                    # failure. Keep the issue in ``all_issues`` with its
-                    # original wording while exposing it consistently in the
-                    # result's error collection.
-                    if self.strict and issue.severity == "warning":
-                        issue.severity = "error"
-
-                    if issue.severity == "error":
-                        errors.append(issue)
-                    elif issue.severity == "warning":
-                        warnings.append(issue)
-                    else:
-                        infos.append(issue)
-            except Exception as e:
-                errors.append(
-                    VerificationIssue(
-                        check=f"{category}.check_failed",
-                        severity="error",
-                        expected="Check to run successfully",
-                        actual=str(e),
-                        evidence=f"Check '{category}' failed with exception",
-                    )
-                )
-
-        total_checks = len(self._init_checks())
-        errors_count = len(errors)
-        warnings_count = len(warnings)
-
-        score = 100.0
-        if total_checks > 0:
-            error_penalty = (errors_count / total_checks) * 60
-            warning_penalty = (warnings_count / total_checks) * 30
-            score = max(0.0, score - error_penalty - warning_penalty)
-
-        passed = len(errors) == 0
-        if self.strict:
-            passed = passed and len(warnings) == 0
+        score = self._compute_score(errors, warnings)
+        passed = self._is_passed(errors, warnings)
 
         result = VerificationResult(
             passed=passed,
@@ -219,6 +179,67 @@ class APAVerifier:
         )
 
         return result
+
+    def _run_single_check(
+        self,
+        category: str,
+        check: VerificationCheck,
+        ctx: VerificationContext,
+        all_issues: list[VerificationIssue],
+        errors: list[VerificationIssue],
+        warnings: list[VerificationIssue],
+        infos: list[VerificationIssue],
+    ) -> None:
+        try:
+            issues = check.run(ctx)
+            for issue in issues:
+                self._categorize_issue(category, issue, all_issues, errors, warnings, infos)
+        except Exception as e:
+            errors.append(
+                VerificationIssue(
+                    check=f"{category}.check_failed",
+                    severity="error",
+                    expected="Check to run successfully",
+                    actual=str(e),
+                    evidence=f"Check '{category}' failed with exception",
+                )
+            )
+
+    def _categorize_issue(
+        self,
+        category: str,
+        issue: VerificationIssue,
+        all_issues: list[VerificationIssue],
+        errors: list[VerificationIssue],
+        warnings: list[VerificationIssue],
+        infos: list[VerificationIssue],
+    ) -> None:
+        if "." not in issue.check:
+            issue.check = f"{category}.{issue.check.split('.')[-1]}"
+        all_issues.append(issue)
+        if self.strict and issue.severity == "warning":
+            issue.severity = "error"
+        if issue.severity == "error":
+            errors.append(issue)
+        elif issue.severity == "warning":
+            warnings.append(issue)
+        else:
+            infos.append(issue)
+
+    def _compute_score(
+        self, errors: list[VerificationIssue], warnings: list[VerificationIssue]
+    ) -> float:
+        total = len(self._init_checks())
+        if total == 0:
+            return 100.0
+        err_pen = (len(errors) / total) * 60
+        warn_pen = (len(warnings) / total) * 30
+        return max(0.0, 100.0 - err_pen - warn_pen)
+
+    def _is_passed(
+        self, errors: list[VerificationIssue], warnings: list[VerificationIssue]
+    ) -> bool:
+        return not errors and not (self.strict and warnings)
 
     def _extract_meta_from_docx(self) -> DocumentMetadata:
         """Extract metadata from DOCX document."""
@@ -358,42 +379,44 @@ class APAVerifier:
             "    </div>",
         ]
         html = "\n".join(html_parts) + "\n"
-
-        if result.errors:
-            html += f"<h2>Errors ({len(result.errors)})</h2>\n"
-            for issue in result.errors:
-                evidence_html = (
-                    f"<div><strong>Evidence</strong>: {issue.evidence}</div>"
-                    if issue.evidence
-                    else ""
-                )
-                html += (
-                    f'<div class="err">'
-                    f'<div class="chk">{issue.check}</div>'
-                    f"<div><strong>Expected</strong>: {issue.expected}</div>"
-                    f"<div><strong>Actual</strong>: {issue.actual}</div>"
-                    f"{evidence_html}"
-                    f"</div>\n"
-                )
-
-        if result.warnings:
-            html += f"<h2>Warnings ({len(result.warnings)})</h2>\n"
-            for issue in result.warnings:
-                html += (
-                    f'<div class="warn">'
-                    f'<div class="chk">{issue.check}</div>'
-                    f"<div><strong>Expected</strong>: {issue.expected}</div>"
-                    f"<div><strong>Actual</strong>: {issue.actual}</div>"
-                    f"</div>\n"
-                )
-
-        if result.infos:
-            html += f"<h2>Info ({len(result.infos)})</h2>\n"
-            for issue in result.infos:
-                html += f'<div class="info">{issue.check}: {issue.actual}</div>\n'
-
+        html += self._html_errors(result)
+        html += self._html_warnings(result)
+        html += self._html_infos(result)
         html += "</body></html>"
         return html
+
+    def _html_errors(self, result: VerificationResult) -> str:
+        if not result.errors:
+            return ""
+        parts = [f"<h2>Errors ({len(result.errors)})</h2>\n"]
+        for issue in result.errors:
+            ev = f"<div><strong>Evidence</strong>: {issue.evidence}</div>" if issue.evidence else ""
+            parts.append(
+                f'<div class="err"><div class="chk">{issue.check}</div>'
+                f"<div><strong>Expected</strong>: {issue.expected}</div>"
+                f"<div><strong>Actual</strong>: {issue.actual}</div>{ev}</div>\n"
+            )
+        return "".join(parts)
+
+    def _html_warnings(self, result: VerificationResult) -> str:
+        if not result.warnings:
+            return ""
+        parts = [f"<h2>Warnings ({len(result.warnings)})</h2>\n"]
+        for issue in result.warnings:
+            parts.append(
+                f'<div class="warn"><div class="chk">{issue.check}</div>'
+                f"<div><strong>Expected</strong>: {issue.expected}</div>"
+                f"<div><strong>Actual</strong>: {issue.actual}</div></div>\n"
+            )
+        return "".join(parts)
+
+    def _html_infos(self, result: VerificationResult) -> str:
+        if not result.infos:
+            return ""
+        parts = [f"<h2>Info ({len(result.infos)})</h2>\n"]
+        for issue in result.infos:
+            parts.append(f'<div class="info">{issue.check}: {issue.actual}</div>\n')
+        return "".join(parts)
 
     def close(self) -> None:
         """Close all resources."""

@@ -10,14 +10,29 @@ from .config import METADATA_FIELDS, PAGEBREAK_OPENXML
 from .models import DocumentMetadata
 
 _OUTER_RE = re.compile(r"^\s*-{20,}\s*$")
-_INNER_RE = re.compile(r"^\s*-{3,}(\s+-{3,})+\s*$")
-_TOC_SUFFIX_RE = re.compile(r"\.{3,}\s*\d+\s*$")
 _NUMBERED_TOC_PREFIX_RE = re.compile(r"^\s*\d+\.\s+")
 _GRID_TABLE_RE = re.compile(r"^\+[-=+]+\+$")
 _ORDERED_LIST_RE = re.compile(r"^\d+\.\s")
 _BOX_DRAWING_RE = re.compile(r"^[┌┐└┘├┤┬┴┼─│]+")
 _FENCE_RE = re.compile(r"^```\s*\{?math\}?\s*$")
+_NUMBERED_TOC_ESCAPE_RE = re.compile(r"^(\s*\d+)\.\s+")
 _HEADING_PREFIX = "#"
+
+
+def _has_toc_suffix(text: str) -> bool:
+    trimmed = text.rstrip()
+    if not trimmed or not trimmed[-1].isdigit():
+        return False
+    idx = len(trimmed) - 1
+    while idx >= 0 and trimmed[idx].isdigit():
+        idx -= 1
+    while idx >= 0 and trimmed[idx].isspace():
+        idx -= 1
+    cnt = 0
+    while idx >= 0 and trimmed[idx] == ".":
+        cnt += 1
+        idx -= 1
+    return cnt >= 3
 
 
 class MarkdownPreprocessor:
@@ -53,40 +68,35 @@ class MarkdownPreprocessor:
         return metadata, end_line
 
     @staticmethod
-    def extract_metadata(lines: list[str]) -> DocumentMetadata:
-        """Extract title, author, etc. from YAML frontmatter or fallback parsing."""
+    def _metadata_from_yaml(yaml_data: dict[str, str]) -> DocumentMetadata:
         data: dict[str, str] = {}
+        for key in (
+            "title",
+            "subtitle",
+            "author",
+            "affiliation",
+            "program",
+            "ficha",
+            "institution",
+            "center",
+            "instructor",
+            "subject",
+            "location",
+            "date",
+            "short_title",
+        ):
+            if yaml_data.get(key):
+                data[key] = str(yaml_data[key])
+        return DocumentMetadata.from_dict(data)
 
-        yaml_data, _yaml_end = MarkdownPreprocessor.extract_yaml_frontmatter(lines)
-
-        if yaml_data:
-            for key in [
-                "title",
-                "subtitle",
-                "author",
-                "affiliation",
-                "program",
-                "ficha",
-                "institution",
-                "center",
-                "instructor",
-                "subject",
-                "location",
-                "date",
-                "short_title",
-            ]:
-                if yaml_data.get(key):
-                    data[key] = str(yaml_data[key])
-
-            return DocumentMetadata.from_dict(data)
-
+    @staticmethod
+    def _metadata_from_fallback(lines: list[str]) -> DocumentMetadata:
+        data: dict[str, str] = {}
         title_parts = []
         for i in range(2):
             if i < len(lines):
                 title_parts.append(lines[i].strip().replace("\r", "").replace("**", ""))
-
         data["title"] = " ".join(filter(None, title_parts)).strip()
-
         idx = 0
         for i in range(2, 16):
             if i >= len(lines):
@@ -97,8 +107,15 @@ class MarkdownPreprocessor:
             if val and idx < len(METADATA_FIELDS):
                 data[METADATA_FIELDS[idx]] = val
                 idx += 1
-
         return DocumentMetadata.from_dict(data)
+
+    @staticmethod
+    def extract_metadata(lines: list[str]) -> DocumentMetadata:
+        """Extract title, author, etc. from YAML frontmatter or fallback parsing."""
+        yaml_data, _ = MarkdownPreprocessor.extract_yaml_frontmatter(lines)
+        if yaml_data:
+            return MarkdownPreprocessor._metadata_from_yaml(yaml_data)
+        return MarkdownPreprocessor._metadata_from_fallback(lines)
 
     @staticmethod
     def build_title_page_md(meta: DocumentMetadata) -> str:
@@ -134,7 +151,7 @@ class MarkdownPreprocessor:
         """Linear two-pass TOC check (S5852)."""
         if "..." not in stripped:
             return False
-        return bool(_TOC_SUFFIX_RE.search(stripped))
+        return _has_toc_suffix(stripped)
 
     @staticmethod
     def _is_numbered_toc_line(stripped: str) -> bool:
@@ -143,28 +160,42 @@ class MarkdownPreprocessor:
             return False
         if "..." not in stripped:
             return False
-        return bool(_TOC_SUFFIX_RE.search(stripped))
+        return _has_toc_suffix(stripped)
+
+    @staticmethod
+    def _is_markdown_prefix(stripped: str) -> bool:
+        return stripped.startswith(("#", "```", "---", "===", ">", "!["))
+
+    @staticmethod
+    def _is_list_item(stripped: str) -> bool:
+        if stripped.startswith(("-", "*", "+")) and len(stripped) > 1 and stripped[1] == " ":
+            return True
+        return bool(_ORDERED_LIST_RE.match(stripped))
+
+    @staticmethod
+    def _is_table_line(stripped: str) -> bool:
+        if _GRID_TABLE_RE.match(stripped):
+            return True
+        return stripped.startswith("|")
+
+    @staticmethod
+    def _is_code_or_box(stripped: str) -> bool:
+        if stripped.startswith(("<", "```{")):
+            return True
+        return bool(_BOX_DRAWING_RE.match(stripped))
 
     @staticmethod
     def _is_special_line(stripped: str) -> bool:
         """Return True if this line is a Markdown structural element that must NOT be joined."""
         if not stripped:
             return True
-        if stripped.startswith(("#", "```", "---", "===", ">", "![", "![")):
+        if MarkdownPreprocessor._is_markdown_prefix(stripped):
             return True
-        if stripped.startswith(("-", "*", "+")) and len(stripped) > 1 and stripped[1] == " ":
+        if MarkdownPreprocessor._is_list_item(stripped):
             return True
-        if _ORDERED_LIST_RE.match(stripped):
+        if MarkdownPreprocessor._is_table_line(stripped):
             return True
-        if _GRID_TABLE_RE.match(stripped):
-            return True
-        if stripped.startswith("|") and stripped.endswith("|"):
-            return True
-        if stripped.startswith("|"):
-            return True
-        if stripped.startswith(("<", "```{")):
-            return True
-        if _BOX_DRAWING_RE.match(stripped):
+        if MarkdownPreprocessor._is_code_or_box(stripped):
             return True
         return MarkdownPreprocessor._is_toc_like_line(stripped)
 
@@ -174,7 +205,21 @@ class MarkdownPreprocessor:
 
     @staticmethod
     def _is_inner_separator(line: str) -> bool:
-        return bool(_INNER_RE.match(line.strip().replace("\r", "")))
+        return MarkdownPreprocessor._is_inner_line(line.strip().replace("\r", ""))
+
+    @staticmethod
+    def _is_inner_line(stripped: str) -> bool:
+        """Linear check for inner separator without super-linear regex."""
+        if not stripped:
+            return False
+        if " " not in stripped:
+            return False
+        if any(c not in "- " for c in stripped):
+            return False
+        parts = [p for p in stripped.split(" ") if p]
+        if len(parts) < 2:
+            return False
+        return all(len(p) >= 3 and all(ch == "-" for ch in p) for p in parts)
 
     @staticmethod
     def _detect_table_start(stripped: str) -> tuple[bool, bool]:
@@ -182,7 +227,7 @@ class MarkdownPreprocessor:
         is_outer = bool(_OUTER_RE.match(stripped))
         is_inner = False
         if not is_outer:
-            is_inner = bool(_INNER_RE.match(stripped))
+            is_inner = MarkdownPreprocessor._is_inner_line(stripped)
         return is_outer, is_inner
 
     @staticmethod
@@ -197,7 +242,8 @@ class MarkdownPreprocessor:
             s = lines[i].strip().replace("\r", "")
             table_lines.append(lines[i])
             is_end = (
-                (is_outer and bool(_OUTER_RE.match(s))) or (is_inner and bool(_INNER_RE.match(s)))
+                (is_outer and bool(_OUTER_RE.match(s)))
+                or (is_inner and MarkdownPreprocessor._is_inner_line(s))
             ) and len(table_lines) > 2
             if is_end:
                 end_found = True
@@ -211,7 +257,7 @@ class MarkdownPreprocessor:
         """Find inner separator line inside table block."""
         for tl in table_lines[1:-1]:
             ts = tl.strip()
-            if _INNER_RE.match(ts):
+            if MarkdownPreprocessor._is_inner_line(ts):
                 return tl
         return None
 
@@ -285,38 +331,40 @@ class MarkdownPreprocessor:
         return -1
 
     @staticmethod
+    def _group_records(raw_lines: list[str]) -> list[list[str]]:
+        records: list[list[str]] = []
+        current: list[str] = []
+        for ln in raw_lines:
+            if not ln.strip():
+                if current:
+                    records.append(current)
+                    current = []
+            else:
+                current.append(ln)
+        if current:
+            records.append(current)
+        return records
+
+    @staticmethod
+    def _cells_for_record(record: list[str], col_boundaries: list[tuple[int, int]]) -> list[str]:
+        cells: list[str] = []
+        for col_start, col_end in col_boundaries:
+            parts: list[str] = []
+            for rl in record:
+                padded = rl.ljust(col_end)
+                part = padded[col_start:col_end].strip()
+                if part:
+                    parts.append(part)
+            cells.append(" ".join(parts))
+        return cells
+
+    @staticmethod
     def _extract_cells(
         raw_lines: list[str], col_boundaries: list[tuple[int, int]]
     ) -> list[list[str]]:
         """Group raw_lines by blank-line-separated records, extract cells."""
-        records: list[list[str]] = []
-        current_record: list[str] = []
-
-        for ln in raw_lines:
-            s = ln.strip()
-            if not s:
-                if current_record:
-                    records.append(current_record)
-                    current_record = []
-            else:
-                current_record.append(ln)
-        if current_record:
-            records.append(current_record)
-
-        result_cells: list[list[str]] = []
-        for record in records:
-            cells: list[str] = []
-            for col_start, col_end in col_boundaries:
-                col_parts: list[str] = []
-                for rl in record:
-                    padded = rl.ljust(col_end)
-                    part = padded[col_start:col_end].strip()
-                    if part:
-                        col_parts.append(part)
-                cells.append(" ".join(col_parts))
-            result_cells.append(cells)
-
-        return result_cells
+        records = MarkdownPreprocessor._group_records(raw_lines)
+        return [MarkdownPreprocessor._cells_for_record(r, col_boundaries) for r in records]
 
     @staticmethod
     def _build_pipe_table(
@@ -433,7 +481,7 @@ class MarkdownPreprocessor:
     @staticmethod
     def _handle_math_content(
         line: str,
-        stripped: str,
+        _stripped: str,
         is_delim: bool,
         in_math_block: bool,
         single_line_math: bool,
@@ -521,31 +569,37 @@ class MarkdownPreprocessor:
         return result
 
     @staticmethod
-    def _determine_content_start(lines: list[str], yaml_data: dict[str, str], yaml_end: int) -> int:
-        """Determine where content starts after frontmatter/metadata."""
-        if yaml_data:
-            content_start = yaml_end + 1
-            while content_start < len(lines) and not lines[content_start].strip():
-                content_start += 1
-            return content_start
+    def _content_start_after_yaml(lines: list[str], yaml_end: int) -> int:
+        content_start = yaml_end + 1
+        while content_start < len(lines) and not lines[content_start].strip():
+            content_start += 1
+        return content_start
 
-        metadata_end = 0
+    @staticmethod
+    def _find_metadata_end(lines: list[str]) -> int:
         for i, line in enumerate(lines):
             stripped = line.strip().replace("\r", "")
             if stripped in ("---", "--"):
-                metadata_end = i
-                break
+                return i
+        return 0
 
-        content_start = metadata_end
-        for i in range(metadata_end, len(lines)):
+    @staticmethod
+    def _find_first_heading(lines: list[str], start: int) -> int:
+        for i in range(start, len(lines)):
             stripped = lines[i].strip().replace("\r", "")
             if stripped.startswith("# "):
-                content_start = i
-                break
+                return i
+        return start
 
+    @staticmethod
+    def _determine_content_start(lines: list[str], yaml_data: dict[str, str], yaml_end: int) -> int:
+        """Determine where content starts after frontmatter/metadata."""
+        if yaml_data:
+            return MarkdownPreprocessor._content_start_after_yaml(lines, yaml_end)
+        metadata_end = MarkdownPreprocessor._find_metadata_end(lines)
+        content_start = MarkdownPreprocessor._find_first_heading(lines, metadata_end)
         if metadata_end == 0 and content_start == 0 and len(lines) > 60:
-            content_start = 60
-
+            return 60
         return content_start
 
     @staticmethod
@@ -579,7 +633,7 @@ class MarkdownPreprocessor:
                 found_first_heading = True
 
             if MarkdownPreprocessor._is_numbered_toc_line(stripped):
-                line = re.sub(r"^(\s*\d+)\.\s+", r"\1\\. ", line)
+                line = _NUMBERED_TOC_ESCAPE_RE.sub(r"\1\\. ", line)
 
             output_parts.append(line)
 

@@ -58,6 +58,24 @@ class ParagraphsCheck:
         self._check_alignment(body_paragraphs, ctx, issues)
         return issues
 
+    def _should_skip_body(self, p: DOCXParagraphInfo, state: _FilterState) -> bool:
+        if not p.text.strip():
+            return True
+        if self._handle_abstract_keywords(p, state):
+            return True
+        if state.in_abstract or state.in_references or state.in_toc:
+            return True
+        if self._is_skipped_style(p.style_name or ""):
+            return True
+        if self._is_caption_or_digit(p):
+            return True
+        if p.alignment == "center":
+            return True
+        if state.skip_first_body_after_heading:
+            state.skip_first_body_after_heading = False
+            return True
+        return False
+
     def _collect_body_paragraphs(
         self,
         paragraphs_info: list[DOCXParagraphInfo],
@@ -70,20 +88,7 @@ class ParagraphsCheck:
                 continue
             if self._handle_heading_paragraph(p, state):
                 continue
-            if not p.text.strip():
-                continue
-            if self._handle_abstract_keywords(p, state):
-                continue
-            if state.in_abstract or state.in_references or state.in_toc:
-                continue
-            if self._is_skipped_style(p.style_name or ""):
-                continue
-            if self._is_caption_or_digit(p):
-                continue
-            if p.alignment == "center":
-                continue
-            if state.skip_first_body_after_heading:
-                state.skip_first_body_after_heading = False
+            if self._should_skip_body(p, state):
                 continue
             filtered.append(p)
         return filtered

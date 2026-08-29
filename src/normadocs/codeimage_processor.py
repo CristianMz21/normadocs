@@ -56,8 +56,8 @@ class CodeImageProcessor:
     DEFAULT_TEXT_COLOR = "#2e3436"
 
     CODE_BLOCK_RE = re.compile(
-        r"```(\w*)\s*\{code\}\s*\n(.*?)\n```",
-        re.DOTALL | re.MULTILINE,
+        r"```(\w*)\s*\{code\}\s*\n([^`]*?)\n```",
+        re.MULTILINE,
     )
 
     CSS_TEMPLATE = """

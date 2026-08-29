@@ -30,6 +30,7 @@ REFERENCE_HEADINGS = frozenset(
 )
 
 _AUTHOR = r"[A-ZÁÉÍÓÚÑ][\wáéíóúñ\-]+"
+_AUTHOR_RE = re.compile(_AUTHOR)
 
 # "(A, B y C, 2020)" — parenthetical citation content
 _PAREN_FULL = re.compile(r"\(([^()]+)\)")
@@ -39,7 +40,7 @@ _YEAR_TAIL = re.compile(r",\s*(\d{4}[a-z]?)\s*$")
 
 # "A, B y C (2020)" — narrative citation with a full author list
 _NARRATIVE_CITATION = re.compile(
-    rf"({_AUTHOR})(?:\s*,\s*{_AUTHOR}){{1,}}\s+(?:y|&)\s+{_AUTHOR}\s*\((\d{{4}}[a-z]?)\)"
+    rf"({_AUTHOR})(?:, {_AUTHOR})+\s+(?:y|&)\s+{_AUTHOR}\s*\((\d{{4}}[a-z]?)\)"
 )
 
 # "García, A. y López, B." — Spanish conjunction before the last author
@@ -48,7 +49,7 @@ _REF_CONJUNCTION = re.compile(r"\.\s*y\s+(?=[A-ZÁÉÍÓÚÑ])")
 
 # "Revista Educación, 45(2), 112-130." — journal name + volume after a
 # sentence-ending period (the article title's closing period)
-_JOURNAL_VOLUME = re.compile(r"(?<=[.!?]\s)([A-ZÁÉÍÓÚÑ][^.!?]*?),\s*(\d+)(?=\s*[(,])")
+_JOURNAL_VOLUME = re.compile(r"([A-ZÁÉÍÓÚÑ][^.!?]*),\s*(\d+)(?=\s*[(,])")
 
 _YEAR_MARKER = re.compile(r"\((?:s\.\s*f\.|n\.\s*d\.|\d{4})")
 
@@ -58,6 +59,8 @@ _ET_AL = "et al."
 _ET_AL_DOT = "et al.,"
 _AND_SPACED = " y "
 _AND_REPLACED = " & "
+_SPLIT_RE = re.compile(r",\s*|\s+[y&]\s+")
+_DATE_PAREN_RE = re.compile(r"\((s\.\s*f\.|n\.\s*d\.|\d{4})\)", re.IGNORECASE)
 _REF_CONJ_REPLACED = "., & "
 
 
@@ -103,8 +106,8 @@ class APACitationsHandler:
         Tokens that are not capitalized words (e.g. "p < 0.05") make the
         segment non-authorish, returning 0 so it is never rewritten.
         """
-        tokens = re.split(r"\s*,\s*|\s+[y&]\s+", segment.strip())
-        matched = [t for t in tokens if re.fullmatch(_AUTHOR, t)]
+        tokens = _SPLIT_RE.split(segment.strip())
+        matched = [t for t in tokens if _AUTHOR_RE.fullmatch(t)]
         return len(matched) if len(matched) == len(tokens) and tokens else 0
 
     def _is_reference_heading(self, p: ParagraphType) -> bool:
@@ -165,7 +168,7 @@ class APACitationsHandler:
             return f"{authors}, {year_text}"
         count = self._author_count(authors)
         if count >= min_authors:
-            first = re.split(r"\s*,\s*|\s+[y&]\s+", authors)[0].strip()
+            first = _SPLIT_RE.split(authors)[0].strip()
             return f"{first} {_ET_AL_DOT} {year_text}"
         if count == 2 and _AND_SPACED in authors:
             return f"{authors.replace(_AND_SPACED, _AND_REPLACED)}, {year_text}"
@@ -220,7 +223,12 @@ class APACitationsHandler:
 
     def _italicize_journals(self, p: ParagraphType) -> None:
         """Italicize "Journal Name, Volume" spans in a plain reference entry."""
-        matches = list(_JOURNAL_VOLUME.finditer(p.text))
+        raw = list(_JOURNAL_VOLUME.finditer(p.text))
+        matches = [
+            m
+            for m in raw
+            if m.start() >= 2 and p.text[m.start() - 2] in ".!?" and p.text[m.start() - 1] == " "
+        ]
         if not matches:
             return
         offset = 0
@@ -303,7 +311,7 @@ class APACitationsHandler:
         the same author; undated works (s. f./n.d.) precede dated ones.
         """
         author = reference.split("(", 1)[0].strip().casefold()
-        date_match = re.search(r"\((s\.\s*f\.|n\.\s*d\.|\d{4})\)", reference, re.IGNORECASE)
+        date_match = _DATE_PAREN_RE.search(reference)
         if date_match is None or date_match.group(1).casefold() in {"s. f.", "n. d."}:
             year = 0
         else:

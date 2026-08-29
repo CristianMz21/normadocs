@@ -143,7 +143,7 @@ class FiguresCheck:
                 numbers.append(int(parts[1].rstrip(".")))
         if not numbers:
             return
-        if sorted(numbers) == list(range(1, len(numbers) + 1)):
+        if self._is_sequential(numbers):
             return
         issues.append(
             VerificationIssue(
@@ -154,6 +154,11 @@ class FiguresCheck:
                 evidence="Figure numbers must be consecutive starting at 1",
             )
         )
+
+    @staticmethod
+    def _is_sequential(numbers: list[int]) -> bool:
+        s = sorted(numbers)
+        return bool(s) and s[0] == 1 and s[-1] == len(s) and len(set(s)) == len(s)
 
     def _check_caption_position(
         self,

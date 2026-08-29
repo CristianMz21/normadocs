@@ -239,17 +239,15 @@ class CoverPageCheck:
             return
         if ctx.strict and not ctx.meta.author:
             return
-        # Non-strict always warns if missing; strict only if author configured
-        if not ctx.strict or ctx.meta.author:
-            issues.append(
-                VerificationIssue(
-                    check=f"{CheckCategory.COVER_PAGE}.author_present",
-                    severity=severity,
-                    expected="Author name on cover page",
-                    actual="Author not found in expected location",
-                    evidence="Cover page may be missing author",
-                )
+        issues.append(
+            VerificationIssue(
+                check=f"{CheckCategory.COVER_PAGE}.author_present",
+                severity=severity,
+                expected="Author name on cover page",
+                actual="Author not found in expected location",
+                evidence="Cover page may be missing author",
             )
+        )
 
     def _check_missing_institution(
         self,

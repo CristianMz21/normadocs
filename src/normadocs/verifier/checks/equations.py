@@ -78,7 +78,7 @@ class EquationsCheck:
                     )
                 )
 
-        if numbers and sorted(numbers) != list(range(1, len(numbers) + 1)):
+        if numbers and not self._is_sequential(numbers):
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.EQUATIONS}.numbering_sequence",
@@ -90,6 +90,11 @@ class EquationsCheck:
             )
 
         return issues
+
+    @staticmethod
+    def _is_sequential(numbers: list[int]) -> bool:
+        s = sorted(numbers)
+        return bool(s) and s[0] == 1 and s[-1] == len(s) and len(set(s)) == len(s)
 
     @staticmethod
     def _has_right_tab_stop(p: Paragraph) -> bool:

@@ -21,6 +21,8 @@ __all__ = [
 if TYPE_CHECKING:
     from .apa_verifier import APAVerifier
 
+_CAPTION_RE = re.compile(r"^(Tabla|Table|Figura|Figure)\s+\d+")
+
 
 @dataclass
 class VerificationIssue:
@@ -93,7 +95,7 @@ def is_apa_caption_or_table_title(text: str) -> bool:
         return True
     # Caption labels with number, with or without a title:
     # "Tabla 1", "Table 1", "Figura 1", "Figure 1", "Figura 1. Título", ...
-    if re.match(r"^(Tabla|Table|Figura|Figure)\s+\d+", stripped):
+    if _CAPTION_RE.match(stripped):
         return True
     return stripped.startswith(". ")
 

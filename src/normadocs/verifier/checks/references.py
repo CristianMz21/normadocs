@@ -23,9 +23,12 @@ if TYPE_CHECKING:
 class ReferencesCheck:
     """Check references formatting against APA 7th Edition requirements."""
 
-    _JOURNAL_VOLUME = re.compile(r"(?<=[.!?]\s)([A-ZÁÉÍÓÚÑ][^.!?]*?),\s*\d+(?=\s*[(,])")
+    _JOURNAL_VOLUME = re.compile(r"(?<=[.!?]\s)([A-ZÁÉÍÓÚÑ][^.!?]+?),\s*\d+(?=\s*[(,])")
     _YEAR_MARKER = re.compile(r"\((?:s\.\s*f\.|n\.\s*d\.|\d{4})")
     _SPANISH_CONJUNCTION = re.compile(r"\.\s*y\s+[A-ZÁÉÍÓÚÑ]")
+    _DOI_RE = re.compile(r"\bdoi:", re.IGNORECASE)
+    _RETRIEVED_RE = re.compile(r"\b(?:recuperado\s+de|retrieved\s+from)\b", re.IGNORECASE)
+    _DATE_PAREN_RE = re.compile(r"\((s\.\s*f\.|n\.\s*d\.|\d{4})\)", re.IGNORECASE)
 
     @staticmethod
     def _sort_key(reference: str) -> tuple[str, int, str]:
@@ -36,7 +39,7 @@ class ReferencesCheck:
         dated works, which a plain lexical comparison does not implement.
         """
         author = reference.split("(", 1)[0].strip().casefold()
-        date_match = re.search(r"\((s\.\s*f\.|n\.\s*d\.|\d{4})\)", reference, re.IGNORECASE)
+        date_match = ReferencesCheck._DATE_PAREN_RE.search(reference)
         if date_match is None or date_match.group(1).casefold() in {"s. f.", "n. d."}:
             year = 0
         else:
@@ -204,7 +207,7 @@ class ReferencesCheck:
         self._check_italic_source(p_info, text, index, issues)
 
     def _check_retrieved_from(self, text: str, index: int, issues: list[VerificationIssue]) -> None:
-        if not re.search(r"\b(?:recuperado\s+de|retrieved\s+from)\b", text, re.IGNORECASE):
+        if not ReferencesCheck._RETRIEVED_RE.search(text):
             return
         issues.append(
             VerificationIssue(
@@ -234,7 +237,7 @@ class ReferencesCheck:
         )
 
     def _check_doi_format(self, text: str, index: int, issues: list[VerificationIssue]) -> None:
-        if not re.search(r"\bdoi:", text, re.IGNORECASE) and "dx.doi.org" not in text:
+        if not ReferencesCheck._DOI_RE.search(text) and "dx.doi.org" not in text:
             return
         issues.append(
             VerificationIssue(

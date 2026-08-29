@@ -12,6 +12,8 @@ from ..docx_analyzer import DOCXParagraphInfo
 if TYPE_CHECKING:
     from ..apa_verifier import VerificationContext
 
+_HEADING_LEVEL_RE = re.compile(r"(?:heading|encabezado)\s*(\d+)\s*$", re.IGNORECASE)
+
 
 Severity = Literal["error", "warning"]
 
@@ -45,9 +47,39 @@ class StructureCheck:
     """Check the required structure of a general academic APA report."""
 
     @staticmethod
+    def _consume_digits(text: str, idx: int) -> int:
+        while idx < len(text) and text[idx].isdigit():
+            idx += 1
+        return idx
+
+    @staticmethod
+    def _consume_dot_digits(text: str, idx: int) -> int:
+        while idx < len(text) and text[idx] == ".":
+            nxt = idx + 1
+            if nxt < len(text) and text[nxt].isdigit():
+                idx = StructureCheck._consume_digits(text, nxt + 1)
+            else:
+                break
+        return idx
+
+    @staticmethod
+    def _strip_number_prefix(text: str) -> str:
+        """Remove leading numbering like '1.', '1.2', '2) ' without super-linear regex."""
+        stripped = text.strip()
+        if not stripped or not stripped[0].isdigit():
+            return stripped
+        idx = StructureCheck._consume_digits(stripped, 0)
+        idx = StructureCheck._consume_dot_digits(stripped, idx)
+        if idx < len(stripped) and stripped[idx] in ".)":
+            idx += 1
+        while idx < len(stripped) and stripped[idx].isspace():
+            idx += 1
+        return stripped[idx:]
+
+    @staticmethod
     def _normalize(text: str) -> str:
         """Normalize heading text for Spanish/English structural matching."""
-        normalized = re.sub(r"^\s*\d+(?:\.\d+)*[.)]?\s*", "", text.strip())
+        normalized = StructureCheck._strip_number_prefix(text.strip())
         normalized = normalized.casefold()
         replacements = str.maketrans("áéíóúüñ", "aeiouun")
         return normalized.translate(replacements)
@@ -57,7 +89,7 @@ class StructureCheck:
         """Extract an outline level from a Word heading style name."""
         if style_name is None:
             return None
-        match = re.search(r"(?:heading|encabezado)\s*(\d+)\s*$", style_name, re.IGNORECASE)
+        match = _HEADING_LEVEL_RE.search(style_name)
         return int(match.group(1)) if match else None
 
     @staticmethod

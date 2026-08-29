@@ -19,11 +19,12 @@ if TYPE_CHECKING:
     from ..apa_verifier import VerificationContext
 
 _AUTHOR = r"[A-ZÁÉÍÓÚÑ][\wáéíóúñ\-]+"
+_AUTHOR_RE = re.compile(_AUTHOR)
 
 _PAREN_FULL = re.compile(r"\(([^()]+)\)")
 _YEAR_TAIL = re.compile(r",\s*(\d{4}[a-z]?)\s*$")
 _NARRATIVE_CITATION = re.compile(
-    rf"({_AUTHOR}(?:\s*,\s*{_AUTHOR})*(?:\s+(?:y|&)\s+{_AUTHOR})?)\s*\(\d{{4}}[a-z]?\)"
+    rf"({_AUTHOR}(?:, {_AUTHOR})*(?:\s+(?:y|&)\s+{_AUTHOR})?)\s*\(\d{{4}}[a-z]?\)"
 )
 
 QUOTE_OPEN = ('"', "\u201c", "\u00ab")
@@ -31,6 +32,7 @@ BLOCK_QUOTE_MIN_WORDS = 40
 
 
 _ET_AL = "et al."
+_SPLIT_RE = re.compile(r",\s*|\s+[y&]\s+")
 
 _REFERENCE_HEADINGS = frozenset(
     {
@@ -218,6 +220,6 @@ class CitationsCheck:
     @staticmethod
     def _author_count(segment: str) -> int:
         """Count author-like tokens in a citation segment."""
-        tokens = re.split(r"\s*,\s*|\s+[y&]\s+", segment.strip())
-        matched = [t for t in tokens if re.fullmatch(_AUTHOR, t)]
+        tokens = _SPLIT_RE.split(segment.strip())
+        matched = [t for t in tokens if _AUTHOR_RE.fullmatch(t)]
         return len(matched) if tokens and len(matched) == len(tokens) else 0

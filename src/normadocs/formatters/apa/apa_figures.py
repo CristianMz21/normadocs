@@ -36,6 +36,11 @@ _W_LINE = "w:line"
 _W_LINE_RULE = "w:lineRule"
 _W_AFTER = "w:after"
 _W_PR = "w:pPr"
+_NS_WP = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+_NS_PIC = "http://schemas.openxmlformats.org/drawingml/2006/picture"
+_NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
+_CAPTION_RE = re.compile(r"^(Figura|Figure)\s+(\d+)\s*[.:]?\s*(.*)$")
+_PRESERVE = "preserve"
 
 
 class APAFiguresHandler:
@@ -96,7 +101,7 @@ class APAFiguresHandler:
         r_pr.append(sz)
         run.append(r_pr)
         t = OxmlElement(_W_T)
-        t.set(qn(_XML_SPACE), "preserve")
+        t.set(qn(_XML_SPACE), _PRESERVE)
         t.text = text
         run.append(t)
         p_el.append(run)
@@ -111,13 +116,12 @@ class APAFiguresHandler:
 
     def _collect_image_paragraphs(self) -> list[tuple[Any, str]]:
         """Collect paragraphs containing images and their alt text."""
-        ns_wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
         result: list[tuple[Any, str]] = []
         for p in self.doc.paragraphs:
             drawings = p._element.findall(f".//{qn(_W_DRAWING_QN)}")
             if not drawings:
                 continue
-            alt = self._extract_alt_text_for_drawings(drawings, ns_wp)
+            alt = self._extract_alt_text_for_drawings(drawings, _NS_WP)
             result.append((p, alt.strip()))
         return result
 
@@ -126,8 +130,7 @@ class APAFiguresHandler:
         for drawing in drawings:
             for doc_pr in drawing.iter(f"{{{ns_wp}}}docPr"):
                 return str((doc_pr.get(_DESCR, "") or doc_pr.get(_NAME, "")).strip())
-            ns_pic = "http://schemas.openxmlformats.org/drawingml/2006/picture"
-            for c_nv_pr in drawing.iter(f"{{{ns_pic}}}cNvPr"):
+            for c_nv_pr in drawing.iter(f"{{{_NS_PIC}}}cNvPr"):
                 return str((c_nv_pr.get(_DESCR, "") or c_nv_pr.get(_NAME, "")).strip())
         return ""
 
@@ -140,14 +143,13 @@ class APAFiguresHandler:
 
     def _scale_image_drawings(self, p: Any) -> None:
         """Scale oversized drawings to fit page."""
-        ns_wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
         max_w = Inches(6.5)
         max_h = Inches(8.5)
-        drawings = p._element.findall(f".//{{{ns_wp}}}inline") + p._element.findall(
-            f".//{{{ns_wp}}}anchor"
+        drawings = p._element.findall(f".//{{{_NS_WP}}}inline") + p._element.findall(
+            f".//{{{_NS_WP}}}anchor"
         )
         for d in drawings:
-            self._scale_single_drawing(d, max_w, max_h, ns_wp)
+            self._scale_single_drawing(d, max_w, max_h, _NS_WP)
 
     def _scale_single_drawing(self, drawing: Any, max_w: Any, max_h: Any, ns_wp: str) -> None:
         """Scale one drawing element if oversized."""
@@ -178,8 +180,7 @@ class APAFiguresHandler:
         new_cy = int(cy * scale)
         extent.set(_CX, str(new_cx))
         extent.set(_CY, str(new_cy))
-        ns_a = "http://schemas.openxmlformats.org/drawingml/2006/main"
-        for ext_el in drawing.iter(f"{{{ns_a}}}ext"):
+        for ext_el in drawing.iter(f"{{{_NS_A}}}ext"):
             self._scale_ext(ext_el, scale)
 
     def _scale_ext(self, ext_el: Any, scale: float) -> None:
@@ -193,14 +194,13 @@ class APAFiguresHandler:
 
     def add_figure_captions(self) -> None:
         """Ensure every figure has an APA 7 caption: 'Figura N.' bold + title italic."""
-        caption_re = re.compile(r"^(Figura|Figure)\s+(\d+)\s*[.:]?\s*(.*)$")
         image_paragraphs = [
             p for p in self.doc.paragraphs if p._element.findall(f".//{qn(_W_DRAWING_QN)}")
         ]
-        self._move_existing_captions(image_paragraphs, caption_re)
-        max_used = self._find_max_caption_number(caption_re)
-        self._insert_missing_captions(image_paragraphs, caption_re, max_used)
-        self._normalize_caption_runs(caption_re)
+        self._move_existing_captions(image_paragraphs, _CAPTION_RE)
+        max_used = self._find_max_caption_number(_CAPTION_RE)
+        self._insert_missing_captions(image_paragraphs, _CAPTION_RE, max_used)
+        self._normalize_caption_runs(_CAPTION_RE)
 
     def _move_existing_captions(self, images: list[Any], caption_re: re.Pattern[str]) -> None:
         """Move captions sitting directly below image to above it."""
@@ -259,7 +259,7 @@ class APAFiguresHandler:
 
     def _reformat_caption(self, para: Any, label: str, num: str, title: str) -> None:
         """Reformat caption runs to bold label and italic title."""
-        for r in list(para.runs):
+        for r in tuple(para.runs):
             parent = r._element.getparent()
             if parent is not None:
                 parent.remove(r._element)
@@ -309,7 +309,7 @@ class APAFiguresHandler:
         text = neighbor.text.strip()
         if not text:
             return True
-        if text.startswith("Nota.") or text.startswith("Note."):
+        if text.startswith(("Nota.", "Note.")):
             return True
         style_name = paragraph_style_name(neighbor)
         return style_name.startswith("Heading")
@@ -341,7 +341,7 @@ class APAFiguresHandler:
         self._append_font_props(label_rpr)
         label_run.append(label_rpr)
         label_t = OxmlElement(_W_T)
-        label_t.set(qn(_XML_SPACE), "preserve")
+        label_t.set(qn(_XML_SPACE), _PRESERVE)
         label_t.text = f"{prefix} {number}. "
         label_run.append(label_t)
         return label_run
@@ -354,7 +354,7 @@ class APAFiguresHandler:
         self._append_font_props(title_rpr)
         title_run.append(title_rpr)
         title_t = OxmlElement(_W_T)
-        title_t.set(qn(_XML_SPACE), "preserve")
+        title_t.set(qn(_XML_SPACE), _PRESERVE)
         title_t.text = title
         title_run.append(title_t)
         return title_run
@@ -372,11 +372,9 @@ class APAFiguresHandler:
     @staticmethod
     def _extract_alt_text(p: Any) -> str:
         """Extract alt text from the first drawing of a paragraph."""
-        ns_wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
         for drawing in p._element.findall(f".//{qn(_W_DRAWING_QN)}"):
-            for doc_pr in drawing.iter(f"{{{ns_wp}}}docPr"):
+            for doc_pr in drawing.iter(f"{{{_NS_WP}}}docPr"):
                 return str((doc_pr.get(_DESCR, "") or doc_pr.get(_NAME, "")).strip())
-            ns_pic = "http://schemas.openxmlformats.org/drawingml/2006/picture"
-            for c_nv_pr in drawing.iter(f"{{{ns_pic}}}cNvPr"):
+            for c_nv_pr in drawing.iter(f"{{{_NS_PIC}}}cNvPr"):
                 return str((c_nv_pr.get(_DESCR, "") or c_nv_pr.get(_NAME, "")).strip())
         return ""

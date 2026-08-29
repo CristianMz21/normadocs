@@ -189,6 +189,26 @@ class APAPageHandler:
             return False
         return False
 
+    def _is_target_section(self, heading_text: str) -> bool:
+        targets = (
+            "Conclusiones",
+            "Referencias",
+            "References",
+            "Appendix A",
+            "Appendices",
+        )
+        lower = heading_text.lower()
+        return any(lower == t.lower() for t in targets)
+
+    def _insert_page_break_before(self, p: Any) -> None:
+        br_para = OxmlElement("w:p")
+        br_run = OxmlElement("w:r")
+        br = OxmlElement("w:br")
+        br.set(qn("w:type"), "page")
+        br_run.append(br)
+        br_para.append(br_run)
+        p._element.addprevious(br_para)
+
     def add_section_page_breaks(self) -> None:
         """Add section breaks only when one is not already before the heading.
 
@@ -197,35 +217,15 @@ class APAPageHandler:
         LibreOffice. Direct callers that provide an unprocessed DOCX retain
         the legacy fallback for Conclusions/References.
         """
-        # Sections that need to start on a new page
-        new_page_sections = [
-            "Conclusiones",
-            "Referencias",
-            "References",
-            "Appendix A",
-            "Appendices",
-        ]
-
-        # Find headings and add page breaks before them
-        for _i, p in enumerate(self.doc.paragraphs):
-            if paragraph_style_name(p).startswith("Heading"):
-                # Check if this heading is one of our target sections
-                heading_text = p.text.strip()
-                for section in new_page_sections:
-                    if heading_text.lower() == section.lower():
-                        if self._has_page_break_before(p):
-                            break
-                        # Create a valid WordprocessingML paragraph containing
-                        # the page-break run. A standalone w:br sibling is not
-                        # valid WordprocessingML and may be dropped by converters.
-                        break_paragraph = OxmlElement("w:p")
-                        break_run = OxmlElement("w:r")
-                        br = OxmlElement("w:br")
-                        br.set(qn("w:type"), "page")
-                        break_run.append(br)
-                        break_paragraph.append(break_run)
-                        p._element.addprevious(break_paragraph)
-                        break
+        for p in self.doc.paragraphs:
+            if not paragraph_style_name(p).startswith("Heading"):
+                continue
+            heading_text = p.text.strip()
+            if not self._is_target_section(heading_text):
+                continue
+            if self._has_page_break_before(p):
+                continue
+            self._insert_page_break_before(p)
 
     def setup_running_head(self, short_title: str | None = None) -> None:
         """Add running head to headers on pages after the cover page.

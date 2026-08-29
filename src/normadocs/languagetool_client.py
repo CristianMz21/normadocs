@@ -3,6 +3,7 @@ LanguageTool client for grammar and spell checking.
 """
 
 import ipaddress
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +12,8 @@ from typing import Any
 import requests
 
 from .utils.subprocess import get_command_path, run_background_command
+
+_PORT_RE = re.compile(r":(\d+)")
 
 
 def _is_loopback_host(host: str) -> bool:
@@ -233,9 +236,7 @@ class LanguageToolClient:
 
     def _get_port_from_url(self) -> int:
         """Extract port from base URL."""
-        import re
-
-        match = re.search(r":(\d+)", self.base_url)
+        match = _PORT_RE.search(self.base_url)
         return int(match.group(1)) if match else 8081
 
     def stop_server(self) -> None:

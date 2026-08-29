@@ -226,7 +226,7 @@ class TablesCheck:
                 numbers.append(int(parts[1].rstrip(".")))
         if not numbers:
             return
-        if sorted(numbers) == list(range(1, len(numbers) + 1)):
+        if self._is_sequential(numbers):
             return
         issues.append(
             VerificationIssue(
@@ -237,6 +237,11 @@ class TablesCheck:
                 evidence="Table numbers must be consecutive starting at 1",
             )
         )
+
+    @staticmethod
+    def _is_sequential(numbers: list[int]) -> bool:
+        s = sorted(numbers)
+        return bool(s) and s[0] == 1 and s[-1] == len(s) and len(set(s)) == len(s)
 
     def _check_table_notes(self, ctx: VerificationContext, issues: list[VerificationIssue]) -> None:
         """Verify each table has an APA-formatted 'Nota.' below it."""
@@ -250,7 +255,7 @@ class TablesCheck:
 
     def _find_note_for_table(
         self,
-        t_idx: int,
+        _t_idx: int,
         table: Any,
         body_children: list[Any],
         ctx: VerificationContext,
