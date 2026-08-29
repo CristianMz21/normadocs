@@ -239,8 +239,6 @@ class CoverPageCheck:
             return
         if ctx.strict and not ctx.meta.author:
             return
-        if not ctx.strict and cover_elements["author"]:
-            return
         # Non-strict always warns if missing; strict only if author configured
         if not ctx.strict or ctx.meta.author:
             issues.append(
