@@ -40,21 +40,21 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: uv sync --frozen --extra dev --extra pdf --extra codeimage --python 3.13 # NOSONAR
+        run: uv sync --no-build --frozen --extra dev --extra pdf --extra codeimage --python 3.13 # NOSONAR
 
       - name: Lint with Ruff (no noqa allowed)
-        run: uv run ruff check src/ tests/ --output-format=github --no-cache # NOSONAR
+        run: uv run --no-build ruff check src/ tests/ --output-format=github --no-cache # NOSONAR
         env:
           RUFF_NOQA: "1"
 
       - name: Format check with Ruff
-        run: uv run ruff format --check src/ tests/ --output-format=github --no-cache # NOSONAR
+        run: uv run --no-build ruff format --check src/ tests/ --output-format=github --no-cache # NOSONAR
 
       - name: Type check with MyPy
-        run: uv run mypy --strict src/ # NOSONAR
+        run: uv run --no-build mypy --strict src/ # NOSONAR
 
       - name: Type check with Pyright
-        run: uv run pyright # NOSONAR
+        run: uv run --no-build pyright # NOSONAR
 
   security:
     name: Security Scan
@@ -79,13 +79,13 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: uv sync --frozen --extra dev --extra static --python 3.13 # NOSONAR
+        run: uv sync --no-build --frozen --extra dev --extra static --python 3.13 # NOSONAR
 
       - name: Run Bandit
-        run: uv run bandit -r src/ -c pyproject.toml # NOSONAR
+        run: uv run --no-build bandit -r src/ -c pyproject.toml # NOSONAR
 
       - name: Run Semgrep (advanced SAST)
-        run: uv run semgrep scan --config p/python --config p/security-audit --error --metrics off src/ # NOSONAR
+        run: uv run --no-build semgrep scan --config p/python --config p/security-audit --error --metrics off src/ # NOSONAR
 
   gitleaks:
     name: Secret Scan (Gitleaks)
@@ -135,11 +135,11 @@ jobs:
           sudo apt-get install -y pandoc
 
       - name: Install dependencies (locked)
-        run: uv sync --frozen --extra dev --python "${{ matrix.python-version }}" # NOSONAR
+        run: uv sync --no-build --frozen --extra dev --python "${{ matrix.python-version }}" # NOSONAR
 
       - name: Run tests with coverage (warnings as errors)
         run: >- # NOSONAR
-          uv run pytest tests/ -W error --cov=normadocs
+          uv run --no-build pytest tests/ -W error --cov=normadocs
           --cov-report=term-missing --cov-report=xml --cov-fail-under=78
 
       - name: Upload coverage (3.13 only)
@@ -180,13 +180,13 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: uv sync --frozen --extra dev --python 3.13 # NOSONAR
+        run: uv sync --no-build --frozen --extra dev --python 3.13 # NOSONAR
 
       - name: Build sdist and wheel
-        run: uv run python -m build # NOSONAR
+        run: uv run --no-build python -m build # NOSONAR
 
       - name: Validate package metadata
-        run: uv run twine check dist/* # NOSONAR
+        run: uv run --no-build twine check dist/* # NOSONAR
 
       - name: Upload dist artifacts
         uses: actions/upload-artifact@v6
