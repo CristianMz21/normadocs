@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] - 2026-08-29
+
+### Fixed
+
+- **CLI robustness** (`src/normadocs/cli.py:32`, `pandoc_client.py:13`): early validation for `--style`/`--format` with OS-aware `Pandoc` hints, fixed `VALID_STYLES` to include `apa7`/`apa7estudiante` so default `apa7estudiante` no longer fails; `tests/test_cli.py:405` migrated to `tempfile.TemporaryDirectory` for typer 0.26.
+- **Pipeline** (`preprocessor.py`, `apa_equations.py`): hard line breaks, `$$` display-math with `\tag` stripping, ` ```math` fences → `$$`, page-break OpenXML translation, equation numbering with tab stops, verifier `EquationsCheck`.
+- **Packaging**: `src/normadocs/__init__.py:5` synced to `0.2.6`, `uv.lock` updated, `pyproject.toml:3` bumped.
+- **CI/Security**: `ci.yml` now triggers on all `push`/`pull_request` to `main` (removed `paths` filter that hid recent pushes), `uv` invocations annotated with `# NOSONAR` and `--no-build` where safe, `sonar-project.properties` now uses `sonar.newCode.referenceBranch=main` and `sonar.issue.ignore.allfile` for workflows to silence `S8541`/`S8544` false positives (`uv` handles locking via `uv.lock`).
+- **Dependencies**: GitHub Actions pinned to SHAs and bumped per Dependabot: `docker/login-action@v3→v4@d...`, `docker/build-push-action@v6→v7@53b7...`, `actions/deploy-pages@v4→v5@cd2c...`, `actions/upload-artifact@v6→v7@043f...`, `codecov/codecov-action@v5→v6@f227...` in `ci.yml`, `docker-publish.yml`, `docs.yml`, `release.yml`.
+- **Repo hygiene**: `.gitignore` now ignores `ExportDocs/` (CLI default `DEFAULT_OUTPUT_DIR`) and `_pandoc_raw/`.
+
 ## [Unreleased]
 
 ### Fixed

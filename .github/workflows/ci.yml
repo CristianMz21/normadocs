@@ -144,14 +144,14 @@ jobs:
 
       - name: Upload coverage (3.13 only)
         if: matrix.python-version == '3.13'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-report
           path: coverage.xml
 
       - name: Upload coverage to Codecov (3.13 only)
         if: matrix.python-version == '3.13'
-        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
+        uses: codecov/codecov-action@f2274c2c340e0c81c8f7dc407b2a477b8935f171 # v6
         with:
           file: coverage.xml
           fail_ci_if_error: false
@@ -189,7 +189,7 @@ jobs:
         run: uv run --no-build twine check dist/* # NOSONAR
 
       - name: Upload dist artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dist
           path: dist/
