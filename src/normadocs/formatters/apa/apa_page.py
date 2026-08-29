@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Inches, Pt
 
-from ...config import DEFAULT_BODY_FONT
+from ...config import DEFAULT_BODY_FONT, W_TYPE, W_VAL
 from ...utils.docx_helpers import paragraph_style_name
 
 if TYPE_CHECKING:
@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
 _FLD_CHAR = "w:fldChar"
 _FLD_CHAR_TYPE = "w:fldCharType"
+_W_VAL = W_VAL
+_W_TYPE = W_TYPE
 
 
 class APAPageHandler:
@@ -42,9 +44,21 @@ class APAPageHandler:
         self.doc = doc
         self.config = config if config is not None else {}
 
+    def get_config(self, *keys: str, default: Any = None) -> Any:
+        """Get nested config value via dot-notation keys."""
+        value: Any = self.config
+        for key in keys:
+            if isinstance(value, dict):
+                value = value.get(key)
+            else:
+                return default
+            if value is None:
+                return default
+        return value
+
     def _get_margins(self) -> dict[str, float]:
         """Get margins from config with defaults."""
-        margins = self.config.get("margins", {})
+        margins = cast(dict[str, Any], self.get_config("margins", default={}))
         return {
             "top": margins.get("top", 1.0),
             "bottom": margins.get("bottom", 1.0),
@@ -231,118 +245,111 @@ class APAPageHandler:
             short_title: The short title to display. If None or empty,
                         the running head is not added.
         """
+        display_title = self._resolve_display_title(short_title)
+        if display_title is None:
+            return
+        for section in self.doc.sections:
+            self._apply_running_head_to_section(section, display_title)
+
+    def _resolve_display_title(self, short_title: str | None) -> str | None:
+        """Resolve and truncate the running head title, or None if disabled."""
         if not short_title:
-            return
-
-        # Check if running head is enabled in config (default True)
-        enabled = self.config.get("running_head", {}).get("enabled", True)
+            return None
+        enabled = cast(bool, self.get_config("running_head", "enabled", default=True))
         if not enabled:
-            return
-
-        # Get max length from config, default to 50
-        max_length = int(self.config.get("running_head", {}).get("max_length", 50))
-
-        # Truncate if necessary
+            return None
+        max_length = int(cast(int, self.get_config("running_head", "max_length", default=50)))
         display_title = short_title.upper()
         if len(display_title) > max_length:
             display_title = display_title[:max_length]
+        return display_title
 
-        # Apply running head to all sections. With
-        # different_first_page_header_footer=True, the first-page header
-        # contains only its page number and later pages contain the running head.
+    def _apply_running_head_to_section(self, section: SectionType, display_title: str) -> None:
+        """Apply running head configuration to a single section."""
+        self._reset_first_page_header(section)
+        self._setup_header_with_running_head(section.header, display_title)
 
-        for section in self.doc.sections:
-            # Clear the first-page header and restore its page number only;
-            # the student cover must not contain the running-head text.
-            first_page_header = section.first_page_header
-            first_page_header.is_linked_to_previous = False
-            for p in first_page_header.paragraphs:
-                p.clear()
-                del p._element[:]
-            self._add_page_number(section, first_page_header)
+    def _reset_first_page_header(self, section: SectionType) -> None:
+        """Clear first-page header and restore page number only."""
+        first_page_header = section.first_page_header
+        first_page_header.is_linked_to_previous = False
+        for p in first_page_header.paragraphs:
+            p.clear()
+            del p._element[:]
+        self._add_page_number(section, first_page_header)
 
-            # Set up the default header with running head (for pages 2+)
-            header = section.header
-            header.is_linked_to_previous = False
+    def _setup_header_with_running_head(self, header: Any, display_title: str) -> None:
+        """Configure default header with running head and page number."""
+        header.is_linked_to_previous = False
+        for p in header.paragraphs:
+            p.clear()
+        hp = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
+        self._configure_header_tabs(hp)
+        self._add_running_head_content(hp, display_title)
+        self._strip_excess_header_paragraphs(header)
 
-            # Clear existing header content
-            for p in header.paragraphs:
-                p.clear()
+    def _configure_header_tabs(self, hp: Any) -> None:
+        """Set center and right tab stops on a header paragraph."""
+        p_pr = hp._p.find(qn("w:pPr"))
+        if p_pr is None:
+            p_pr = OxmlElement("w:pPr")
+            hp._p.insert(0, p_pr)
+        tabs = OxmlElement("w:tabs")
+        tab1 = OxmlElement("w:tab")
+        tab1.set(qn(_W_VAL), "center")
+        tab1.set(qn("w:pos"), "4680")
+        tabs.append(tab1)
+        tab2 = OxmlElement("w:tab")
+        tab2.set(qn(_W_VAL), "right")
+        tab2.set(qn("w:pos"), "9360")
+        tabs.append(tab2)
+        existing_tabs = p_pr.find(qn("w:tabs"))
+        if existing_tabs is not None:
+            p_pr.remove(existing_tabs)
+        p_pr.append(tabs)
 
-            # Get or create the header paragraph
-            hp = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
+    def _add_running_head_content(self, hp: Any, display_title: str) -> None:
+        """Add title, tabs, and PAGE field to header paragraph."""
+        title_run = hp.add_run(display_title)
+        title_run.font.name = DEFAULT_BODY_FONT
+        title_run.font.size = Pt(12)
+        hp.add_run("\t")
+        hp.add_run("\t")
+        self._add_page_field_runs(hp)
 
-            # Set tab stops for left and right content
-            p_pr = hp._p.find(qn("w:pPr"))
-            if p_pr is None:
-                p_pr = OxmlElement("w:pPr")
-                hp._p.insert(0, p_pr)
+    def _add_page_field_runs(self, hp: Any) -> None:
+        """Build PAGE field with begin/separate/end sequence."""
+        run_begin = hp.add_run()
+        fld_begin = OxmlElement(_FLD_CHAR)
+        fld_begin.set(qn(_FLD_CHAR_TYPE), "begin")
+        run_begin._r.append(fld_begin)
+        run_begin.font.name = DEFAULT_BODY_FONT
+        run_begin.font.size = Pt(12)
+        run_instr = hp.add_run()
+        instr = OxmlElement("w:instrText")
+        instr.set(qn("xml:space"), "preserve")
+        instr.text = " PAGE "
+        run_instr._r.append(instr)
+        run_instr.font.name = DEFAULT_BODY_FONT
+        run_instr.font.size = Pt(12)
+        run_sep = hp.add_run()
+        fld_sep = OxmlElement(_FLD_CHAR)
+        fld_sep.set(qn(_FLD_CHAR_TYPE), "separate")
+        run_sep._r.append(fld_sep)
+        run_sep.font.name = DEFAULT_BODY_FONT
+        run_sep.font.size = Pt(12)
+        run_num = hp.add_run("1")
+        run_num.font.name = DEFAULT_BODY_FONT
+        run_num.font.size = Pt(12)
+        run_end = hp.add_run()
+        fld_end = OxmlElement(_FLD_CHAR)
+        fld_end.set(qn(_FLD_CHAR_TYPE), "end")
+        run_end._r.append(fld_end)
+        run_end.font.name = DEFAULT_BODY_FONT
+        run_end.font.size = Pt(12)
 
-            # Add tab stop at center for left/right separation
-            tabs = OxmlElement("w:tabs")
-            # Tab at 3.25 inches (center of 6.5 inch text width) - right-aligned
-            tab1 = OxmlElement("w:tab")
-            tab1.set(qn("w:val"), "center")
-            tab1.set(qn("w:pos"), "4680")  # 3.25 inches in twips (4680)
-            tabs.append(tab1)
-            # Tab at right margin for page number
-            tab2 = OxmlElement("w:tab")
-            tab2.set(qn("w:val"), "right")
-            tab2.set(qn("w:pos"), "9360")  # 6.5 inches in twips
-            tabs.append(tab2)
-
-            # Remove existing tabs if any
-            existing_tabs = p_pr.find(qn("w:tabs"))
-            if existing_tabs is not None:
-                p_pr.remove(existing_tabs)
-            p_pr.append(tabs)
-
-            # Add the short title (left-aligned, uppercase)
-            title_run = hp.add_run(display_title)
-            title_run.font.name = DEFAULT_BODY_FONT
-            title_run.font.size = Pt(12)
-
-            # Add tab to center
-            hp.add_run("\t")
-
-            # Add another tab to right (for page number alignment)
-            hp.add_run("\t")
-
-            # Build PAGE field with begin/separate/end sequence
-            run_begin = hp.add_run()
-            fld_begin = OxmlElement(_FLD_CHAR)
-            fld_begin.set(qn(_FLD_CHAR_TYPE), "begin")
-            run_begin._r.append(fld_begin)
-            run_begin.font.name = DEFAULT_BODY_FONT
-            run_begin.font.size = Pt(12)
-
-            run_instr = hp.add_run()
-            instr = OxmlElement("w:instrText")
-            instr.set(qn("xml:space"), "preserve")
-            instr.text = " PAGE "
-            run_instr._r.append(instr)
-            run_instr.font.name = DEFAULT_BODY_FONT
-            run_instr.font.size = Pt(12)
-
-            run_sep = hp.add_run()
-            fld_sep = OxmlElement(_FLD_CHAR)
-            fld_sep.set(qn(_FLD_CHAR_TYPE), "separate")
-            run_sep._r.append(fld_sep)
-            run_sep.font.name = DEFAULT_BODY_FONT
-            run_sep.font.size = Pt(12)
-
-            run_num = hp.add_run("1")
-            run_num.font.name = DEFAULT_BODY_FONT
-            run_num.font.size = Pt(12)
-
-            run_end = hp.add_run()
-            fld_end = OxmlElement(_FLD_CHAR)
-            fld_end.set(qn(_FLD_CHAR_TYPE), "end")
-            run_end._r.append(fld_end)
-            run_end.font.name = DEFAULT_BODY_FONT
-            run_end.font.size = Pt(12)
-
-            # Strip excessive paragraphs
-            while len(header.paragraphs) > 1:
-                p_elem = header.paragraphs[-1]._element
-                p_elem.getparent().remove(p_elem)
+    def _strip_excess_header_paragraphs(self, header: Any) -> None:
+        """Remove extra paragraphs from a header."""
+        while len(header.paragraphs) > 1:
+            p_elem = header.paragraphs[-1]._element
+            p_elem.getparent().remove(p_elem)

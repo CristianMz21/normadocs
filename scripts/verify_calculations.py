@@ -184,9 +184,8 @@ def verify_aiu_iva_calculation(base: int) -> dict:
 
 def verify_markdown_calculations(md_path: str) -> dict:
     """Lee el markdown y verifica todos los cálculos."""
-
     with open(md_path, encoding="utf-8") as f:
-        content = f.read()
+        f.read()
 
     results = {
         "personal_costs": verify_personal_costs(),

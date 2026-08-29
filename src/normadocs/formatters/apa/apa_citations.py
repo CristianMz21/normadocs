@@ -54,6 +54,12 @@ _YEAR_MARKER = re.compile(r"\((?:s\.\s*f\.|n\.\s*d\.|\d{4})")
 
 _RETRIEVED_FROM = re.compile(r"\b(?:Recuperado\s+de|Retrieved\s+from)\s*:?\s*", re.IGNORECASE)
 
+_ET_AL = "et al."
+_ET_AL_DOT = "et al.,"
+_AND_SPACED = " y "
+_AND_REPLACED = " & "
+_REF_CONJ_REPLACED = "., & "
+
 
 class APACitationsHandler:
     """Handles in-text citations and the reference list per APA 7th Edition."""
@@ -68,15 +74,27 @@ class APACitationsHandler:
         self.doc = doc
         self.config = config if config is not None else {}
 
+    def get_config(self, *keys: str, default: Any = None) -> Any:
+        """Get nested config value via dot-notation keys."""
+        value: Any = self.config
+        for key in keys:
+            if isinstance(value, dict):
+                value = value.get(key)
+            else:
+                return default
+            if value is None:
+                return default
+        return value
+
     def _get_citations_config(self) -> dict[str, Any]:
         """Get citation configuration with APA defaults."""
-        default_config: dict[str, Any] = {"et_al_min_authors": 3, "ampersand": True}
-        return cast(dict[str, Any], self.config.get("citations", default_config))
+        default: dict[str, Any] = {"et_al_min_authors": 3, "ampersand": True}
+        return cast(dict[str, Any], self.get_config("citations", default=default))
 
     def _get_references_config(self) -> dict[str, Any]:
         """Get reference-list configuration with APA defaults."""
-        default_config: dict[str, Any] = {"sort": True, "italicize_journals": True}
-        return cast(dict[str, Any], self.config.get("references", default_config))
+        default: dict[str, Any] = {"sort": True, "italicize_journals": True}
+        return cast(dict[str, Any], self.get_config("references", default=default))
 
     @staticmethod
     def _author_count(segment: str) -> int:
@@ -127,7 +145,7 @@ class APACitationsHandler:
             authors = match.group(0).rsplit("(", 1)[0].strip()
             if self._author_count(authors) < min_authors:
                 return match.group(0)
-            return f"{match.group(1)} et al. ({match.group(2)})"
+            return f"{match.group(1)} {_ET_AL} ({match.group(2)})"
 
         def _parenthetical(match: re.Match[str]) -> str:
             segments = [s.strip() for s in match.group(1).split(";")]
@@ -143,14 +161,14 @@ class APACitationsHandler:
             return segment
         authors = segment[: year.start()].strip()
         year_text = year.group(1)
-        if "et al." in authors:
+        if _ET_AL in authors:
             return f"{authors}, {year_text}"
         count = self._author_count(authors)
         if count >= min_authors:
             first = re.split(r"\s*,\s*|\s+[y&]\s+", authors)[0].strip()
-            return f"{first} et al., {year_text}"
-        if count == 2 and " y " in authors:
-            return f"{authors.replace(' y ', ' & ')}, {year_text}"
+            return f"{first} {_ET_AL_DOT} {year_text}"
+        if count == 2 and _AND_SPACED in authors:
+            return f"{authors.replace(_AND_SPACED, _AND_REPLACED)}, {year_text}"
         return segment
 
     def format_references(self) -> None:
@@ -196,7 +214,7 @@ class APACitationsHandler:
         marker = _YEAR_MARKER.search(text)
         if marker is not None:
             head, tail = text[: marker.start()], text[marker.start() :]
-            head = _REF_CONJUNCTION.sub("., & ", head)
+            head = _REF_CONJUNCTION.sub(_REF_CONJ_REPLACED, head)
             text = head + tail
         run.text = text
 

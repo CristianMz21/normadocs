@@ -1,5 +1,7 @@
 """APA 7th Edition formatter - main class that delegates to handlers."""
 
+from __future__ import annotations
+
 from typing import Any, cast
 
 from docx import Document
@@ -284,6 +286,7 @@ class APADocxFormatter:
     # Keywords handler delegation
     def _format_keywords(self, meta: DocumentMetadata) -> None:
         """Delegate to APAKeywordsHandler to format keywords section."""
+        del meta
         self._keywords.format_keywords()
 
     def _add_page_break_before_introduction(self) -> None:

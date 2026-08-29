@@ -14,6 +14,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches
 
+from ...config import DEFAULT_BODY_FONT, W_VAL
+
 if TYPE_CHECKING:
     from docx.document import Document as DocType
     from docx.text.paragraph import Paragraph as ParagraphType
@@ -32,15 +34,27 @@ class APAEquationsHandler:
         self.doc = doc
         self.config = config if config is not None else {}
 
+    def get_config(self, *keys: str, default: Any = None) -> Any:
+        """Get nested config value via dot-notation keys."""
+        value: Any = self.config
+        for key in keys:
+            if isinstance(value, dict):
+                value = value.get(key)
+            else:
+                return default
+            if value is None:
+                return default
+        return value
+
     def _get_equations_config(self) -> dict[str, Any]:
         """Get equation configuration with APA defaults."""
-        default_config: dict[str, Any] = {
+        default: dict[str, Any] = {
             "numbering": True,
             "format": "({n})",
             "center_tab_inches": 3.25,
             "right_tab_inches": 6.5,
         }
-        return cast(dict[str, Any], self.config.get("equations", default_config))
+        return cast(dict[str, Any], self.get_config("equations", default=default))
 
     def format_equations(self) -> None:
         """Number and lay out display equations per APA 7.
@@ -113,11 +127,11 @@ class APAEquationsHandler:
         run = OxmlElement("w:r")
         rpr = OxmlElement("w:rPr")
         fonts = OxmlElement("w:rFonts")
-        fonts.set(qn("w:ascii"), "Times New Roman")
-        fonts.set(qn("w:hAnsi"), "Times New Roman")
+        fonts.set(qn("w:ascii"), DEFAULT_BODY_FONT)
+        fonts.set(qn("w:hAnsi"), DEFAULT_BODY_FONT)
         rpr.append(fonts)
         size = OxmlElement("w:sz")
-        size.set(qn("w:val"), "24")
+        size.set(qn(W_VAL), "24")
         rpr.append(size)
         run.append(rpr)
         run.append(OxmlElement("w:tab"))

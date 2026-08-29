@@ -17,6 +17,41 @@ if TYPE_CHECKING:
     from docx.text.run import Run as RunType
 
 
+_FOREIGN_WORDS = frozenset(
+    (
+        "Backend",
+        "Frontend",
+        "backend",
+        "frontend",
+        "PostgreSQL",
+        "Redis",
+        "Django",
+        "React",
+        "Next.js",
+        "JavaScript",
+        "Python",
+        "Celery",
+        "Docker",
+        "Wompi",
+        "WhatsApp",
+        "iPhone",
+        "iOS",
+        "DDoS",
+        "SSL",
+        "PCI DSS",
+        "RESTful",
+        "API",
+        "APIs",
+        "SQL",
+        "ORM",
+        "CDN",
+        "CEO",
+    )
+)
+
+_KEYWORDS_RE = re.compile(r"((?:Palabras\s+clave|Keywords):)(.*)", re.IGNORECASE)
+
+
 def _clear_paragraph(p: ParagraphType) -> ParagraphType:
     """Clear a paragraph's content while preserving formatting."""
     cast(Any, p._p).clear_content()
@@ -44,18 +79,29 @@ class APAKeywordsHandler:
         self.doc = doc
         self.config = config if config is not None else {}
 
+    def get_config(self, *keys: str, default: Any = None) -> Any:
+        """Get nested config value via dot-notation keys."""
+        value: Any = self.config
+        for key in keys:
+            if isinstance(value, dict):
+                value = value.get(key)
+            else:
+                return default
+            if value is None:
+                return default
+        return value
+
     def _get_keywords_config(self) -> dict[str, Any]:
         """Get keywords configuration from config with defaults.
 
         Returns:
             Keywords configuration dictionary.
         """
-        default_config: dict[str, Any] = {
-            "caption_prefix": "Figure",
-            "title_above": True,
-            "nota_prefix": _NOTA_PREFIX,
+        default: dict[str, Any] = {
+            "keywords_label": "Keywords",
+            "keywords_prefix": _NOTA_PREFIX,
         }
-        return cast(dict[str, Any], self.config.get("figures", default_config))
+        return cast(dict[str, Any], self.get_config("keywords", default=default))
 
     def _apply_font_style(self, run: RunType, italic: bool | None = None) -> None:
         """Apply font style to a run (helper for this handler)."""
@@ -72,29 +118,38 @@ class APAKeywordsHandler:
         - Left indent of 0.5 inches
         - "Keywords:" label in italics
         """
-        found_kw = False
-
-        for p in self.doc.paragraphs:
-            text_lower = p.text.lower()
-            if "palabras clave" in text_lower or "keywords" in text_lower:
-                found_kw = True
-
-                full = p.text.strip()
-                match = re.search(r"((?:Palabras\s+clave|Keywords):)(.*)", full, re.IGNORECASE)
-                if match:
-                    label, content = match.groups()
-                    _clear_paragraph(p)
-                    p.paragraph_format.left_indent = Inches(0.5)
-                    p.paragraph_format.first_line_indent = Inches(0)
-                    r1 = p.add_run(label + " ")
-                    r1.italic = True
-                    self._apply_font_style(r1)
-                    r2 = p.add_run(content.strip())
-                    self._apply_font_style(r2)
-                break
-
+        found_kw = self._format_keywords_paragraphs()
         if found_kw:
             self._add_page_break_before_introduction()
+
+    def _format_keywords_paragraphs(self) -> bool:
+        """Search and format the keywords paragraph, return whether found."""
+        for p in self.doc.paragraphs:
+            if self._is_keywords_paragraph(p):
+                self._format_single_keywords_paragraph(p)
+                return True
+        return False
+
+    def _is_keywords_paragraph(self, p: ParagraphType) -> bool:
+        """Return True if paragraph contains keywords marker."""
+        text_lower = p.text.lower()
+        return "palabras clave" in text_lower or "keywords" in text_lower
+
+    def _format_single_keywords_paragraph(self, p: ParagraphType) -> None:
+        """Format a single keywords paragraph."""
+        full = p.text.strip()
+        match = _KEYWORDS_RE.search(full)
+        if match is None:
+            return
+        label, content = match.groups()
+        _clear_paragraph(p)
+        p.paragraph_format.left_indent = Inches(0.5)
+        p.paragraph_format.first_line_indent = Inches(0)
+        r1 = p.add_run(label + " ")
+        r1.italic = True
+        self._apply_font_style(r1)
+        r2 = p.add_run(content.strip())
+        self._apply_font_style(r2)
 
     def _add_page_break_before_introduction(self) -> None:
         """Add page break before the Introduction section.
@@ -127,34 +182,34 @@ class APAKeywordsHandler:
         Finds paragraphs starting with 'Nota.' and splits the first run
         so that 'Nota.' is italic and the rest is regular.
         """
+        for p in self.doc.paragraphs:
+            if not p.text.strip().startswith(_NOTA_PREFIX):
+                continue
+            self._format_single_nota_paragraph(p)
+
+    def _format_single_nota_paragraph(self, p: ParagraphType) -> None:
+        """Rebuild a single Nota paragraph with italic prefix."""
         from docx.enum.text import WD_ALIGN_PARAGRAPH
         from docx.shared import Inches
 
-        for p in self.doc.paragraphs:
-            text = p.text.strip()
-            if not text.startswith(_NOTA_PREFIX):
-                continue
+        full_text = p.text
+        self._clear_runs(p)
+        nota_run = p.add_run(f"{_NOTA_PREFIX} ")
+        nota_run.italic = True
+        self._apply_font_style(nota_run, italic=True)
+        rest = full_text[len(_NOTA_PREFIX) :].strip()
+        if rest:
+            rest_run = p.add_run(rest)
+            self._apply_font_style(rest_run)
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p.paragraph_format.first_line_indent = Inches(0)
 
-            # Get full text and rebuild with italic "Nota."
-            full_text = p.text
-            # Clear all runs
-            for run in list(p.runs):
-                run._element.getparent().remove(run._element)
-
-            # Add "Nota. " as italic
-            nota_run = p.add_run("Nota. ")
-            nota_run.italic = True
-            self._apply_font_style(nota_run, italic=True)
-
-            # Add the rest as regular text
-            rest = full_text[len(_NOTA_PREFIX) :].strip()
-            if rest:
-                rest_run = p.add_run(rest)
-                self._apply_font_style(rest_run)
-
-            # Ensure left alignment and no indent for notes
-            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            p.paragraph_format.first_line_indent = Inches(0)
+    def _clear_runs(self, p: ParagraphType) -> None:
+        """Remove all runs from a paragraph."""
+        for run in tuple(p.runs):
+            parent = run._element.getparent()
+            if parent is not None:
+                parent.remove(run._element)
 
     def apply_foreign_word_italics(self) -> None:
         """Apply italics to foreign words per APA 7 (Backend, Frontend, etc.).
@@ -162,48 +217,39 @@ class APAKeywordsHandler:
         APA 7 requires that foreign words used as nouns be italicized on first use.
         This method searches for these terms in table cells and applies italics.
         """
-        foreign_words = [
-            "Backend",
-            "Frontend",
-            "backend",
-            "frontend",
-            "PostgreSQL",
-            "Redis",
-            "Django",
-            "React",
-            "Next.js",
-            "JavaScript",
-            "Python",
-            "Celery",
-            "Docker",
-            "Wompi",
-            "WhatsApp",
-            "iPhone",
-            "iOS",
-            "DDoS",
-            "SSL",
-            "PCI DSS",
-            "RESTful",
-            "API",
-            "APIs",
-            "SQL",
-            "ORM",
-            "CDN",
-            "CEO",
-        ]
-
         for table in self.doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    for p in cell.paragraphs:
-                        runs = list(p.runs)
-                        for run in runs:
-                            if not run.text:
-                                continue
-                            text = run.text
-                            has_foreign = any(fw in text for fw in foreign_words)
-                            if not has_foreign:
-                                continue
-                            if run.italic:
-                                continue
-                            run.italic = True
+            self._process_table_for_foreign(table)
+
+    def _process_table_for_foreign(self, table: Any) -> None:
+        """Process a single table for foreign words."""
+        for row in table.rows:
+            self._process_row_for_foreign(row)
+
+    def _process_row_for_foreign(self, row: Any) -> None:
+        """Process a single row."""
+        for cell in row.cells:
+            self._process_cell_for_foreign(cell)
+
+    def _process_cell_for_foreign(self, cell: Any) -> None:
+        """Process a single cell."""
+        for p in cell.paragraphs:
+            self._process_paragraph_for_foreign(p)
+
+    def _process_paragraph_for_foreign(self, p: ParagraphType) -> None:
+        """Process paragraph runs for foreign words."""
+        for run in tuple(p.runs):
+            self._process_run_for_foreign(run)
+
+    def _process_run_for_foreign(self, run: RunType) -> None:
+        """Apply italic to a run if it contains foreign words."""
+        if not run.text:
+            return
+        if run.italic:
+            return
+        if not self._contains_foreign_word(run.text):
+            return
+        run.italic = True
+
+    def _contains_foreign_word(self, text: str) -> bool:
+        """Return True if text contains any foreign word."""
+        return any(fw in text for fw in _FOREIGN_WORDS)
