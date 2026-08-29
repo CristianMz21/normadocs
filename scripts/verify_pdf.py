@@ -164,7 +164,7 @@ class APA7Verifier:
         for page_num, text in self.pages_text.items():
             # Buscar inicio del cuerpo
             if re.search(
-                r"^\s*1\.\s*DESCRIPCIÓN|INTRODUCCIÓN|Este documento",
+                r"^\s*(?:1\.\s*DESCRIPCIÓN|INTRODUCCIÓN|Este documento)",
                 text,
                 re.MULTILINE | re.IGNORECASE,
             ):
@@ -297,8 +297,9 @@ class APA7Verifier:
             self.passed.append(f"Citas con 'et al.' detectadas: {len(et_al_cites)}")
 
     def verify_font_indicators(self):
-        """Verifica indicadores de formato de fuente (no se puede verificar directamente en PDF extraído).
+        """Verifica indicadores de formato de fuente.
 
+        No se puede verificar directamente en PDF extraído.
         Este método es una marca de posición ya que PDF extrae solo texto.
         """
         # Verificar que no haya texto RAW de Markdown

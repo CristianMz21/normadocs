@@ -209,16 +209,12 @@ def verify_markdown_calculations(md_path: str) -> dict:
     expected_aiu = 23992500
     expected_iva = 2604900
     expected_total = 95147400
-
-    print(
-        f"  ESPERADO AIU: ${expected_aiu:,} -> {'✓' if aiu_mack['aiu'] == expected_aiu else '✗ ERROR'}"
-    )
-    print(
-        f"  ESPERADO IVA: ${expected_iva:,} -> {'✓' if aiu_mack['iva'] == expected_iva else '✗ ERROR'}"
-    )
-    print(
-        f"  ESPERADO TOTAL: ${expected_total:,} -> {'✓' if aiu_mack['total_final'] == expected_total else '✗ ERROR'}"
-    )
+    aiu_ok = "✓" if aiu_mack["aiu"] == expected_aiu else "✗ ERROR"
+    iva_ok = "✓" if aiu_mack["iva"] == expected_iva else "✗ ERROR"
+    total_ok = "✓" if aiu_mack["total_final"] == expected_total else "✗ ERROR"
+    print(f"  ESPERADO AIU: ${expected_aiu:,} -> {aiu_ok}")
+    print(f"  ESPERADO IVA: ${expected_iva:,} -> {iva_ok}")
+    print(f"  ESPERADO TOTAL: ${expected_total:,} -> {total_ok}")
 
     results["aiu_calculation"] = {
         "calculated": aiu_mack,
@@ -254,14 +250,15 @@ def main():
     all_passed = True
 
     print("\nCostos de Personal:")
-    print(
-        f"  {'✓' if results['personal_costs']['passed'] else '✗'} Subtotal: ${results['personal_costs']['expected']:,}"
-    )
+    pers_ok = "✓" if results["personal_costs"]["passed"] else "✗"
+    pers_val = results["personal_costs"]["expected"]
+    print(f"  {pers_ok} Subtotal: ${pers_val:,}")
 
     print("\nCostos Directos:")
-    print(
-        f"  {'✓' if results['direct_costs']['passed'] else '✗'} Total: ${results['direct_costs']['calculated']:,} (esperado: ${results['direct_costs']['expected']:,})"
-    )
+    direct_ok = "✓" if results["direct_costs"]["passed"] else "✗"
+    direct_calc = results["direct_costs"]["calculated"]
+    direct_exp = results["direct_costs"]["expected"]
+    print(f"  {direct_ok} Total: ${direct_calc:,} (esperado: ${direct_exp:,})")
 
     print("\nTabla Comparativa:")
     for provider, data in [
@@ -269,23 +266,19 @@ def main():
         ("TecnoShop", results["comparison"]["tecnoshop"]),
         ("DevSoft", results["comparison"]["devsoft"]),
     ]:
-        print(
-            f"  {provider}: Subtotal=${data['subtotal']:,}, Total=${data['total']:,} -> {'✓' if data['passed'] else '✗'}"
-        )
+        ok = "✓" if data["passed"] else "✗"
+        print(f"  {provider}: Subtotal=${data['subtotal']:,}, Total=${data['total']:,} -> {ok}")
         if not data["passed"]:
             all_passed = False
 
     print("\nCálculo AIU/IVA:")
     aiu = results["aiu_calculation"]
-    print(
-        f"  AIU: ${aiu['calculated']['aiu']:,} -> {'✓' if aiu['calculated']['aiu'] == aiu['expected_aiu'] else '✗'}"
-    )
-    print(
-        f"  IVA: ${aiu['calculated']['iva']:,} -> {'✓' if aiu['calculated']['iva'] == aiu['expected_iva'] else '✗'}"
-    )
-    print(
-        f"  Total: ${aiu['calculated']['total_final']:,} -> {'✓' if aiu['calculated']['total_final'] == aiu['expected_total'] else '✗'}"
-    )
+    aiu2_ok = "✓" if aiu["calculated"]["aiu"] == aiu["expected_aiu"] else "✗"
+    iva2_ok = "✓" if aiu["calculated"]["iva"] == aiu["expected_iva"] else "✗"
+    tot2_ok = "✓" if aiu["calculated"]["total_final"] == aiu["expected_total"] else "✗"
+    print(f"  AIU: ${aiu['calculated']['aiu']:,} -> {aiu2_ok}")
+    print(f"  IVA: ${aiu['calculated']['iva']:,} -> {iva2_ok}")
+    print(f"  Total: ${aiu['calculated']['total_final']:,} -> {tot2_ok}")
 
     if not aiu["passed"]:
         all_passed = False
