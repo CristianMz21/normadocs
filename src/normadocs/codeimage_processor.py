@@ -15,6 +15,8 @@ from typing import NamedTuple
 
 logger = logging.getLogger("normadocs")
 
+_CODE_MARKER = "{code}"
+
 
 class CodeImageResult(NamedTuple):
     """Result of processing a single code block."""
@@ -55,6 +57,24 @@ class CodeImageProcessor:
     DEFAULT_TEXT_COLOR = "#2e3436"
 
     @staticmethod
+    def _is_valid_lang(lang_part: str) -> bool:
+        return not lang_part or all(c.isalnum() or c == "_" for c in lang_part)
+
+    @staticmethod
+    def _extract_opening_info(opening: str) -> tuple[str, str] | None:
+        inner = opening[3:].strip()
+        if _CODE_MARKER not in inner:
+            return None
+        code_idx = inner.find(_CODE_MARKER)
+        lang_part = inner[:code_idx].strip()
+        if not CodeImageProcessor._is_valid_lang(lang_part):
+            return None
+        suffix = inner[code_idx + len(_CODE_MARKER) :].strip()
+        if suffix != "":
+            return None
+        return lang_part, inner
+
+    @staticmethod
     def _find_code_blocks(text: str) -> list[tuple[int, int, str, str, str]]:
         """Manual linear scan for ```lang {code} blocks (replaces S8786)."""
         result: list[tuple[int, int, str, str, str]] = []
@@ -68,20 +88,13 @@ class CodeImageProcessor:
             if line_end == -1:
                 break
             opening = text[start:line_end]
-            inner = opening[3:].strip()
-            if "{code}" not in inner:
-                pos = start + 3
+            info = CodeImageProcessor._extract_opening_info(opening)
+            if info is None:
+                # distinguish missing marker vs invalid lang/suffix
+                inner = opening[3:].strip()
+                pos = start + 3 if _CODE_MARKER not in inner else line_end + 1
                 continue
-            code_idx = inner.find("{code}")
-            lang_part = inner[:code_idx].strip()
-            if lang_part and not all(c.isalnum() or c == "_" for c in lang_part):
-                pos = line_end + 1
-                continue
-            suffix = inner[code_idx + len("{code}") :].strip()
-            if suffix != "":
-                pos = line_end + 1
-                continue
-            lang = lang_part
+            lang = info[0]
             content_start = line_end + 1
             close = text.find("\n```", content_start)
             if close == -1:
