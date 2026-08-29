@@ -20,6 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  PIP_CACHE_DIR: ~/.cache/pip
   UV_SYSTEM_PYTHON: 1
 
 jobs:
@@ -49,9 +50,7 @@ jobs:
           cache-dependency-glob: "docs/requirements.lock"
 
       - name: Install documentation dependencies (locked)
-        run: >-
-          uv pip install --only-binary :all:
-          -r docs/requirements.lock --python python3.13
+        run: pip install --no-build --only-binary :all: --require-hashes -r docs/requirements.lock
 
       - name: Build documentation
         run: mkdocs build --strict
