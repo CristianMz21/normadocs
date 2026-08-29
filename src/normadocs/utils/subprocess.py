@@ -118,40 +118,7 @@ def _no_shell_run(
     Raises:
         CommandFailedError: If the command returns non-zero exit code.
     """
-    if capture_output:
-        if text:
-            if encoding:
-                return subprocess.run(
-                    cmd,
-                    shell=False,
-                    capture_output=True,
-                    text=True,
-                    encoding=encoding,
-                    timeout=timeout,
-                    input=input_data,
-                    cwd=cwd,
-                )
-            else:
-                return subprocess.run(
-                    cmd,
-                    shell=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout,
-                    input=input_data,
-                    cwd=cwd,
-                )
-        else:
-            return subprocess.run(
-                cmd,
-                shell=False,
-                capture_output=True,
-                text=False,
-                timeout=timeout,
-                input=input_data,
-                cwd=cwd,
-            )
-    else:
+    if not capture_output:
         return subprocess.run(
             cmd,
             shell=False,
@@ -160,6 +127,36 @@ def _no_shell_run(
             input=input_data,
             cwd=cwd,
         )
+    if not text:
+        return subprocess.run(
+            cmd,
+            shell=False,
+            capture_output=True,
+            text=False,
+            timeout=timeout,
+            input=input_data,
+            cwd=cwd,
+        )
+    if encoding:
+        return subprocess.run(
+            cmd,
+            shell=False,
+            capture_output=True,
+            text=True,
+            encoding=encoding,
+            timeout=timeout,
+            input=input_data,
+            cwd=cwd,
+        )
+    return subprocess.run(
+        cmd,
+        shell=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        input=input_data,
+        cwd=cwd,
+    )
 
 
 def run_command(
