@@ -30,22 +30,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set working directory
 WORKDIR /app
 
-# uv binary from a pinned upstream release
-COPY --from=ghcr.io/astral-sh/uv:0.9.16 /uv /uvx /bin/
-
-# Copy only what the locked install needs; keeps local artifacts out
-COPY pyproject.toml uv.lock README.md LICENSE ./
+# Copy hashed lock and project metadata; keep uv.lock in repo for local dev only
+COPY requirements-ci.txt pyproject.toml README.md LICENSE ./
 COPY src ./src
 
-# Install the project and its runtime dependencies, pinned by uv.lock.
-# Runs as a non-root user: the CLI writes its output into the CWD.
-ENV UV_PYTHON_DOWNLOADS=never
-RUN useradd --create-home --uid 1000 appuser \
-    && uv sync --frozen --no-dev --python /usr/local/bin/python3 \
+# Install runtime dependencies with hash verification (CWE-829/CWE-506).
+# Uses plain pip with --require-hashes so Sonar S8541/S8544 is clean.
+# Project code is executed via PYTHONPATH + wrapper script to avoid
+# a second install without hashes.
+ENV PYTHONPATH=/app/src
+RUN pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt \
+    && useradd --create-home --uid 1000 appuser \
     && mkdir -p /app/ExportDocs \
-    && chown -R appuser:appuser /app
+    && chown -R appuser:appuser /app \
+    && printf '#!/bin/sh\nexec python -m normadocs "$@"\n' > /usr/local/bin/normadocs \
+    && chmod +x /usr/local/bin/normadocs
 
-ENV PATH="/app/.venv/bin:$PATH"
 USER appuser
 
 # Default command: Show help
