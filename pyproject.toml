@@ -162,3 +162,4 @@ exclude_lines = [
 # ── Bandit ────────────────────────────────────────────────────────────
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "utils"]
+# trigger CI
