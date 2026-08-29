@@ -13,7 +13,6 @@ PAGEBREAK_OPENXML = """
   </w:r>
 </w:p>
 ```
-
 """
 
 # Default output directory
@@ -24,3 +23,14 @@ DEFAULT_BODY_FONT = "Times New Roman"
 
 # Metadata field order for extraction
 METADATA_FIELDS = ["author", "program", "ficha", "institution", "center", "instructor", "date"]
+
+# Centralized OpenXML attribute constants (S1192)
+W_VAL = "w:val"
+W_TYPE = "w:type"
+W_SPACING = "w:spacing"
+
+# Centralized style name constants (S1192)
+HEADING_1_STYLE = "Heading 1"
+HEADING_2_STYLE = "Heading 2"
+HEADING_3_STYLE = "Heading 3"
+NORMAL_STYLE = "Normal"
