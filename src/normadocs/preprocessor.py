@@ -375,6 +375,33 @@ class MarkdownPreprocessor:
 
         return result
 
+    _TAG_RE = re.compile(r"\\tag\{[^}]*\}")
+
+    @staticmethod
+    def _is_math_delim(stripped: str) -> bool:
+        return stripped == "$$"
+
+    @staticmethod
+    def _is_single_line_math(stripped: str) -> bool:
+        return stripped.startswith("$$") and stripped.endswith("$$") and len(stripped) > 4
+
+    @staticmethod
+    def _is_code_fence(stripped: str) -> bool:
+        return stripped.startswith("```")
+
+    @staticmethod
+    def _flush_buffer(buffer: list[str], result: list[str]) -> None:
+        if buffer:
+            result.append(" ".join(buffer))
+            buffer.clear()
+
+    @staticmethod
+    def _normalize_hard_break(line: str) -> str:
+        normalized = line.rstrip("\r").rstrip(" \t")
+        if not normalized.endswith("\\"):
+            normalized += "\\"
+        return normalized
+
     @staticmethod
     def _join_wrapped_lines(lines: list[str]) -> list[str]:
         """
@@ -393,55 +420,39 @@ class MarkdownPreprocessor:
         buffer: list[str] = []
         in_code_block = False
         in_math_block = False
-        tag_re = re.compile(r"\\tag\{[^}]*\}")
 
         for line in lines:
             stripped = line.strip().replace("\r", "")
-            is_delim = stripped == "$$"
-            single_line_math = (
-                stripped.startswith("$$") and stripped.endswith("$$") and len(stripped) > 4
-            )
+            is_delim = MarkdownPreprocessor._is_math_delim(stripped)
+            single_line_math = MarkdownPreprocessor._is_single_line_math(stripped)
             opens_math = is_delim and not in_math_block
 
-            if stripped.startswith("```"):
+            if MarkdownPreprocessor._is_code_fence(stripped):
                 in_code_block = not in_code_block
             elif is_delim:
                 in_math_block = not in_math_block
             elif not in_math_block and stripped.startswith("$$"):
-                # opener carrying content on the same line: "$$ x = 1"
                 in_math_block = True
 
             if is_delim or in_math_block or single_line_math:
                 if (opens_math or single_line_math) and buffer:
-                    result.append(" ".join(buffer))
-                    buffer = []
-                result.append(tag_re.sub("", line))
+                    MarkdownPreprocessor._flush_buffer(buffer, result)
+                result.append(MarkdownPreprocessor._TAG_RE.sub("", line))
                 continue
 
             if in_code_block or MarkdownPreprocessor._is_special_line(stripped):
-                # Flush any buffered continuation text
-                if buffer:
-                    result.append(" ".join(buffer))
-                    buffer = []
+                MarkdownPreprocessor._flush_buffer(buffer, result)
                 result.append(line)
-            elif MarkdownPreprocessor._has_hard_line_break(line):
-                # Intentional break: flush the paragraph so far and keep this
-                # line as its own physical line ending with a backslash
-                if buffer:
-                    result.append(" ".join(buffer))
-                    buffer = []
-                normalized = line.rstrip("\r").rstrip(" \t")
-                if not normalized.endswith("\\"):
-                    normalized += "\\"
-                result.append(normalized)
-            else:
-                # This is a continuation line — accumulate it
-                buffer.append(stripped)
+                continue
 
-        # Flush remaining
-        if buffer:
-            result.append(" ".join(buffer))
+            if MarkdownPreprocessor._has_hard_line_break(line):
+                MarkdownPreprocessor._flush_buffer(buffer, result)
+                result.append(MarkdownPreprocessor._normalize_hard_break(line))
+                continue
 
+            buffer.append(stripped)
+
+        MarkdownPreprocessor._flush_buffer(buffer, result)
         return result
 
     def process(self, text: str) -> tuple[str, DocumentMetadata]:
