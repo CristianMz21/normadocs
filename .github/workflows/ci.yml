@@ -40,7 +40,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: uv sync --no-build --frozen --extra dev --extra pdf --extra codeimage --python 3.13 # NOSONAR
+        run: uv sync --frozen --extra dev --extra pdf --extra codeimage --python 3.13 # NOSONAR
 
       - name: Lint with Ruff (no noqa allowed)
         run: uv run --no-build ruff check src/ tests/ --output-format=github --no-cache # NOSONAR
@@ -79,7 +79,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: uv sync --no-build --frozen --extra dev --extra static --python 3.13 # NOSONAR
+        run: uv sync --frozen --extra dev --extra static --python 3.13 # NOSONAR
 
       - name: Run Bandit
         run: uv run --no-build bandit -r src/ -c pyproject.toml # NOSONAR
@@ -135,7 +135,7 @@ jobs:
           sudo apt-get install -y pandoc
 
       - name: Install dependencies (locked)
-        run: uv sync --no-build --frozen --extra dev --python "${{ matrix.python-version }}" # NOSONAR
+        run: uv sync --frozen --extra dev --python "${{ matrix.python-version }}" # NOSONAR
 
       - name: Run tests with coverage (warnings as errors)
         run: >- # NOSONAR
@@ -180,7 +180,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: uv sync --no-build --frozen --extra dev --python 3.13 # NOSONAR
+        run: uv sync --frozen --extra dev --python 3.13 # NOSONAR
 
       - name: Build sdist and wheel
         run: uv run --no-build python -m build # NOSONAR
