@@ -9,6 +9,16 @@ import yaml
 from .config import METADATA_FIELDS, PAGEBREAK_OPENXML
 from .models import DocumentMetadata
 
+_OUTER_RE = re.compile(r"^\s*-{20,}\s*$")
+_INNER_RE = re.compile(r"^\s*-{3,}(\s+-{3,})+\s*$")
+_TOC_SUFFIX_RE = re.compile(r"\.{3,}\s*\d+\s*$")
+_NUMBERED_TOC_PREFIX_RE = re.compile(r"^\s*\d+\.\s+")
+_GRID_TABLE_RE = re.compile(r"^\+[-=+]+\+$")
+_ORDERED_LIST_RE = re.compile(r"^\d+\.\s")
+_BOX_DRAWING_RE = re.compile(r"^[┌┐└┘├┤┬┴┼─│]+")
+_FENCE_RE = re.compile(r"^```\s*\{?math\}?\s*$")
+_HEADING_PREFIX = "#"
+
 
 class MarkdownPreprocessor:
     """Handles the preparation of Markdown content for APA conversion."""
@@ -23,7 +33,6 @@ class MarkdownPreprocessor:
         if not lines or lines[0].strip() != "---":
             return {}, -1
 
-        # Find the closing ---
         end_line = -1
         for i in range(1, len(lines)):
             if lines[i].strip() == "---":
@@ -33,7 +42,6 @@ class MarkdownPreprocessor:
         if end_line == -1:
             return {}, -1
 
-        # Parse YAML content (lines between the --- delimiters)
         yaml_content = "\n".join(lines[1:end_line])
         try:
             metadata = yaml.safe_load(yaml_content) or {}
@@ -49,11 +57,9 @@ class MarkdownPreprocessor:
         """Extract title, author, etc. from YAML frontmatter or fallback parsing."""
         data: dict[str, str] = {}
 
-        # Try to extract YAML frontmatter first
         yaml_data, _yaml_end = MarkdownPreprocessor.extract_yaml_frontmatter(lines)
 
         if yaml_data:
-            # Use YAML frontmatter data directly
             for key in [
                 "title",
                 "subtitle",
@@ -74,8 +80,6 @@ class MarkdownPreprocessor:
 
             return DocumentMetadata.from_dict(data)
 
-        # Fallback: legacy parsing for documents without YAML frontmatter
-        # Lines 0-1: Title
         title_parts = []
         for i in range(2):
             if i < len(lines):
@@ -83,18 +87,16 @@ class MarkdownPreprocessor:
 
         data["title"] = " ".join(filter(None, title_parts)).strip()
 
-        # Remaining metadata
         idx = 0
-        # Check lines 2-15 for other metadata, skipping empty lines and stopping at ---
         for i in range(2, 16):
-            if i < len(lines):
-                val = lines[i].strip().replace("\r", "")
-                # Stop at --- or # heading (start of content)
-                if val in ("---", "--") or val.startswith("#"):
-                    break
-                if val and idx < len(METADATA_FIELDS):
-                    data[METADATA_FIELDS[idx]] = val
-                    idx += 1
+            if i >= len(lines):
+                break
+            val = lines[i].strip().replace("\r", "")
+            if val in ("---", "--") or val.startswith("#"):
+                break
+            if val and idx < len(METADATA_FIELDS):
+                data[METADATA_FIELDS[idx]] = val
+                idx += 1
 
         return DocumentMetadata.from_dict(data)
 
@@ -106,62 +108,112 @@ class MarkdownPreprocessor:
         """
         parts: list[str] = []
 
-        # Use raw OpenXML for the title page to prevent Pandoc from interpreting content
-        # as title metadata. We use a centered div but avoid using Pandoc's title features.
         parts.append('<div style="text-align:center">\n')
 
-        # Title - use HTML entity encoding to prevent Pandoc extraction
         title = meta.title or "Sin Título"
-        # Replace # with HTML entity to prevent Pandoc from treating as heading
         title_encoded = title.replace("#", "&#35;")
         parts.append(f"**{title_encoded}**\n")
-        parts.append("")  # Blank line between title and author (APA)
-        parts.append("&nbsp;\n")  # Extra visual spacing
+        parts.append("")
+        parts.append("&nbsp;\n")
         parts.append("")
 
-        # Metadata fields - each wrapped to prevent interpretation
         fields = ["author", "program", "ficha", "institution", "center", "instructor", "date"]
         for field in fields:
             val = getattr(meta, field, None)
             if val:
-                # Wrap in HTML comment-like structure to prevent extraction
                 parts.append(f"<!-- {field} --> {val}\n")
 
         parts.append("\n</div>\n\n")
 
-        # Page break after title page
         parts.append(PAGEBREAK_OPENXML)
 
         return "\n".join(parts)
 
     @staticmethod
+    def _is_toc_like_line(stripped: str) -> bool:
+        """Linear two-pass TOC check (S5852)."""
+        if "..." not in stripped:
+            return False
+        return bool(_TOC_SUFFIX_RE.search(stripped))
+
+    @staticmethod
+    def _is_numbered_toc_line(stripped: str) -> bool:
+        """Check numbered TOC line with linear regexes."""
+        if not _NUMBERED_TOC_PREFIX_RE.match(stripped):
+            return False
+        if "..." not in stripped:
+            return False
+        return bool(_TOC_SUFFIX_RE.search(stripped))
+
+    @staticmethod
     def _is_special_line(stripped: str) -> bool:
         """Return True if this line is a Markdown structural element that must NOT be joined."""
         if not stripped:
-            return True  # blank line = paragraph separator
+            return True
         if stripped.startswith(("#", "```", "---", "===", ">", "![", "![")):
             return True
         if stripped.startswith(("-", "*", "+")) and len(stripped) > 1 and stripped[1] == " ":
-            return True  # unordered list
-        if re.match(r"^\d+\.\s", stripped):
-            return True  # ordered list
-        # Grid table borders: +---+---+
-        if re.match(r"^\+[-=+]+\+$", stripped):
             return True
-        # Pipe table rows: | ... |
+        if _ORDERED_LIST_RE.match(stripped):
+            return True
+        if _GRID_TABLE_RE.match(stripped):
+            return True
         if stripped.startswith("|") and stripped.endswith("|"):
             return True
-        # Pandoc grid table text rows that start with |
         if stripped.startswith("|"):
             return True
-        # Raw OpenXML / HTML blocks
         if stripped.startswith(("<", "```{")):
             return True
-        # ASCII art / box-drawing characters at start of line
-        if re.match(r"^[┌┐└┘├┤┬┴┼─│]+", stripped):
+        if _BOX_DRAWING_RE.match(stripped):
             return True
-        # TOC-like entry: text followed by dots and a page number
-        return bool(re.match(r"^.*\.{3,}\s*\d+\s*$", stripped))
+        return MarkdownPreprocessor._is_toc_like_line(stripped)
+
+    @staticmethod
+    def _is_outer_separator(line: str) -> bool:
+        return bool(_OUTER_RE.match(line.strip().replace("\r", "")))
+
+    @staticmethod
+    def _is_inner_separator(line: str) -> bool:
+        return bool(_INNER_RE.match(line.strip().replace("\r", "")))
+
+    @staticmethod
+    def _detect_table_start(stripped: str) -> tuple[bool, bool]:
+        """Return (is_outer, is_inner) for table start detection."""
+        is_outer = bool(_OUTER_RE.match(stripped))
+        is_inner = False
+        if not is_outer:
+            is_inner = bool(_INNER_RE.match(stripped))
+        return is_outer, is_inner
+
+    @staticmethod
+    def _collect_table_block(
+        lines: list[str], start_idx: int, is_outer: bool, is_inner: bool
+    ) -> tuple[list[str], bool, int]:
+        """Collect lines until matching end separator (same type)."""
+        table_lines = [lines[start_idx]]
+        i = start_idx + 1
+        end_found = False
+        while i < len(lines):
+            s = lines[i].strip().replace("\r", "")
+            table_lines.append(lines[i])
+            is_end = (
+                (is_outer and bool(_OUTER_RE.match(s))) or (is_inner and bool(_INNER_RE.match(s)))
+            ) and len(table_lines) > 2
+            if is_end:
+                end_found = True
+                i += 1
+                break
+            i += 1
+        return table_lines, end_found, i
+
+    @staticmethod
+    def _find_inner_separator(table_lines: list[str]) -> str | None:
+        """Find inner separator line inside table block."""
+        for tl in table_lines[1:-1]:
+            ts = tl.strip()
+            if _INNER_RE.match(ts):
+                return tl
+        return None
 
     @staticmethod
     def _convert_multiline_tables(lines: list[str]) -> list[str]:
@@ -170,62 +222,34 @@ class MarkdownPreprocessor:
         Detects outer separators (single continuous dashes) and inner separators
         (dash groups separated by spaces).
         """
-        # Pattern for a long continuous dash line (outer separator)
-        outer_re = re.compile(r"^\s*-{20,}\s*$")
-        # Pattern for inner separator with column groups
-        inner_re = re.compile(r"^\s*-{3,}(\s+-{3,})+\s*$")
-
         result: list[str] = []
         i = 0
         while i < len(lines):
             stripped = lines[i].strip().replace("\r", "")
+            is_outer, is_inner = MarkdownPreprocessor._detect_table_start(stripped)
 
-            # Determine if this is a table start (outer or inner)
-            started_with_outer = outer_re.match(stripped)
-            started_with_inner = inner_re.match(stripped) if not started_with_outer else False
-
-            if started_with_outer or started_with_inner:
-                # Found potential start of a multiline table
-                table_lines = [lines[i]]
-                i += 1
-
-                # Collect all lines until the matching end separator (SAME type)
-                end_found = False
-                while i < len(lines):
-                    s = lines[i].strip().replace("\r", "")
-                    table_lines.append(lines[i])
-                    # End must match the SAME separator type as start
-                    is_end = (
-                        (started_with_outer and outer_re.match(s))
-                        or (started_with_inner and inner_re.match(s))
-                    ) and len(table_lines) > 2
-                    if is_end:
-                        end_found = True
-                        i += 1
-                        break
-                    i += 1
+            if is_outer or is_inner:
+                table_lines, end_found, next_i = MarkdownPreprocessor._collect_table_block(
+                    lines, i, is_outer, is_inner
+                )
 
                 if not end_found or len(table_lines) < 4:
                     result.extend(table_lines)
+                    i = next_i
                     continue
 
-                # Find the inner separator to determine column boundaries
-                inner_sep_line = None
-                for tl in table_lines[1:-1]:
-                    ts = tl.strip()
-                    if inner_re.match(ts):
-                        inner_sep_line = tl
-                        break
+                inner_sep_line = MarkdownPreprocessor._find_inner_separator(table_lines)
 
                 if inner_sep_line is None:
                     result.extend(table_lines)
+                    i = next_i
                     continue
 
-                # Parse columns from the inner separator
                 pipe_lines = MarkdownPreprocessor._parse_multiline_table(
                     table_lines, inner_sep_line
                 )
                 result.extend(pipe_lines)
+                i = next_i
             else:
                 result.append(lines[i])
                 i += 1
@@ -233,13 +257,9 @@ class MarkdownPreprocessor:
         return result
 
     @staticmethod
-    def _parse_multiline_table(table_lines: list[str], inner_sep_line: str) -> list[str]:
-        """
-        Given the raw lines of a multiline table (including outer separators),
-        parse column boundaries from the inner separator and produce a pipe table.
-        """
-        # Parse column boundaries from the inner separator (has dash groups)
-        col_boundaries = []
+    def _parse_col_boundaries(inner_sep_line: str) -> list[tuple[int, int]]:
+        """Parse column boundaries from inner separator dash groups."""
+        col_boundaries: list[tuple[int, int]] = []
         in_dash = False
         start = 0
         for j, ch in enumerate(inner_sep_line):
@@ -253,83 +273,74 @@ class MarkdownPreprocessor:
                     in_dash = False
         if in_dash:
             col_boundaries.append((start, len(inner_sep_line)))
+        return col_boundaries
 
-        if not col_boundaries:
-            return table_lines  # fallback
-
-        # Find the header separator index within table_lines
-        header_sep_idx = -1
-        inner_stripped = inner_sep_line.strip()
+    @staticmethod
+    def _find_header_sep_index(table_lines: list[str], inner_stripped: str) -> int:
+        """Find header separator index within table lines."""
         for k in range(1, len(table_lines) - 1):
             s = table_lines[k].strip()
             if s == inner_stripped:
-                header_sep_idx = k
-                break
+                return k
+        return -1
 
-        if header_sep_idx < 0:
-            return table_lines  # fallback
+    @staticmethod
+    def _extract_cells(
+        raw_lines: list[str], col_boundaries: list[tuple[int, int]]
+    ) -> list[list[str]]:
+        """Group raw_lines by blank-line-separated records, extract cells."""
+        records: list[list[str]] = []
+        current_record: list[str] = []
 
-        # Extract header rows (between top sep and header sep)
-        header_rows = table_lines[1:header_sep_idx]
-        # Extract data rows (between header sep and bottom sep)
-        data_rows = table_lines[header_sep_idx + 1 : -1]
+        for ln in raw_lines:
+            s = ln.strip()
+            if not s:
+                if current_record:
+                    records.append(current_record)
+                    current_record = []
+            else:
+                current_record.append(ln)
+        if current_record:
+            records.append(current_record)
 
-        def extract_cells(raw_lines: list[str]) -> list[list[str]]:
-            """Group raw_lines by blank-line-separated records, extract cells."""
-            records: list[list[str]] = []
-            current_record: list[str] = []
+        result_cells: list[list[str]] = []
+        for record in records:
+            cells: list[str] = []
+            for col_start, col_end in col_boundaries:
+                col_parts: list[str] = []
+                for rl in record:
+                    padded = rl.ljust(col_end)
+                    part = padded[col_start:col_end].strip()
+                    if part:
+                        col_parts.append(part)
+                cells.append(" ".join(col_parts))
+            result_cells.append(cells)
 
-            for ln in raw_lines:
-                s = ln.strip()
-                if not s:
-                    if current_record:
-                        records.append(current_record)
-                        current_record = []
-                else:
-                    current_record.append(ln)
-            if current_record:
-                records.append(current_record)
+        return result_cells
 
-            result_cells: list[list[str]] = []
-            for record in records:
-                cells = []
-                for col_start, col_end in col_boundaries:
-                    col_parts = []
-                    for rl in record:
-                        # Pad line to ensure we can slice
-                        padded = rl.ljust(col_end)
-                        part = padded[col_start:col_end].strip()
-                        if part:
-                            col_parts.append(part)
-                    cells.append(" ".join(col_parts))
-                result_cells.append(cells)
-
-            return result_cells
-
-        header_cells = extract_cells(header_rows)
-        data_cells = extract_cells(data_rows)
-
-        # Build pipe table
+    @staticmethod
+    def _build_pipe_table(
+        header_cells: list[list[str]],
+        data_cells: list[list[str]],
+        col_boundaries: list[tuple[int, int]],
+    ) -> list[str]:
+        """Build pipe table from header and data cells."""
         result: list[str] = []
 
-        # Header row (merge multi-row headers)
         if header_cells:
-            merged_header = []
+            merged_header: list[str] = []
             for col_idx in range(len(col_boundaries)):
-                parts = []
+                parts: list[str] = []
                 for row_cells in header_cells:
                     if col_idx < len(row_cells) and row_cells[col_idx]:
                         parts.append(row_cells[col_idx])
                 merged_header.append(" ".join(parts))
-            # Strip ** bold markers
             merged_header = [h.replace("**", "") for h in merged_header]
             result.append("| " + " | ".join(merged_header) + " |")
             result.append("| " + " | ".join("---" for _ in merged_header) + " |")
 
-        # Data rows
         for row_cells in data_cells:
-            # Clean cells
-            cleaned = []
+            cleaned: list[str] = []
             for c in row_cells:
                 c = c.replace("**", "").replace("*", "")
                 cleaned.append(c)
@@ -338,12 +349,34 @@ class MarkdownPreprocessor:
         return result
 
     @staticmethod
-    def _has_hard_line_break(line: str) -> bool:
-        """Return whether a source line ends with an intentional Markdown hard break.
-
-        Pandoc turns a trailing backslash or two trailing spaces into a real
-        line break (<w:br/>) in the DOCX; both must survive preprocessing.
+    def _parse_multiline_table(table_lines: list[str], inner_sep_line: str) -> list[str]:
         """
+        Given the raw lines of a multiline table (including outer separators),
+        parse column boundaries from the inner separator and produce a pipe table.
+        """
+        col_boundaries = MarkdownPreprocessor._parse_col_boundaries(inner_sep_line)
+
+        if not col_boundaries:
+            return table_lines
+
+        header_sep_idx = MarkdownPreprocessor._find_header_sep_index(
+            table_lines, inner_sep_line.strip()
+        )
+
+        if header_sep_idx < 0:
+            return table_lines
+
+        header_rows = table_lines[1:header_sep_idx]
+        data_rows = table_lines[header_sep_idx + 1 : -1]
+
+        header_cells = MarkdownPreprocessor._extract_cells(header_rows, col_boundaries)
+        data_cells = MarkdownPreprocessor._extract_cells(data_rows, col_boundaries)
+
+        return MarkdownPreprocessor._build_pipe_table(header_cells, data_cells, col_boundaries)
+
+    @staticmethod
+    def _has_hard_line_break(line: str) -> bool:
+        """Return whether a source line ends with an intentional Markdown hard break."""
         raw = line.rstrip("\r")
         if raw.endswith("  "):
             return True
@@ -352,18 +385,13 @@ class MarkdownPreprocessor:
 
     @staticmethod
     def _convert_math_fences(lines: list[str]) -> list[str]:
-        """Convert GitHub-style ```math fenced blocks to Pandoc $$ display math.
-
-        Pandoc's markdown reader does not understand ```math fences and would
-        render the equation as plain source code inside a code block.
-        """
+        """Convert GitHub-style ```math fenced blocks to Pandoc $$ display math."""
         result: list[str] = []
         in_math_fence = False
-        fence_re = re.compile(r"^```\s*\{?math\}?\s*$")
 
         for line in lines:
             stripped = line.strip().replace("\r", "")
-            if not in_math_fence and fence_re.match(stripped):
+            if not in_math_fence and _FENCE_RE.match(stripped):
                 in_math_fence = True
                 result.append("$$")
                 continue
@@ -403,18 +431,51 @@ class MarkdownPreprocessor:
         return normalized
 
     @staticmethod
+    def _handle_math_content(
+        line: str,
+        stripped: str,
+        is_delim: bool,
+        in_math_block: bool,
+        single_line_math: bool,
+        opens_math: bool,
+        buffer: list[str],
+        result: list[str],
+    ) -> bool:
+        """Handle math block lines; return True if handled."""
+        if is_delim or in_math_block or single_line_math:
+            if (opens_math or single_line_math) and buffer:
+                MarkdownPreprocessor._flush_buffer(buffer, result)
+            result.append(MarkdownPreprocessor._TAG_RE.sub("", line))
+            return True
+        return False
+
+    @staticmethod
+    def _handle_special_content(
+        line: str, stripped: str, in_code_block: bool, buffer: list[str], result: list[str]
+    ) -> bool:
+        """Handle special/code lines; return True if handled."""
+        if in_code_block or MarkdownPreprocessor._is_special_line(stripped):
+            MarkdownPreprocessor._flush_buffer(buffer, result)
+            result.append(line)
+            return True
+        return False
+
+    @staticmethod
+    def _handle_hard_break_content(line: str, buffer: list[str], result: list[str]) -> bool:
+        """Handle hard break lines; return True if handled."""
+        if MarkdownPreprocessor._has_hard_line_break(line):
+            MarkdownPreprocessor._flush_buffer(buffer, result)
+            result.append(MarkdownPreprocessor._normalize_hard_break(line))
+            return True
+        return False
+
+    @staticmethod
     def _join_wrapped_lines(lines: list[str]) -> list[str]:
         """
         Join consecutive non-special lines into single paragraphs.
 
         This fixes the 'hard return' problem where text is wrapped at ~72 chars,
-        while preserving intentional structure:
-
-        - Hard line breaks (trailing backslash or two trailing spaces) are kept
-          as real line breaks and normalized to the robust backslash form.
-        - Display math blocks delimited by ``$$`` on their own lines are never
-          joined (multi-line LaTeX such as ``aligned`` must stay verbatim), and
-          ``\\tag{n}`` markers are dropped because OMML does not carry them.
+        while preserving intentional structure.
         """
         result: list[str] = []
         buffer: list[str] = []
@@ -434,26 +495,95 @@ class MarkdownPreprocessor:
             elif not in_math_block and stripped.startswith("$$"):
                 in_math_block = True
 
-            if is_delim or in_math_block or single_line_math:
-                if (opens_math or single_line_math) and buffer:
-                    MarkdownPreprocessor._flush_buffer(buffer, result)
-                result.append(MarkdownPreprocessor._TAG_RE.sub("", line))
+            if MarkdownPreprocessor._handle_math_content(
+                line,
+                stripped,
+                is_delim,
+                in_math_block,
+                single_line_math,
+                opens_math,
+                buffer,
+                result,
+            ):
                 continue
 
-            if in_code_block or MarkdownPreprocessor._is_special_line(stripped):
-                MarkdownPreprocessor._flush_buffer(buffer, result)
-                result.append(line)
+            if MarkdownPreprocessor._handle_special_content(
+                line, stripped, in_code_block, buffer, result
+            ):
                 continue
 
-            if MarkdownPreprocessor._has_hard_line_break(line):
-                MarkdownPreprocessor._flush_buffer(buffer, result)
-                result.append(MarkdownPreprocessor._normalize_hard_break(line))
+            if MarkdownPreprocessor._handle_hard_break_content(line, buffer, result):
                 continue
 
             buffer.append(stripped)
 
         MarkdownPreprocessor._flush_buffer(buffer, result)
         return result
+
+    @staticmethod
+    def _determine_content_start(lines: list[str], yaml_data: dict[str, str], yaml_end: int) -> int:
+        """Determine where content starts after frontmatter/metadata."""
+        if yaml_data:
+            content_start = yaml_end + 1
+            while content_start < len(lines) and not lines[content_start].strip():
+                content_start += 1
+            return content_start
+
+        metadata_end = 0
+        for i, line in enumerate(lines):
+            stripped = line.strip().replace("\r", "")
+            if stripped in ("---", "--"):
+                metadata_end = i
+                break
+
+        content_start = metadata_end
+        for i in range(metadata_end, len(lines)):
+            stripped = lines[i].strip().replace("\r", "")
+            if stripped.startswith("# "):
+                content_start = i
+                break
+
+        if metadata_end == 0 and content_start == 0 and len(lines) > 60:
+            content_start = 60
+
+        return content_start
+
+    @staticmethod
+    def _is_heading_level_1(stripped: str) -> bool:
+        """Check if line is a level-1 heading with enough text."""
+        if not stripped.startswith(_HEADING_PREFIX):
+            return False
+        if stripped.startswith("##"):
+            return False
+        if not stripped.startswith("# "):
+            return False
+        heading_text = stripped[2:].strip()
+        return len(heading_text) > 2
+
+    @staticmethod
+    def _build_output_parts(joined_lines: list[str]) -> list[str]:
+        """Add page breaks before H1 and escape numbered TOC lines."""
+        output_parts: list[str] = []
+        found_first_heading = False
+
+        for line in joined_lines:
+            stripped = line.strip().replace("\r", "")
+
+            if stripped in ("\\newpage", "\\pagebreak"):
+                output_parts.append(PAGEBREAK_OPENXML)
+                continue
+
+            if MarkdownPreprocessor._is_heading_level_1(stripped):
+                if found_first_heading:
+                    output_parts.append(PAGEBREAK_OPENXML)
+                found_first_heading = True
+
+            if MarkdownPreprocessor._is_numbered_toc_line(stripped):
+                line = re.sub(r"^(\s*\d+)\.\s+", r"\1\\. ", line)
+
+            output_parts.append(line)
+
+        return output_parts
 
     def process(self, text: str) -> tuple[str, DocumentMetadata]:
         """
@@ -467,78 +597,17 @@ class MarkdownPreprocessor:
         lines = text.split("\n")
         meta = self.extract_metadata(lines)
 
-        # Find where content starts
         yaml_data, yaml_end = self.extract_yaml_frontmatter(lines)
+        content_start = self._determine_content_start(lines, yaml_data, yaml_end)
 
-        if yaml_data:
-            # YAML frontmatter detected - skip the entire YAML block (including closing ---)
-            # Content starts after the closing ---
-            content_start = yaml_end + 1
-            # Skip any empty lines after YAML block
-            while content_start < len(lines) and not lines[content_start].strip():
-                content_start += 1
-        else:
-            # No YAML frontmatter - check for legacy metadata block (--- at line 0)
-            metadata_end = 0
-            for i, line in enumerate(lines):
-                stripped = line.strip().replace("\r", "")
-                if stripped in ("---", "--"):
-                    metadata_end = i
-                    break
-
-            # Then find first # heading after metadata
-            content_start = metadata_end
-            for i in range(metadata_end, len(lines)):
-                stripped = lines[i].strip().replace("\r", "")
-                if stripped.startswith("# "):
-                    content_start = i
-                    break
-
-            # Fallback: if no --- found but there's a # heading, use it
-            if metadata_end == 0 and content_start == 0 and len(lines) > 60:
-                content_start = 60  # fallback legacy behavior
-
-        # Extract only content lines (skip YAML/metadata header)
-        # Start from first # heading and include everything after
         content_lines = lines[content_start:] if content_start > 0 else lines
 
-        # Convert multiline dashed tables to pipe tables
         content_lines = self._convert_multiline_tables(content_lines)
 
-        # Convert GitHub-style ```math fences to Pandoc $$ display math
         content_lines = self._convert_math_fences(content_lines)
 
-        # Join hard-wrapped lines into proper paragraphs
         joined_lines = self._join_wrapped_lines(content_lines)
 
-        # Don't build title page here - let the APA formatter handle it
-        # This prevents Pandoc from creating duplicate title pages
-
-        # Build the new markdown
-        output_parts: list[str] = []
-        found_first_heading = False  # First # heading after title page doesn't need page break
-
-        for line in joined_lines:
-            stripped = line.strip().replace("\r", "")
-
-            # Explicit page breaks: raw LaTeX commands are silently dropped by
-            # Pandoc for DOCX output, so they become raw OpenXML page breaks
-            if stripped in ("\\newpage", "\\pagebreak"):
-                output_parts.append(PAGEBREAK_OPENXML)
-                continue
-
-            # Check for level 1 heading
-            if re.match(r"^#\s+", stripped) and not re.match(r"^##", stripped):
-                heading_text = stripped[2:].strip()
-                if len(heading_text) > 2:
-                    if found_first_heading:
-                        output_parts.append(PAGEBREAK_OPENXML)
-                    found_first_heading = True
-
-            # Escape TOC numbered lines to prevent Pandoc from converting them to ordered lists
-            if re.match(r"^\s*\d+\.\s+.*\.{3,}\s*\d+\s*$", stripped):
-                line = re.sub(r"^(\s*\d+)\.\s+", r"\1\\. ", line)
-
-            output_parts.append(line)
+        output_parts = self._build_output_parts(joined_lines)
 
         return "\n".join(output_parts), meta
