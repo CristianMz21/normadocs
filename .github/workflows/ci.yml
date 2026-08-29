@@ -10,6 +10,7 @@ on:
       - "uv.lock"
       - "Makefile"
       - ".github/workflows/**"
+      - "sonar-project.properties"
   pull_request:
     branches: ["main"]
     paths:
@@ -19,6 +20,7 @@ on:
       - "uv.lock"
       - "Makefile"
       - ".github/workflows/**"
+      - "sonar-project.properties"
   workflow_call:
   workflow_dispatch:
 
