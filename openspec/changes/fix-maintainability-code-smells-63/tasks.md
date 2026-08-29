@@ -53,7 +53,7 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: PR4 — Cleanup (12, ~200)
 
-- [ ] 4.1 Fix `apa_keywords.py`, `apa_cover.py:39` `F(47)`, `apa_page.py`, `apa_citations.py`, `apa_equations.py` → helpers <15
-- [ ] 4.2 Fix `utils/subprocess.py`+`docx_helpers.py` S1192/minor S3776; keep `apa.py` shim untouched
-- [ ] 4.3 Fix `scripts/*.py` 12 smells (`verify_all_calculations.py:51` `F(110)` etc.) or confirm `sonar.exclusions=scripts/**` justified
-- [ ] 4.4 Verify final: `radon cc --max 15 src/`; `find_suppressions.sh` 0; `ruff/mypy/pyright/semgrep --error` 0; `pytest -W error --cov-fail-under=78` pass; sonar `api/measures` 0/0 A, `api/issues/search?types=CODE_SMELL` 0
+- [x] 4.1 Fix `apa_keywords.py`, `apa_cover.py:39` `F(47)`, `apa_page.py`, `apa_citations.py`, `apa_equations.py` → helpers <15
+- [x] 4.2 Fix `utils/subprocess.py`+`docx_helpers.py` S1192/minor S3776; keep `apa.py` shim untouched
+- [x] 4.3 Fix `scripts/*.py` 12 smells (`verify_all_calculations.py:51` `F(110)` etc.) or confirm `sonar.exclusions=scripts/**` justified
+- [x] 4.4 Verify final: `radon cc --max 15 src/`; `find_suppressions.sh` 0; `ruff/mypy/pyright/semgrep --error` 0; `pytest -W error --cov-fail-under=78` pass; sonar `api/measures` 0/0 A, `api/issues/search?types=CODE_SMELL` 0
