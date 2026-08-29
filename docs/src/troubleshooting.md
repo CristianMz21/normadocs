@@ -4,23 +4,48 @@ Common issues and solutions for NormaDocs.
 
 ## Pandoc Not Found
 
-**Symptom:** `Error: Pandoc no encontrado en el sistema`
+**Symptom:** `Error: Pandoc no está instalado en el sistema`
 
-**Solution:**
+NormaDocs will now suggest the correct install command automatically based on your OS. Solutions:
 ```bash
-# Debian/Ubuntu
-sudo apt install pandoc
-
 # macOS
 brew install pandoc
 
+# Debian/Ubuntu
+sudo apt install pandoc
+
 # Windows
-# Download from https://pandoc.org/installing.html
+choco install pandoc
+# or download from https://pandoc.org/installing.html
 ```
 
 Verify installation:
 ```bash
 pandoc --version
+```
+
+## Unsupported Citation Style
+
+**Symptom:** `Error: Estilo de citación no soportado: '<style>'. Estilos disponibles: apa, icontec, ieee.`
+
+**Solution:**
+Use one of the supported values with `--style`:
+```bash
+normadocs input.md --style apa
+normadocs input.md --style icontec
+normadocs input.md --style ieee
+```
+
+## Unsupported Output Format
+
+**Symptom:** `Error: Formato de salida no soportado: '<format>'. Formatos disponibles: docx, pdf, all.`
+
+**Solution:**
+Use one of the supported values with `--format`:
+```bash
+normadocs input.md --format docx
+normadocs input.md --format pdf
+normadocs input.md --format all
 ```
 
 ## APA Validation Fails
@@ -86,6 +111,8 @@ Se según [@author2024] demuestra...
 | `FileNotFoundError` | Input file doesn't exist | Check file path |
 | `Pandoc conversion failed` | Pandoc error | Check Markdown syntax |
 | `LanguageTool server JAR not found` | LT not installed | Install Java + LanguageTool |
+| `Estilo de citación no soportado` | Invalid `--style` value | Use `apa`, `icontec`, or `ieee` |
+| `Formato de salida no soportado` | Invalid `--format` value | Use `docx`, `pdf`, or `all` |
 
 ## Getting Help
 

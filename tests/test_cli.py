@@ -403,5 +403,50 @@ class TestCLILanguageToolDocker(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
 
 
+class TestCLIValidation(unittest.TestCase):
+    """Tests for early --style and --format validation."""
+
+    def test_invalid_style_rejected(self):
+        """Test that an unsupported --style value fails fast with a clear message."""
+        with tempfile.TemporaryDirectory() as tmp:
+            test_md = Path(tmp) / "test.md"
+            test_md.write_text("# Title\n\nContent", encoding="utf-8")
+            result = runner.invoke(app, [str(test_md), "--style", "banana"])
+            self.assertEqual(result.exit_code, 1)
+            self.assertIn("Estilo de citación no soportado", result.output)
+            self.assertIn("apa", result.output)
+            self.assertIn("icontec", result.output)
+
+    def test_invalid_format_rejected(self):
+        """Test that an unsupported --format value fails fast with a clear message."""
+        with tempfile.TemporaryDirectory() as tmp:
+            test_md = Path(tmp) / "test.md"
+            test_md.write_text("# Title\n\nContent", encoding="utf-8")
+            result = runner.invoke(app, [str(test_md), "--format", "banana"])
+            self.assertEqual(result.exit_code, 1)
+            self.assertIn("Formato de salida no soportado", result.output)
+            self.assertIn("docx, pdf, all", result.output)
+
+    def test_valid_styles_accepted(self):
+        """Test that all documented valid --style values pass validation."""
+        for style in ["apa", "apa7", "apa7estudiante", "icontec", "ieee"]:
+            with self.subTest(style=style), tempfile.TemporaryDirectory() as tmp:
+                test_md = Path(tmp) / "test.md"
+                test_md.write_text("# Title\n\nContent", encoding="utf-8")
+                result = runner.invoke(app, [str(test_md), "--style", style])
+                # Should not fail due to style validation specifically
+                self.assertNotIn("no soportado", result.output)
+
+    def test_valid_formats_accepted(self):
+        """Test that all documented valid --format values pass validation."""
+        for fmt in ["docx", "pdf", "all"]:
+            with self.subTest(fmt=fmt), tempfile.TemporaryDirectory() as tmp:
+                test_md = Path(tmp) / "test.md"
+                test_md.write_text("# Title\n\nContent", encoding="utf-8")
+                result = runner.invoke(app, [str(test_md), "--format", fmt])
+                # Should not fail due to format validation specifically
+                self.assertNotIn("no soportado", result.output)
+
+
 if __name__ == "__main__":
     unittest.main()
