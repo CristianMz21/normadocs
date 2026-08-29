@@ -75,6 +75,10 @@ examples/ExportDocs/*.docx
 examples/ExportDocs/*.pdf
 examples/exports/
 
+# CLI default output dir (CWD-relative ExportDocs/)
+ExportDocs/
+_pandoc_raw/
+
 # OS files
 .DS_Store
 Thumbs.db
