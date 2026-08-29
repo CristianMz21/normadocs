@@ -220,6 +220,63 @@ def _section_bg(name: str) -> tuple[int, int, int]:
     return _DARK_BLUE
 
 
+def _draw_section_row(
+    draw: ImageDraw.ImageDraw, y: int, name: str, fonts: dict, row_height: int
+) -> int:
+    bg_color = _section_bg(name)
+    draw.rectangle([(40, y), (_WIDTH - 40, y + row_height)], fill=bg_color)
+    draw.text(
+        (50, y + row_height // 2),
+        name,
+        fill=_WHITE,
+        anchor="lm",
+        font=fonts["header"],
+    )
+    return y + row_height
+
+
+def _draw_row_cells(
+    draw: ImageDraw.ImageDraw,
+    y: int,
+    item: tuple[str, str, str, str, str, str],
+    col_widths: list[int],
+    fonts: dict,
+    row_height: int,
+) -> None:
+    x = 50
+    for j, cell in enumerate(item):
+        text_color = _GREEN if j == 4 else _DARK_BLUE
+        font = fonts["price"] if j in (3, 4) else fonts["item"]
+        draw.text(
+            (x, y + row_height // 2 - 2),
+            cell,
+            fill=text_color,
+            anchor="lm",
+            font=font,
+        )
+        x += col_widths[j]
+
+
+def _draw_data_row(
+    draw: ImageDraw.ImageDraw,
+    y: int,
+    item: tuple[str, str, str, str, str, str],
+    i: int,
+    col_widths: list[int],
+    fonts: dict,
+    row_height: int,
+) -> int:
+    bg_color = _LIGHT_GRAY if i % 2 == 0 else _WHITE
+    draw.rectangle([(40, y), (_WIDTH - 40, y + row_height)], fill=bg_color)
+    _draw_row_cells(draw, y, item, col_widths, fonts, row_height)
+    draw.line(
+        [(40, y + row_height), (_WIDTH - 40, y + row_height)],
+        fill=(200, 200, 200),
+        width=1,
+    )
+    return y + row_height
+
+
 def _render_rows(
     draw: ImageDraw.ImageDraw,
     start_y: int,
@@ -232,40 +289,12 @@ def _render_rows(
     y = start_y
     for i, item in enumerate(items):
         if item[0] in section_headers:
-            bg_color = _section_bg(item[0])
-            draw.rectangle([(40, y), (_WIDTH - 40, y + row_height)], fill=bg_color)
-            draw.text(
-                (50, y + row_height // 2),
-                item[0],
-                fill=_WHITE,
-                anchor="lm",
-                font=fonts["header"],
-            )
-            y += row_height
+            y = _draw_section_row(draw, y, item[0], fonts, row_height)
             continue
         if item[0] == "":
             y += 4
             continue
-        bg_color = _LIGHT_GRAY if i % 2 == 0 else _WHITE
-        draw.rectangle([(40, y), (_WIDTH - 40, y + row_height)], fill=bg_color)
-        x = 50
-        for j, cell in enumerate(item):
-            text_color = _GREEN if j == 4 else _DARK_BLUE
-            font = fonts["price"] if j in [3, 4] else fonts["item"]
-            draw.text(
-                (x, y + row_height // 2 - 2),
-                cell,
-                fill=text_color,
-                anchor="lm",
-                font=font,
-            )
-            x += col_widths[j]
-        draw.line(
-            [(40, y + row_height), (_WIDTH - 40, y + row_height)],
-            fill=(200, 200, 200),
-            width=1,
-        )
-        y += row_height
+        y = _draw_data_row(draw, y, item, i, col_widths, fonts, row_height)
     return y
 
 

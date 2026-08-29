@@ -404,36 +404,30 @@ class APA7Verifier:
                 f"Líneas muy largas detectadas ({len(very_long_lines)}): verificar interlineado"
             )
 
-    def print_report(self):
-        """Imprime reporte completo de verificación."""
-        print("=" * 70)
-        print(f"VERIFICACIÓN ESTRICTA APA 7: {self.pdf_path.name}")
-        print("=" * 70)
-        print(f"\n📄 Total páginas: {self.total_pages}\n")
+    def _report_errors(self) -> None:
+        if not self.errors:
+            return
+        print(f"\n❌ ERRORES ({len(self.errors)}):")
+        for e in self.errors:
+            print(f"   • {e}")
 
-        # Resumen
-        print("-" * 70)
-        print("📋 RESUMEN DE VERIFICACIÓN")
-        print("-" * 70)
+    def _report_warnings(self) -> None:
+        if not self.warnings:
+            return
+        print(f"\n⚠️  ADVERTENCIAS ({len(self.warnings)}):")
+        for w in self.warnings:
+            print(f"   • {w}")
 
-        if self.errors:
-            print(f"\n❌ ERRORES ({len(self.errors)}):")
-            for e in self.errors:
-                print(f"   • {e}")
+    def _report_passed(self) -> None:
+        if not self.passed:
+            return
+        print(f"\n✅ CORRECTO ({len(self.passed)}):")
+        for p in self.passed[:10]:
+            print(f"   ✓ {p}")
+        if len(self.passed) > 10:
+            print(f"   ... y {len(self.passed) - 10} más")
 
-        if self.warnings:
-            print(f"\n⚠️  ADVERTENCIAS ({len(self.warnings)}):")
-            for w in self.warnings:
-                print(f"   • {w}")
-
-        if self.passed:
-            print(f"\n✅ CORRECTO ({len(self.passed)}):")
-            for p in self.passed[:10]:  # Mostrar máximo 10
-                print(f"   ✓ {p}")
-            if len(self.passed) > 10:
-                print(f"   ... y {len(self.passed) - 10} más")
-
-        # Veredicto final
+    def _report_verdict(self) -> None:
         print("\n" + "=" * 70)
         if not self.errors and not self.warnings:
             print("✅ APROBADO - Documento cumple Normas APA 7ma Edición")
@@ -443,6 +437,19 @@ class APA7Verifier:
             print("❌ REPROBADO - Corrija los errores indicados")
         print("=" * 70)
 
+    def print_report(self):
+        """Imprime reporte completo de verificación."""
+        print("=" * 70)
+        print(f"VERIFICACIÓN ESTRICTA APA 7: {self.pdf_path.name}")
+        print("=" * 70)
+        print(f"\n📄 Total páginas: {self.total_pages}\n")
+        print("-" * 70)
+        print("📋 RESUMEN DE VERIFICACIÓN")
+        print("-" * 70)
+        self._report_errors()
+        self._report_warnings()
+        self._report_passed()
+        self._report_verdict()
         return len(self.errors) == 0
 
     def get_detailed_pages(self, num_pages: int = 5) -> str:

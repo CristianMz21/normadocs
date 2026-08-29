@@ -13,6 +13,13 @@ import re
 import sys
 from pathlib import Path
 
+_ERROR_MARK = "✗ ERROR"
+_OK_MARK = "✓"
+
+
+def _status_mark(ok: bool) -> str:
+    return _OK_MARK if ok else _ERROR_MARK
+
 
 def extract_currency(value: str) -> int:
     """Extrae el valor numérico de una cadena con formato de moneda."""
@@ -69,7 +76,7 @@ def verify_direct_costs() -> dict:
     expected = 68550000
     passed = subtotal == expected
     print(f"  ESPERADO: ${expected:,}")
-    print(f"  RESULTADO: {'✓ CORRECTO' if passed else '✗ ERROR'}")
+    print(f"  RESULTADO: {'✓ CORRECTO' if passed else _ERROR_MARK}")
 
     return {"calculated": subtotal, "expected": expected, "passed": passed}
 
@@ -132,7 +139,7 @@ def verify_comparison_table() -> dict:
     total_mack = int(mackroph_subtotal * 1.35) + iva_mack
     print(f"  TOTAL FINAL: ${total_mack:,}")
     mack_ok = total_mack == 95147400
-    print(f"  ESPERADO: $95,147,400 -> {'✓' if mack_ok else '✗ ERROR'}")
+    print(f"  ESPERADO: $95,147,400 -> {_status_mark(mack_ok)}")
 
     print("\nTECNO SHOP S.A:")
     print(f"  Suma de rubros: ${tecnoshop_subtotal:,}")
@@ -143,7 +150,7 @@ def verify_comparison_table() -> dict:
     total_tecno = int(tecnoshop_subtotal * 1.35) + iva_tecno
     print(f"  TOTAL FINAL: ${total_tecno:,}")
     tecno_ok = total_tecno == 105488000
-    print(f"  ESPERADO: $105,488,000 -> {'✓' if tecno_ok else '✗ ERROR'}")
+    print(f"  ESPERADO: $105,488,000 -> {_status_mark(tecno_ok)}")
 
     print("\nDEV SOFT COLOMBIA:")
     print(f"  Suma de rubros: ${devsoft_subtotal:,}")
@@ -154,7 +161,7 @@ def verify_comparison_table() -> dict:
     total_dev = int(devsoft_subtotal * 1.35) + iva_dev
     print(f"  TOTAL FINAL: ${total_dev:,}")
     dev_ok = total_dev == 100907600
-    print(f"  ESPERADO: $100,907,600 -> {'✓' if dev_ok else '✗ ERROR'}")
+    print(f"  ESPERADO: $100,907,600 -> {_status_mark(dev_ok)}")
 
     return {
         "mackroph": {"subtotal": mackroph_subtotal, "total": total_mack, "passed": mack_ok},
@@ -209,9 +216,9 @@ def verify_markdown_calculations(md_path: str) -> dict:
     expected_aiu = 23992500
     expected_iva = 2604900
     expected_total = 95147400
-    aiu_ok = "✓" if aiu_mack["aiu"] == expected_aiu else "✗ ERROR"
-    iva_ok = "✓" if aiu_mack["iva"] == expected_iva else "✗ ERROR"
-    total_ok = "✓" if aiu_mack["total_final"] == expected_total else "✗ ERROR"
+    aiu_ok = _status_mark(aiu_mack["aiu"] == expected_aiu)
+    iva_ok = _status_mark(aiu_mack["iva"] == expected_iva)
+    total_ok = _status_mark(aiu_mack["total_final"] == expected_total)
     print(f"  ESPERADO AIU: ${expected_aiu:,} -> {aiu_ok}")
     print(f"  ESPERADO IVA: ${expected_iva:,} -> {iva_ok}")
     print(f"  ESPERADO TOTAL: ${expected_total:,} -> {total_ok}")
@@ -229,6 +236,49 @@ def verify_markdown_calculations(md_path: str) -> dict:
     return results
 
 
+def _report_personal_section(results: dict) -> None:
+    print("\nCostos de Personal:")
+    pers_ok = _OK_MARK if results["personal_costs"]["passed"] else "✗"
+    pers_val = results["personal_costs"]["expected"]
+    print(f"  {pers_ok} Subtotal: ${pers_val:,}")
+
+
+def _report_direct_section(results: dict) -> None:
+    print("\nCostos Directos:")
+    direct_ok = _OK_MARK if results["direct_costs"]["passed"] else "✗"
+    direct_calc = results["direct_costs"]["calculated"]
+    direct_exp = results["direct_costs"]["expected"]
+    print(f"  {direct_ok} Total: ${direct_calc:,} (esperado: ${direct_exp:,})")
+
+
+def _report_comparison_section(results: dict, all_passed: bool) -> bool:
+    print("\nTabla Comparativa:")
+    for provider, data in [
+        ("Mackroph", results["comparison"]["mackroph"]),
+        ("TecnoShop", results["comparison"]["tecnoshop"]),
+        ("DevSoft", results["comparison"]["devsoft"]),
+    ]:
+        ok = _OK_MARK if data["passed"] else "✗"
+        print(f"  {provider}: Subtotal=${data['subtotal']:,}, Total=${data['total']:,} -> {ok}")
+        if not data["passed"]:
+            all_passed = False
+    return all_passed
+
+
+def _report_aiu_section(results: dict, all_passed: bool) -> bool:
+    print("\nCálculo AIU/IVA:")
+    aiu = results["aiu_calculation"]
+    aiu2_ok = _OK_MARK if aiu["calculated"]["aiu"] == aiu["expected_aiu"] else "✗"
+    iva2_ok = _OK_MARK if aiu["calculated"]["iva"] == aiu["expected_iva"] else "✗"
+    tot2_ok = _OK_MARK if aiu["calculated"]["total_final"] == aiu["expected_total"] else "✗"
+    print(f"  AIU: ${aiu['calculated']['aiu']:,} -> {aiu2_ok}")
+    print(f"  IVA: ${aiu['calculated']['iva']:,} -> {iva2_ok}")
+    print(f"  Total: ${aiu['calculated']['total_final']:,} -> {tot2_ok}")
+    if not aiu["passed"]:
+        all_passed = False
+    return all_passed
+
+
 def main():
     md_file = "IDocs/Evidencia_AA1_EV02/02_Informes/INFORME_TECNICO_ECONOMICO.md"
 
@@ -242,46 +292,15 @@ def main():
 
     results = verify_markdown_calculations(md_file)
 
-    # Resumen
     print("\n" + "=" * 70)
     print("RESUMEN DE VERIFICACIÓN")
     print("=" * 70)
 
     all_passed = True
-
-    print("\nCostos de Personal:")
-    pers_ok = "✓" if results["personal_costs"]["passed"] else "✗"
-    pers_val = results["personal_costs"]["expected"]
-    print(f"  {pers_ok} Subtotal: ${pers_val:,}")
-
-    print("\nCostos Directos:")
-    direct_ok = "✓" if results["direct_costs"]["passed"] else "✗"
-    direct_calc = results["direct_costs"]["calculated"]
-    direct_exp = results["direct_costs"]["expected"]
-    print(f"  {direct_ok} Total: ${direct_calc:,} (esperado: ${direct_exp:,})")
-
-    print("\nTabla Comparativa:")
-    for provider, data in [
-        ("Mackroph", results["comparison"]["mackroph"]),
-        ("TecnoShop", results["comparison"]["tecnoshop"]),
-        ("DevSoft", results["comparison"]["devsoft"]),
-    ]:
-        ok = "✓" if data["passed"] else "✗"
-        print(f"  {provider}: Subtotal=${data['subtotal']:,}, Total=${data['total']:,} -> {ok}")
-        if not data["passed"]:
-            all_passed = False
-
-    print("\nCálculo AIU/IVA:")
-    aiu = results["aiu_calculation"]
-    aiu2_ok = "✓" if aiu["calculated"]["aiu"] == aiu["expected_aiu"] else "✗"
-    iva2_ok = "✓" if aiu["calculated"]["iva"] == aiu["expected_iva"] else "✗"
-    tot2_ok = "✓" if aiu["calculated"]["total_final"] == aiu["expected_total"] else "✗"
-    print(f"  AIU: ${aiu['calculated']['aiu']:,} -> {aiu2_ok}")
-    print(f"  IVA: ${aiu['calculated']['iva']:,} -> {iva2_ok}")
-    print(f"  Total: ${aiu['calculated']['total_final']:,} -> {tot2_ok}")
-
-    if not aiu["passed"]:
-        all_passed = False
+    _report_personal_section(results)
+    _report_direct_section(results)
+    all_passed = _report_comparison_section(results, all_passed)
+    all_passed = _report_aiu_section(results, all_passed)
 
     print("\n" + "=" * 70)
     if all_passed:

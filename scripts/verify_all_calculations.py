@@ -62,27 +62,44 @@ def _section_slice(content: str, start: str, end: str) -> str:
     return content[s:e]
 
 
-def _handle_personal(content: str) -> tuple[int, int]:
-    print("\n" + "=" * 70)
-    print("1. COSTOS DE PERSONAL (Sección 4.2)")
-    print("=" * 70)
-    sec = _section_slice(content, "## 4.2", "## 4.3")
-    rows = parse_table_lines(sec)
+def _first_currency_reversed(cells: list[str]) -> int:
+    for cell in reversed(cells):
+        val = extract_currency(cell)
+        if val > 0:
+            return val
+    return 0
+
+
+def _is_personal_subtotal_row(row: list[str]) -> bool:
+    return len(row) >= 2 and row[0] == "" and "subtotal" in " ".join(row).lower()
+
+
+def _extract_personal_item(row: list[str]) -> tuple[str, int] | None:
+    if len(row) >= 5:
+        val = extract_currency(row[4])
+        if val > 0:
+            return (row[0], val)
+    return None
+
+
+def _collect_personal_rows(
+    rows: list[list[str]],
+) -> tuple[list[tuple[str, int]], int]:
     items: list[tuple[str, int]] = []
     total = 0
     for row in rows:
-        if len(row) >= 2 and row[0] == "" and "subtotal" in " ".join(row).lower():
-            for cell in reversed(row):
-                val = extract_currency(cell)
-                if val > 0:
-                    total = val
-                    break
+        if _is_personal_subtotal_row(row):
+            found = _first_currency_reversed(row)
+            if found:
+                total = found
             continue
-        if len(row) >= 5:
-            name = row[0]
-            val = extract_currency(row[4])
-            if val > 0:
-                items.append((name, val))
+        maybe = _extract_personal_item(row)
+        if maybe is not None:
+            items.append(maybe)
+    return items, total
+
+
+def _summarize_personal(items: list[tuple[str, int]], total: int) -> tuple[int, int]:
     p_sum = sum(t for _, t in items)
     for name, val in items:
         print(f"   - {name}: ${val:,}")
@@ -98,27 +115,37 @@ def _handle_personal(content: str) -> tuple[int, int]:
     return total, p_sum
 
 
-def _handle_hardware(content: str) -> tuple[int, int]:
-    print("\n" + "=" * 70)
-    print("2. COSTOS DE HARDWARE (Sección 2.6)")
-    print("=" * 70)
-    sec = _section_slice(content, "## 2.6", "## 3.")
-    rows = parse_table_lines(sec)
+def _is_total_row(row: list[str]) -> bool:
+    return "total" in " ".join(row).lower()
+
+
+def _extract_hardware_item(row: list[str]) -> tuple[str, int] | None:
+    if len(row) >= 2:
+        val = extract_currency(row[-1])
+        if val > 0:
+            name = row[-2] if len(row) > 2 else row[0]
+            return (name, val)
+    return None
+
+
+def _collect_hardware_rows(
+    rows: list[list[str]],
+) -> tuple[list[tuple[str, int]], int]:
     items: list[tuple[str, int]] = []
     total = 0
     for row in rows:
-        if "total" in " ".join(row).lower():
-            for cell in reversed(row):
-                val = extract_currency(cell)
-                if val > 0:
-                    total = val
-                    break
+        if _is_total_row(row):
+            found = _first_currency_reversed(row)
+            if found:
+                total = found
             continue
-        if len(row) >= 2:
-            val = extract_currency(row[-1])
-            name = row[-2] if len(row) > 2 else row[0]
-            if val > 0:
-                items.append((name, val))
+        maybe = _extract_hardware_item(row)
+        if maybe is not None:
+            items.append(maybe)
+    return items, total
+
+
+def _summarize_hardware(items: list[tuple[str, int]], total: int) -> tuple[int, int]:
     hw_sum = sum(t for _, t in items)
     for name, val in items:
         print(f"   - {name}: ${val:,}")
@@ -131,27 +158,33 @@ def _handle_hardware(content: str) -> tuple[int, int]:
     return hw_sum, hw_sum
 
 
-def _handle_software(content: str) -> tuple[int, int]:
-    print("\n" + "=" * 70)
-    print("3. COSTOS DE SOFTWARE (Sección 3.7)")
-    print("=" * 70)
-    sec = _section_slice(content, "## 3.7", "## 4.")
-    rows = parse_table_lines(sec)
+def _extract_software_item(row: list[str]) -> tuple[str, int] | None:
+    if len(row) >= 2:
+        val = extract_currency(row[-1])
+        name = row[0]
+        if val > 0 and "rubro" not in name.lower():
+            return (name, val)
+    return None
+
+
+def _collect_software_rows(
+    rows: list[list[str]],
+) -> tuple[list[tuple[str, int]], int]:
     items: list[tuple[str, int]] = []
     total = 0
     for row in rows:
-        if "total" in " ".join(row).lower():
-            for cell in reversed(row):
-                val = extract_currency(cell)
-                if val > 0:
-                    total = val
-                    break
+        if _is_total_row(row):
+            found = _first_currency_reversed(row)
+            if found:
+                total = found
             continue
-        if len(row) >= 2:
-            val = extract_currency(row[-1])
-            name = row[0]
-            if val > 0 and "rubro" not in name.lower():
-                items.append((name, val))
+        maybe = _extract_software_item(row)
+        if maybe is not None:
+            items.append(maybe)
+    return items, total
+
+
+def _summarize_software(items: list[tuple[str, int]], total: int) -> tuple[int, int]:
     sw_sum = sum(t for _, t in items)
     for name, val in items:
         print(f"   - {name}: ${val:,}")
@@ -164,27 +197,140 @@ def _handle_software(content: str) -> tuple[int, int]:
     return sw_sum, sw_sum
 
 
-def _handle_direct(content: str, personal: int, hw: int, sw: int) -> int:
-    print("\n" + "=" * 70)
-    print("4. ESTRUCTURA DE COSTOS DIRECTOS (Sección 4.3)")
-    print("=" * 70)
-    sec = _section_slice(content, "## 4.3", "## 4.4")
-    rows = parse_table_lines(sec)
+def _extract_direct_item(row: list[str]) -> tuple[str, int] | None:
+    if len(row) >= 2:
+        val = extract_currency(row[-1])
+        if val > 0:
+            return (row[0], val)
+    return None
+
+
+def _collect_direct_rows(
+    rows: list[list[str]],
+) -> tuple[list[tuple[str, int]], int]:
     items: list[tuple[str, int]] = []
     direct = 0
     for row in rows:
-        if "total" in " ".join(row).lower():
-            for cell in reversed(row):
-                val = extract_currency(cell)
-                if val > 0:
-                    direct = val
-                    break
+        if _is_total_row(row):
+            found = _first_currency_reversed(row)
+            if found:
+                direct = found
             continue
-        if len(row) >= 2:
-            val = extract_currency(row[-1])
-            name = row[0]
+        maybe = _extract_direct_item(row)
+        if maybe is not None:
+            items.append(maybe)
+    return items, direct
+
+
+def _classify_aiu_row(text: str, val: int, vals: dict[str, int]) -> None:
+    if "administración" in text:
+        vals["a"] = val
+    elif "imprevistos" in text:
+        vals["i"] = val
+    elif "utilidad" in text:
+        vals["u"] = val
+    elif "total aiu" in text:
+        vals["total"] = val
+
+
+def _parse_aiu_vals(rows: list[list[str]]) -> dict[str, int]:
+    vals: dict[str, int] = {}
+    for row in rows:
+        text = " ".join(row).lower()
+        if len(row) >= 4:
+            val = extract_currency(row[3])
             if val > 0:
-                items.append((name, val))
+                _classify_aiu_row(text, val, vals)
+    return vals
+
+
+def _report_aiu_row(label: str, key: str, calc: int, vals: dict[str, int]) -> bool:
+    rep = vals.get(key, 0)
+    ok = calc == rep
+    st = "✓" if ok else "✗"
+    print(f"      {label}: Calc=${calc:,} vs Reportado=${rep:,} {st}")
+    return ok
+
+
+def _verify_provider_sums(
+    providers: list[tuple[str, int, int, int]],
+) -> bool:
+    all_ok = True
+    for pname, sub, aiu, sub_aiu in providers:
+        expected = sub + aiu
+        if sub_aiu == expected:
+            print(f"   ✓ {pname}: Subtotal=${sub:,} + AIU=${aiu:,} = ${sub_aiu:,} ✓")
+        else:
+            print(
+                f"   ✗ {pname}: Subtotal=${sub:,} + AIU=${aiu:,} = "
+                f"${expected:,} pero tabla dice ${sub_aiu:,}"
+            )
+            all_ok = False
+    return all_ok
+
+
+def _check_swapped_columns(
+    mack: dict, tecno: dict, dev: dict, providers: list[tuple[str, int, int, int]]
+) -> bool:
+    all_ok = True
+    for pname, sub, aiu, sub_aiu in providers:
+        expected = sub + aiu
+        if sub_aiu != expected:
+            print(
+                f"   ✗ ERROR: {pname} tiene valor incorrecto "
+                f"${sub_aiu:,} (debería ser ${expected:,})"
+            )
+            all_ok = False
+    actual_tecno = tecno["sub"] + tecno["aiu"]
+    actual_dev = dev["sub"] + dev["aiu"]
+    if actual_tecno == dev["sub_aiu"] and actual_dev == tecno["sub_aiu"]:
+        print("   ✗ CRÍTICO: ¡Valores de TecnoShop y DevSoft están INTERCAMBIADOS!")
+        all_ok = False
+    elif actual_tecno == mack["sub_aiu"] or actual_dev == mack["sub_aiu"]:
+        print("   ✗ CRÍTICO: ¡Valores están en columna equivocada!")
+        all_ok = False
+    else:
+        print("   ✓ Columnas correctas - no hay valores intercambiados")
+    return all_ok
+
+
+def _handle_personal(content: str) -> tuple[int, int]:
+    print("\n" + "=" * 70)
+    print("1. COSTOS DE PERSONAL (Sección 4.2)")
+    print("=" * 70)
+    sec = _section_slice(content, "## 4.2", "## 4.3")
+    rows = parse_table_lines(sec)
+    items, total = _collect_personal_rows(rows)
+    return _summarize_personal(items, total)
+
+
+def _handle_hardware(content: str) -> tuple[int, int]:
+    print("\n" + "=" * 70)
+    print("2. COSTOS DE HARDWARE (Sección 2.6)")
+    print("=" * 70)
+    sec = _section_slice(content, "## 2.6", "## 3.")
+    rows = parse_table_lines(sec)
+    items, total = _collect_hardware_rows(rows)
+    return _summarize_hardware(items, total)
+
+
+def _handle_software(content: str) -> tuple[int, int]:
+    print("\n" + "=" * 70)
+    print("3. COSTOS DE SOFTWARE (Sección 3.7)")
+    print("=" * 70)
+    sec = _section_slice(content, "## 3.7", "## 4.")
+    rows = parse_table_lines(sec)
+    items, total = _collect_software_rows(rows)
+    return _summarize_software(items, total)
+
+
+def _print_direct_summary(
+    items: list[tuple[str, int]],
+    direct: int,
+    personal: int,
+    hw: int,
+    sw: int,
+) -> int:
     cost_sum = sum(t for _, t in items)
     for name, val in items:
         print(f"   - {name}: ${val:,}")
@@ -197,45 +343,56 @@ def _handle_direct(content: str, personal: int, hw: int, sw: int) -> int:
     return cost_sum
 
 
-def _handle_aiu(content: str, direct: int, all_ok: bool) -> tuple[int, bool]:
+def _handle_direct(content: str, personal: int, hw: int, sw: int) -> int:
     print("\n" + "=" * 70)
-    print("5. CÁLCULO AIU (Sección 4.4)")
+    print("4. ESTRUCTURA DE COSTOS DIRECTOS (Sección 4.3)")
     print("=" * 70)
-    sec = _section_slice(content, "## 4.4", "## 4.5")
+    sec = _section_slice(content, "## 4.3", "## 4.4")
     rows = parse_table_lines(sec)
-    vals: dict[str, int] = {}
-    for row in rows:
-        text = " ".join(row).lower()
-        if len(row) >= 4:
-            val = extract_currency(row[3])
-            if val > 0:
-                if "administración" in text:
-                    vals["a"] = val
-                elif "imprevistos" in text:
-                    vals["i"] = val
-                elif "utilidad" in text:
-                    vals["u"] = val
-                elif "total aiu" in text:
-                    vals["total"] = val
+    items, direct = _collect_direct_rows(rows)
+    return _print_direct_summary(items, direct, personal, hw, sw)
+
+
+def _calc_aiu_values(direct: int) -> tuple[int, int, int, int, int, int]:
     admin = int(direct * 0.05)
     imp = int(direct * 0.10)
     util = int(direct * 0.20)
     aiu = admin + imp + util
     iva = int(util * 0.19)
     total_c = direct + aiu + iva
-    print(f"   Base Imponible:     ${direct:,}")
-    print(_SEP)
+    return admin, imp, util, aiu, iva, total_c
+
+
+def _report_aiu_comparison(
+    vals: dict[str, int],
+    admin: int,
+    imp: int,
+    util: int,
+    aiu: int,
+    all_ok: bool,
+) -> bool:
     for label, key, calc in [
         ("Administración (5 %)", "a", admin),
         ("Imprevistos (10 %)", "i", imp),
         ("Utilidad (20 %)", "u", util),
         ("Total AIU (35 %)", "total", aiu),
     ]:
-        rep = vals.get(key, 0)
-        st = "✓" if calc == rep else "✗"
-        if calc != rep:
+        if not _report_aiu_row(label, key, calc, vals):
             all_ok = False
-        print(f"      {label}: Calc=${calc:,} vs Reportado=${rep:,} {st}")
+    return all_ok
+
+
+def _handle_aiu(content: str, direct: int, all_ok: bool) -> tuple[int, bool]:
+    print("\n" + "=" * 70)
+    print("5. CÁLCULO AIU (Sección 4.4)")
+    print("=" * 70)
+    sec = _section_slice(content, "## 4.4", "## 4.5")
+    rows = parse_table_lines(sec)
+    vals = _parse_aiu_vals(rows)
+    admin, imp, util, aiu, iva, total_c = _calc_aiu_values(direct)
+    print(f"   Base Imponible:     ${direct:,}")
+    print(_SEP)
+    all_ok = _report_aiu_comparison(vals, admin, imp, util, aiu, all_ok)
     print(f"   IVA (19 %):  ${iva:,}")
     print("   ════════════════════════════════════════")
     print(f"   TOTAL PROYECTO:   ${total_c:,}")
@@ -354,6 +511,13 @@ def _handle_comparative(content: str) -> tuple[dict, dict, dict]:
     return mack, tecno, dev
 
 
+def _check_unique_columns(mack: dict, tecno: dict, dev: dict) -> bool:
+    all_subs = {mack["sub"], tecno["sub"], dev["sub"]}
+    all_aius = {mack["aiu"], tecno["aiu"], dev["aiu"]}
+    all_sub_aius = {mack["sub_aiu"], tecno["sub_aiu"], dev["sub_aiu"]}
+    return len(all_subs) == 3 and len(all_aius) == 3 and len(all_sub_aius) == 3
+
+
 def _handle_swap_check(mack: dict, tecno: dict, dev: dict, all_ok: bool) -> bool:
     print("\n" + "-" * 70)
     print("   ⚡ VERIFICACIÓN DE COLUMNAS (Detección de valores intercambiados)")
@@ -363,40 +527,12 @@ def _handle_swap_check(mack: dict, tecno: dict, dev: dict, all_ok: bool) -> bool
         ("TecnoShop", tecno["sub"], tecno["aiu"], tecno["sub_aiu"]),
         ("DevSoft", dev["sub"], dev["aiu"], dev["sub_aiu"]),
     ]
-    for pname, sub, aiu, sub_aiu in providers:
-        expected = sub + aiu
-        if sub_aiu == expected:
-            print(f"   ✓ {pname}: Subtotal=${sub:,} + AIU=${aiu:,} = ${sub_aiu:,} ✓")
-        else:
-            msg = (
-                f"   ✗ {pname}: Subtotal=${sub:,} + AIU=${aiu:,} = "
-                f"${expected:,} pero tabla dice ${sub_aiu:,}"
-            )
-            print(msg)
-            all_ok = False
+    if not _verify_provider_sums(providers):
+        all_ok = False
     print("\n   🔍 Verificando que valores NO estén intercambiados entre columnas...")
-    all_subs = {mack["sub"], tecno["sub"], dev["sub"]}
-    all_aius = {mack["aiu"], tecno["aiu"], dev["aiu"]}
-    all_sub_aius = {mack["sub_aiu"], tecno["sub_aiu"], dev["sub_aiu"]}
-    if len(all_subs) == 3 and len(all_aius) == 3 and len(all_sub_aius) == 3:
-        for pname, sub, aiu, sub_aiu in providers:
-            expected = sub + aiu
-            if sub_aiu != expected:
-                print(
-                    f"   ✗ ERROR: {pname} tiene valor incorrecto "
-                    f"${sub_aiu:,} (debería ser ${expected:,})"
-                )
-                all_ok = False
-        actual_tecno = tecno["sub"] + tecno["aiu"]
-        actual_dev = dev["sub"] + dev["aiu"]
-        if actual_tecno == dev["sub_aiu"] and actual_dev == tecno["sub_aiu"]:
-            print("   ✗ CRÍTICO: ¡Valores de TecnoShop y DevSoft están INTERCAMBIADOS!")
+    if _check_unique_columns(mack, tecno, dev):
+        if not _check_swapped_columns(mack, tecno, dev, providers):
             all_ok = False
-        elif actual_tecno == mack["sub_aiu"] or actual_dev == mack["sub_aiu"]:
-            print("   ✗ CRÍTICO: ¡Valores están en columna equivocada!")
-            all_ok = False
-        else:
-            print("   ✓ Columnas correctas - no hay valores intercambiados")
     else:
         print("   ⚠️ No se puede verificar intercambio (hay valores duplicados)")
     return all_ok
