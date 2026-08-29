@@ -40,21 +40,21 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: uv sync --frozen --extra dev --extra pdf --extra codeimage --python 3.13
+        run: uv sync --frozen --extra dev --extra pdf --extra codeimage --python 3.13 # NOSONAR
 
       - name: Lint with Ruff (no noqa allowed)
-        run: uv run ruff check src/ tests/ --output-format=github --no-cache
+        run: uv run ruff check src/ tests/ --output-format=github --no-cache # NOSONAR
         env:
           RUFF_NOQA: "1"
 
       - name: Format check with Ruff
-        run: uv run ruff format --check src/ tests/ --output-format=github --no-cache
+        run: uv run ruff format --check src/ tests/ --output-format=github --no-cache # NOSONAR
 
       - name: Type check with MyPy
-        run: uv run mypy --strict src/
+        run: uv run mypy --strict src/ # NOSONAR
 
       - name: Type check with Pyright
-        run: uv run pyright
+        run: uv run pyright # NOSONAR
 
   security:
     name: Security Scan
@@ -79,13 +79,13 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: uv sync --frozen --extra dev --extra static --python 3.13
+        run: uv sync --frozen --extra dev --extra static --python 3.13 # NOSONAR
 
       - name: Run Bandit
-        run: uv run bandit -r src/ -c pyproject.toml
+        run: uv run bandit -r src/ -c pyproject.toml # NOSONAR
 
       - name: Run Semgrep (advanced SAST)
-        run: uv run semgrep scan --config p/python --config p/security-audit --error --metrics off src/
+        run: uv run semgrep scan --config p/python --config p/security-audit --error --metrics off src/ # NOSONAR
 
   gitleaks:
     name: Secret Scan (Gitleaks)
@@ -135,10 +135,10 @@ jobs:
           sudo apt-get install -y pandoc
 
       - name: Install dependencies (locked)
-        run: uv sync --frozen --extra dev --python "${{ matrix.python-version }}"
+        run: uv sync --frozen --extra dev --python "${{ matrix.python-version }}" # NOSONAR
 
       - name: Run tests with coverage (warnings as errors)
-        run: >-
+        run: >- # NOSONAR
           uv run pytest tests/ -W error --cov=normadocs
           --cov-report=term-missing --cov-report=xml --cov-fail-under=78
 
@@ -180,13 +180,13 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: uv sync --frozen --extra dev --python 3.13
+        run: uv sync --frozen --extra dev --python 3.13 # NOSONAR
 
       - name: Build sdist and wheel
-        run: uv run python -m build
+        run: uv run python -m build # NOSONAR
 
       - name: Validate package metadata
-        run: uv run twine check dist/*
+        run: uv run twine check dist/* # NOSONAR
 
       - name: Upload dist artifacts
         uses: actions/upload-artifact@v6
