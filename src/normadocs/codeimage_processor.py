@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import logging
-import re
 from pathlib import Path
 from typing import NamedTuple
 
@@ -46,7 +45,7 @@ class CodeImageProcessor:
             print("world")
         ```
 
-    The {code} marker triggers image generation with a fixed theme (monokai).
+    The {code} marker triggers image generation with a fixed theme (tango).
     """
 
     DEFAULT_THEME = "tango"
@@ -55,10 +54,85 @@ class CodeImageProcessor:
     DEFAULT_BG_COLOR = "#ffffff"
     DEFAULT_TEXT_COLOR = "#2e3436"
 
-    CODE_BLOCK_RE = re.compile(
-        r"```(\w*)\s*\{code\}\s*\n([^`]*?)\n```",
-        re.MULTILINE,
-    )
+    @staticmethod
+    def _find_code_blocks(text: str) -> list[tuple[int, int, str, str, str]]:
+        """Manual linear scan for ```lang {code} blocks (replaces S8786)."""
+        result: list[tuple[int, int, str, str, str]] = []
+        pos = 0
+        n = len(text)
+        while pos < n:
+            start = text.find("```", pos)
+            if start == -1:
+                break
+            line_end = text.find("\n", start)
+            if line_end == -1:
+                break
+            opening = text[start:line_end]
+            inner = opening[3:].strip()
+            if "{code}" not in inner:
+                pos = start + 3
+                continue
+            code_idx = inner.find("{code}")
+            lang_part = inner[:code_idx].strip()
+            if lang_part and not all(c.isalnum() or c == "_" for c in lang_part):
+                pos = line_end + 1
+                continue
+            suffix = inner[code_idx + len("{code}") :].strip()
+            if suffix != "":
+                pos = line_end + 1
+                continue
+            lang = lang_part
+            content_start = line_end + 1
+            close = text.find("\n```", content_start)
+            if close == -1:
+                break
+            content = text[content_start:close]
+            if "`" in content:
+                pos = close + 1
+                continue
+            full = text[start : close + 4]
+            result.append((start, close + 4, lang, content, full))
+            pos = close + 4
+        return result
+
+    class _CodeBlockMatch:
+        def __init__(self, start: int, end: int, lang: str, code: str, full: str) -> None:
+            self._start = start
+            self._end = end
+            self._lang = lang
+            self._code = code
+            self._full = full
+
+        def group(self, n: int) -> str:
+            if n == 0:
+                return self._full
+            if n == 1:
+                return self._lang
+            if n == 2:
+                return self._code
+            return ""
+
+        def start(self) -> int:
+            return self._start
+
+        def end(self) -> int:
+            return self._end
+
+    class _CodeBlockPattern:
+        def finditer(self, text: str) -> list[CodeImageProcessor._CodeBlockMatch]:
+            return [
+                CodeImageProcessor._CodeBlockMatch(s, e, lang, code, full)
+                for s, e, lang, code, full in CodeImageProcessor._find_code_blocks(text)
+            ]
+
+        def search(self, text: str) -> CodeImageProcessor._CodeBlockMatch | None:
+            blocks = CodeImageProcessor._find_code_blocks(text)
+            if not blocks:
+                return None
+            s, e, lang, code, full = blocks[0]
+            return CodeImageProcessor._CodeBlockMatch(s, e, lang, code, full)
+
+    CODE_BLOCK_RE = _CodeBlockPattern()
 
     CSS_TEMPLATE = """
     .code-image {{
@@ -97,7 +171,7 @@ class CodeImageProcessor:
 
         Args:
             output_dir: Directory to save generated images. Defaults to ./code_images.
-            theme: Pygments style to use. Defaults to "monokai".
+            theme: Pygments style to use. Defaults to "tango".
             image_format: Output format ("png" or "jpeg").
             scale: Device pixel ratio for crisp images. Default 2.0 for Retina.
         """

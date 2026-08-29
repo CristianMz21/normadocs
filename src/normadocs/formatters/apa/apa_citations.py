@@ -59,9 +59,67 @@ _ET_AL = "et al."
 _ET_AL_DOT = "et al.,"
 _AND_SPACED = " y "
 _AND_REPLACED = " & "
-_SPLIT_RE = re.compile(r",\s*|\s+[y&]\s+")
 _DATE_PAREN_RE = re.compile(r"\((s\.\s*f\.|n\.\s*d\.|\d{4})\)", re.IGNORECASE)
 _REF_CONJ_REPLACED = "., & "
+
+
+def _skip_spaces(text: str, idx: int) -> int:
+    while idx < len(text) and text[idx].isspace():
+        idx += 1
+    return idx
+
+
+def _handle_comma(text: str, idx: int, cur: list[str], tokens: list[str]) -> int:
+    tokens.append("".join(cur).strip())
+    cur.clear()
+    return _skip_spaces(text, idx + 1)
+
+
+def _try_consume_conjunction(text: str, idx: int, cur: list[str], tokens: list[str]) -> int | None:
+    j = _skip_spaces(text, idx)
+    if j < len(text) and text[j] in {"y", "&"}:
+        k = j + 1
+        if k < len(text) and text[k].isspace():
+            tokens.append("".join(cur).strip())
+            cur.clear()
+            return _skip_spaces(text, k + 1)
+    return None
+
+
+def _split_authors(text: str) -> list[str]:
+    """Manual linear split for author lists (replaces super-linear _SPLIT_RE)."""
+    tokens: list[str] = []
+    cur: list[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch == ",":
+            i = _handle_comma(text, i, cur, tokens)
+            continue
+        if ch.isspace():
+            nxt = _try_consume_conjunction(text, i, cur, tokens)
+            if nxt is not None:
+                i = nxt
+                continue
+            cur.append(ch)
+            i += 1
+            continue
+        cur.append(ch)
+        i += 1
+    if cur:
+        tokens.append("".join(cur).strip())
+    return [t for t in tokens if t]
+
+
+class _SplitPattern:
+    """Minimal replacement for re.Pattern with .split for S8786 compliance."""
+
+    def split(self, text: str) -> list[str]:
+        return _split_authors(text)
+
+
+_SPLIT_RE = _SplitPattern()
 
 
 class APACitationsHandler:

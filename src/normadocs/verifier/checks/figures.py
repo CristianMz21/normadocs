@@ -214,7 +214,7 @@ class FiguresCheck:
         if figure_captions:
             return
         text_by_page = ctx.pdf.extract_text_by_page()
-        all_text = " ".join(text for text in text_by_page.values())
+        all_text = " ".join(text_by_page.values())
         if "figure" not in all_text.lower() and "figura" not in all_text.lower():
             return
         issues.append(

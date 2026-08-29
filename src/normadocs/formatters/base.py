@@ -47,13 +47,13 @@ class DocumentFormatter(ABC):
     def process(self, meta: DocumentMetadata) -> None:
         """Apply all formatting rules to the document."""
         del meta
-        pass
+        ...
 
     @abstractmethod
     def save(self, output_path: str) -> None:
         """Save the formatted document."""
         del output_path
-        pass
+        ...
 
     def _format_table_caption(self, table: Table, number: int, title: str) -> None:
         """Format table caption (Table X + Title). Optional override for subclasses."""

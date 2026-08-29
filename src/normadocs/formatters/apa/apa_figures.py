@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, Any, cast
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -39,8 +38,75 @@ _W_PR = "w:pPr"
 _NS_WP = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
 _NS_PIC = "http://schemas.openxmlformats.org/drawingml/2006/picture"
 _NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
-_CAPTION_RE = re.compile(r"^(Figura|Figure)\s+(\d+)\s*[.:]?\s*(.*)$")
 _PRESERVE = "preserve"
+
+
+def _extract_prefix(text: str) -> tuple[str, str] | None:
+    stripped = text.strip()
+    if stripped.startswith("Figura") and len(stripped) > 6 and stripped[6].isspace():
+        return ("Figura", stripped[6:].lstrip())
+    if stripped.startswith("Figure") and len(stripped) > 6 and stripped[6].isspace():
+        return ("Figure", stripped[6:].lstrip())
+    return None
+
+
+def _extract_number(rest: str) -> tuple[str, int] | None:
+    i = 0
+    num = ""
+    while i < len(rest) and rest[i].isdigit():
+        num += rest[i]
+        i += 1
+    if not num:
+        return None
+    return (num, i)
+
+
+def _skip_punct_and_spaces(rest: str, idx: int) -> int:
+    while idx < len(rest) and rest[idx].isspace():
+        idx += 1
+    if idx < len(rest) and rest[idx] in ".:":
+        idx += 1
+    while idx < len(rest) and rest[idx].isspace():
+        idx += 1
+    return idx
+
+
+def _parse_caption(text: str) -> tuple[str, str, str] | None:
+    """Manual linear parse for 'Figura N. Title' (replaces S8786 _CAPTION_RE)."""
+    pref = _extract_prefix(text)
+    if pref is None:
+        return None
+    prefix, rest = pref
+    num_res = _extract_number(rest)
+    if num_res is None:
+        return None
+    num, idx = num_res
+    idx = _skip_punct_and_spaces(rest, idx)
+    title = rest[idx:] if idx < len(rest) else ""
+    return (prefix, num, title)
+
+
+class _CaptionMatch:
+    """Mimics re.Match for caption parsing."""
+
+    def __init__(self, prefix: str, num: str, title: str) -> None:
+        self._groups = (prefix, num, title)
+
+    def group(self, n: int) -> str:
+        return self._groups[n - 1]
+
+
+class _CaptionPattern:
+    """Minimal replacement for compiled _CAPTION_RE (S8786 linear)."""
+
+    def match(self, text: str) -> _CaptionMatch | None:
+        parsed = _parse_caption(text)
+        if parsed is None:
+            return None
+        return _CaptionMatch(parsed[0], parsed[1], parsed[2])
+
+
+_CAPTION_RE = _CaptionPattern()
 
 
 class APAFiguresHandler:
@@ -50,6 +116,18 @@ class APAFiguresHandler:
         self.doc = doc
         self.config = config if config is not None else {}
 
+    def get_config(self, *keys: str, default: Any = None) -> Any:
+        """Get nested config value via dot-notation keys."""
+        value: Any = self.config
+        for key in keys:
+            if isinstance(value, dict):
+                value = value.get(key)
+            else:
+                return default
+            if value is None:
+                return default
+        return value
+
     def _get_figure_config(self) -> dict[str, Any]:
         """Get figure configuration from config with defaults."""
         default_config: dict[str, Any] = {
@@ -57,14 +135,11 @@ class APAFiguresHandler:
             "title_above": True,
             "nota_prefix": "Nota.",
         }
-        return cast(dict[str, Any], self.config.get("figures", default_config))
+        return cast(dict[str, Any], self.get_config("figures", default=default_config))
 
     def _get_body_font(self) -> str:
         """Get body font name from config."""
-        fonts: dict[str, Any] = {}
-        return cast(
-            str, self.config.get("fonts", fonts).get("body", {}).get("name", DEFAULT_BODY_FONT)
-        )
+        return cast(str, self.get_config("fonts", "body", "name", default=DEFAULT_BODY_FONT))
 
     def _apply_font_style(self, run: RunType, bold: bool = False, italic: bool = False) -> None:
         """Apply font style to a run (helper for this handler)."""
@@ -202,7 +277,7 @@ class APAFiguresHandler:
         self._insert_missing_captions(image_paragraphs, _CAPTION_RE, max_used)
         self._normalize_caption_runs(_CAPTION_RE)
 
-    def _move_existing_captions(self, images: list[Any], caption_re: re.Pattern[str]) -> None:
+    def _move_existing_captions(self, images: list[Any], caption_re: Any) -> None:
         """Move captions sitting directly below image to above it."""
         from docx.text.paragraph import Paragraph
 
@@ -214,7 +289,7 @@ class APAFiguresHandler:
             if caption_re.match(next_p.text.strip()):
                 img_p._element.addprevious(nxt)
 
-    def _find_max_caption_number(self, caption_re: re.Pattern[str]) -> int:
+    def _find_max_caption_number(self, caption_re: Any) -> int:
         """Find highest existing figure number."""
         max_used = 0
         for p in self.doc.paragraphs:
@@ -223,9 +298,7 @@ class APAFiguresHandler:
                 max_used = max(max_used, int(match.group(2)))
         return max_used
 
-    def _insert_missing_captions(
-        self, images: list[Any], caption_re: re.Pattern[str], max_used: int
-    ) -> None:
+    def _insert_missing_captions(self, images: list[Any], caption_re: Any, max_used: int) -> None:
         """Insert missing captions for images without adjacent captions."""
         current_max = max_used
         for img_p in images:
@@ -238,7 +311,7 @@ class APAFiguresHandler:
             caption_el = self._build_caption_element(current_max, alt_text)
             img_p._element.addprevious(caption_el)
 
-    def _normalize_caption_runs(self, caption_re: re.Pattern[str]) -> None:
+    def _normalize_caption_runs(self, caption_re: Any) -> None:
         """Normalize caption paragraphs into bold label + italic title."""
         for para in self.doc.paragraphs:
             text = para.text.strip()
@@ -272,7 +345,7 @@ class APAFiguresHandler:
             self._apply_font_style(title_run, italic=True)
         para.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-    def _has_adjacent_caption(self, img_p: Any, caption_re: re.Pattern[str]) -> bool:
+    def _has_adjacent_caption(self, img_p: Any, caption_re: Any) -> bool:
         """Return whether the paragraphs around an image contain its caption."""
         from docx.text.paragraph import Paragraph
 
