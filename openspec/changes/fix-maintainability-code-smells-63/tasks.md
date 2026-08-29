@@ -37,12 +37,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 2: PR2 — Formatters APA (13, ~380)
 
-- [ ] 2.1 Split `apa_paragraphs.py:95` → `_handle_heading`, `_handle_spacing`, `_handle_indent` + `ParagraphState` <15
-- [ ] 2.2 Split `apa_paragraphs.py:571`+`666` → `_apply_indent_rules`, `_clean_paragraph`; fix S5852 `:386`
-- [ ] 2.3 Split `apa_tables.py:93` → `_apply_layout`, `_apply_cell_geometry`, `_calc_col_widths`, `_clean_cell_text` reuse `W_VAL`
-- [ ] 2.4 Split `apa_tables.py:723`+`628` → helpers <15; fix S5852 `:311`
-- [ ] 2.5 Split `apa_figures.py:91`+`165` + `apa_styles.py:70` → `_has_manual_title`, `_build_caption_element` <15; remove S8786
-- [ ] 2.6 Verify PR2: `radon cc --max 15 formatters/apa/`; `ruff/mypy/pyright` 0; `pytest -W error --cov-fail-under=78` `unit/apa*` DOCX hash same; `find_suppressions.sh` 0; sonar 55→42
+- [x] 2.1 Split `apa_paragraphs.py:95` → `_handle_heading`, `_handle_spacing`, `_handle_indent` + `ParagraphState` <15
+- [x] 2.2 Split `apa_paragraphs.py:571`+`666` → `_apply_indent_rules`, `_clean_paragraph`; fix S5852 `:386`
+- [x] 2.3 Split `apa_tables.py:93` → `_apply_layout`, `_apply_cell_geometry`, `_calc_col_widths`, `_clean_cell_text` reuse `W_VAL`
+- [x] 2.4 Split `apa_tables.py:723`+`628` → helpers <15; fix S5852 `:311`
+- [x] 2.5 Split `apa_figures.py:91`+`165` + `apa_styles.py:70` → `_has_manual_title`, `_build_caption_element` <15; remove S8786
+- [x] 2.6 Verify PR2: `radon cc --max 15 formatters/apa/`; `ruff/mypy/pyright` 0; `pytest -W error --cov-fail-under=78` `unit/apa*` DOCX hash same; `find_suppressions.sh` 0; sonar 55→42
 
 ## Phase 3: PR3 — Verifier (15, ~360)
 
