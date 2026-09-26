@@ -13,6 +13,8 @@ import logging
 from pathlib import Path
 from typing import NamedTuple
 
+from .sql_formatter import format_sql, is_sql_lang
+
 logger = logging.getLogger("normadocs")
 
 _CODE_MARKER = "{code}"
@@ -332,7 +334,10 @@ class CodeImageProcessor:
         offset = 0
 
         for i, block in enumerate(blocks, 1):
-            image_filename = self._make_image_filename(i, block.lang, block.code)
+            code_for_render = block.code
+            if is_sql_lang(block.lang):
+                code_for_render = format_sql(block.code)
+            image_filename = self._make_image_filename(i, block.lang, code_for_render)
             image_path = self.output_dir / image_filename
 
             if image_path.exists():
@@ -347,7 +352,7 @@ class CodeImageProcessor:
                     )
                 )
             else:
-                html = self._get_pygments_html(block.code, block.lang)
+                html = self._get_pygments_html(code_for_render, block.lang)
                 success = self._generate_image(html, image_path)
 
                 if success:

@@ -284,6 +284,125 @@ console.log("world")
             self.assertIn("![python code](", result)
             self.assertIn("![javascript code](", result)
 
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._check_pygments")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._check_imgkit")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._generate_image")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._get_pygments_html")
+    def test_process_sql_block_formatted_before_render(
+        self, mock_html, mock_gen, mock_imgkit, mock_pygments
+    ):
+        """Test SQL {code} blocks reach the renderer uppercased and reindented."""
+        mock_imgkit.return_value = True
+        mock_pygments.return_value = True
+        mock_gen.return_value = True
+        mock_html.return_value = "<html/>"
+
+        import tempfile
+
+        from normadocs.codeimage_processor import CodeImageProcessor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            processor = CodeImageProcessor(output_dir=tmpdir)
+            text = """```sql {code}
+select * from users where id > 1
+```"""
+            result, results = processor.process(text)
+
+            self.assertIn("![sql code](", result)
+            self.assertEqual(len(results), 1)
+            self.assertTrue(results[0].success)
+            mock_html.assert_called_once()
+            rendered_code, rendered_lang = mock_html.call_args[0]
+            self.assertEqual(rendered_lang, "sql")
+            self.assertIn("SELECT", rendered_code)
+            self.assertIn("FROM", rendered_code)
+            self.assertIn("WHERE", rendered_code)
+
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._check_pygments")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._check_imgkit")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._generate_image")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._get_pygments_html")
+    def test_process_sql_hash_covers_formatted_content(
+        self, mock_html, mock_gen, mock_imgkit, mock_pygments
+    ):
+        """Test cached filename hashes the formatted SQL, not the raw input."""
+        mock_imgkit.return_value = True
+        mock_pygments.return_value = True
+        mock_gen.return_value = True
+        mock_html.return_value = "<html/>"
+
+        import tempfile
+
+        from normadocs.codeimage_processor import CodeImageProcessor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            processor = CodeImageProcessor(output_dir=tmpdir)
+            text = """```sql {code}
+select * from users where id > 1
+```"""
+            _, results = processor.process(text)
+
+            rendered_code = mock_html.call_args[0][0]
+            expected_hash = processor._hash_content(rendered_code)
+            self.assertIn(expected_hash, results[0].image_path or "")
+            self.assertNotEqual(rendered_code, "select * from users where id > 1")
+
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._check_pygments")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._check_imgkit")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._generate_image")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._get_pygments_html")
+    def test_process_non_sql_block_untouched(self, mock_html, mock_gen, mock_imgkit, mock_pygments):
+        """Test non-SQL {code} blocks reach the renderer byte-identical."""
+        mock_imgkit.return_value = True
+        mock_pygments.return_value = True
+        mock_gen.return_value = True
+        mock_html.return_value = "<html/>"
+
+        import tempfile
+
+        from normadocs.codeimage_processor import CodeImageProcessor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            processor = CodeImageProcessor(output_dir=tmpdir)
+            raw = 'def hello():\n    print("world")'
+            text = f"""```python {{code}}
+{raw}
+```"""
+            result, results = processor.process(text)
+
+            self.assertIn("![python code](", result)
+            self.assertTrue(results[0].success)
+            mock_html.assert_called_once()
+            self.assertEqual(mock_html.call_args[0][0], raw)
+
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._check_pygments")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._check_imgkit")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._generate_image")
+    @patch("normadocs.codeimage_processor.CodeImageProcessor._get_pygments_html")
+    def test_process_plain_sql_fence_untouched(
+        self, mock_html, mock_gen, mock_imgkit, mock_pygments
+    ):
+        """Test plain sql fences without {code} are never reformatted."""
+        mock_imgkit.return_value = True
+        mock_pygments.return_value = True
+        mock_gen.return_value = True
+        mock_html.return_value = "<html/>"
+
+        import tempfile
+
+        from normadocs.codeimage_processor import CodeImageProcessor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            processor = CodeImageProcessor(output_dir=tmpdir)
+            text = """```sql
+select a from t where a > 1
+```"""
+            result, results = processor.process(text)
+
+            self.assertEqual(result, text)
+            self.assertEqual(len(results), 0)
+            mock_html.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

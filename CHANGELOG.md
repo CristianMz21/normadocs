@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **SQL auto-format for `{code}` image blocks** (`src/normadocs/sql_formatter.py`, `codeimage_processor.py`): fenced blocks tagged exactly `sql` with the `{code}` marker are normalized with `sqlparse` before Pygments/imgkit rendering — keywords uppercased, clauses reindented, comments preserved (`keyword_case="upper"`, `reindent=True`, `strip_comments=False`). The image hash/filename is computed from the formatted content; when `sqlparse` is missing or formatting fails, the original code renders unchanged. Plain ` ```sql ` fences (Pandoc path) and non-SQL languages are untouched. New optional dependency `sqlparse>=0.4.4` in the `codeimage` extra (`uv.lock`, `requirements-ci.txt` updated); 21 new tests (`tests/unit/test_sql_formatter.py`, `tests/test_codeimage.py`).
+
 ### Fixed
 
 - **SonarCloud findings resolved without suppressions** (security D →

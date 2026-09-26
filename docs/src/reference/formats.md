@@ -271,6 +271,16 @@ def hello():
 
 Pygments supports 300+ languages including: `python`, `javascript`, `typescript`, `java`, `c`, `cpp`, `csharp`, `go`, `rust`, `ruby`, `php`, `swift`, `kotlin`, `scala`, `sql`, `html`, `css`, `json`, `yaml`, `xml`, `bash`, `shell`, `markdown`, `latex`, and many more.
 
+### SQL Auto-Format
+
+````markdown
+```sql {code}
+select * from users where id > 1
+```
+````
+
+Blocks tagged exactly `sql` (case-insensitive) are normalized with `sqlparse` before rendering: keywords are uppercased and clauses reindented, while comments are preserved. Only `{code}` blocks are formatted — plain `sql` fences stay untouched, as do all other languages. The image hash and filename are computed from the formatted content. When `sqlparse` is unavailable the original code renders unchanged.
+
 ### How It Works
 
 1. **Detection**: The preprocessor identifies `{code}` marked blocks
@@ -285,7 +295,7 @@ Pygments supports 300+ languages including: `python`, `javascript`, `typescript`
 pip install normadocs[codeimage]
 ```
 
-This installs `pygments>=2.17.0` and `imgkit>=1.0.0`.
+This installs `pygments>=2.17.0`, `imgkit>=1.0.0`, and `sqlparse>=0.4.4`.
 
 > **Note**: imgkit requires `wkhtmltopdf` system library:
 > ```bash
