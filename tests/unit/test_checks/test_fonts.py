@@ -117,8 +117,8 @@ class TestFontsCheck(unittest.TestCase):
             path.unlink(missing_ok=True)
 
     def test_check_fails_with_correct_size(self) -> None:
-        """Test that correct font size passes."""
-        path = self._create_docx_with_fonts("Arial", 12)
+        """Test that correct font size passes (Arial 11pt is its APA profile)."""
+        path = self._create_docx_with_fonts("Arial", 11)
         try:
             ctx = self._create_context(path)
             check = FontsCheck()

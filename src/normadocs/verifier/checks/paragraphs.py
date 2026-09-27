@@ -140,6 +140,8 @@ class ParagraphsCheck:
             or "Caption" in style_name
             or "Compact" in style_name
             or "Source" in style_name
+            or "Block" in style_name
+            or "Quote" in style_name
         )
 
     def _is_caption_or_digit(self, p: DOCXParagraphInfo) -> bool:

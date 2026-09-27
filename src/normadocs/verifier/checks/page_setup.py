@@ -46,7 +46,16 @@ class PageSetupCheck:
 
         default_header = " ".join(ctx.docx.get_header_text("default").split()).upper()
         if ctx.strict:
-            default_header_valid = default_header == "PAGE" or default_header.isdigit()
+            # Strict: professional header has short_title + page number.
+            has_page = "PAGE" in default_header or any(c.isdigit() for c in default_header)
+            if ctx.meta.short_title:
+                # Professional paper: must contain short_title and page number
+                expected_short = ctx.meta.short_title.upper()
+                has_short = expected_short in default_header
+                default_header_valid = has_short and has_page
+            else:
+                # Student paper: header must be exactly PAGE or digit
+                default_header_valid = default_header == "PAGE" or default_header.isdigit()
         else:
             default_header_valid = "PAGE" in default_header or "1" in default_header
         if not default_header_valid:
