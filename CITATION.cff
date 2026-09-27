@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: If you use NormaDocs in academic work, please cite it as below.
 type: software
 title: "NormaDocs"
-version: "0.3.0"
+version: "0.3.1"
 date-released: 2026-09-27
 license: MIT
 url: "https://github.com/CristianMz21/normadocs"
