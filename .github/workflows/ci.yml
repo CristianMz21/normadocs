@@ -171,7 +171,8 @@ jobs:
   tests:
     name: Tests (Python ${{ matrix.python-version }})
     needs: [quality, security, changes]
-    if: needs.changes.outputs.code == 'true'
+    # No job-level if: matrix legs must report for branch protection.
+    # Docs-only gating is step-level (echo leg, ~30s).
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
