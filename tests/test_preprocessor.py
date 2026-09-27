@@ -36,26 +36,22 @@ Text here.
 # Methodology
 More text.
 
+# Referencias
+Entries here.
+
 ## Subsection
 Should not break.
 """
         preprocessor = MarkdownPreprocessor()
         processed, _meta = preprocessor.process(text)
 
-        # Should have page break before Methodology
-        # Note: The exact implementation inserts page break OXML
-        self.assertIn('<w:br w:type="page"/>', processed)
-
-        # Should NOT have page break before Subsection (which starts with ##)
-        # It's hard to test "not before" without strict parsing, but we can check count?
-        # Only 1 page break expected (Intro -> Method) = actually 1
-        # Title page logic no longer adds one in preprocessor.
-        # Temp title -> Intro starts. (No break before first)
-        # Method starts -> adds break.
-        # Total breaks: 1
-
+        # Only Referencias opens a new page (APA 7 continuous body text).
         breaks = processed.count('<w:br w:type="page"/>')
-        self.assertGreaterEqual(breaks, 1)
+        self.assertEqual(breaks, 1)
+        self.assertLess(processed.find("# Methodology"), processed.find("# Referencias"))
+        ref_pos = processed.find("# Referencias")
+        break_pos = processed.find('<w:br w:type="page"/>')
+        self.assertLess(break_pos, ref_pos)
 
 
 if __name__ == "__main__":

@@ -24,6 +24,10 @@ PEP 561 (`src/normadocs/py.typed`).
   download to `/opt/LanguageTool`.
 - **Semgrep** (optional locally): `pip install -e ".[static]"`. CI installs it
   in the `security` job.
+- **SQL extras for codeimage tests**: `pip install -e ".[dev,codeimage]"`.
+  Without the `codeimage` extra, `sqlparse` is missing and the 5 SQL
+  formatter/codeimage tests fail locally (CI installs it via
+  `requirements-ci.txt`). Production code degrades gracefully without it.
 - **Gitleaks** (optional locally): `brew install gitleaks` / release binary.
   CI runs it via `gitleaks-action`.
 
@@ -222,3 +226,8 @@ in `src/normadocs/standards/__init__.py`).
 - Don't run `make publish` (twine upload) without explicit user approval.
 - Don't treat `.specify/memory/constitution.md` as authoritative — it's a
   template, not a live contract.
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
