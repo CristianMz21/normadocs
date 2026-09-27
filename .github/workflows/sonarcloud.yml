@@ -72,7 +72,7 @@ jobs:
 
       - name: Install dependencies (locked)
         if: steps.sonar_gate.outputs.available == 'true'
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Run tests with coverage
         if: steps.sonar_gate.outputs.available == 'true'

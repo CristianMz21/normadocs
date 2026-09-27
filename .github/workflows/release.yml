@@ -100,7 +100,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Lint with Ruff (no noqa allowed)
         run: uv run ruff check src/ tests/ --output-format=github --no-cache
@@ -137,7 +137,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Run Bandit
         run: uv run bandit -r src/ -c pyproject.toml
@@ -171,7 +171,7 @@ jobs:
           sudo apt-get install -y pandoc
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Run tests with coverage (warnings as errors)
         run: >-
@@ -202,7 +202,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Build sdist and wheel
         run: uv run python -m build
@@ -273,7 +273,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Build package
         run: uv run python -m build
