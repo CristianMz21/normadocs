@@ -86,8 +86,8 @@ class TestCitationsCheck(unittest.TestCase):
         self.assertEqual(len(block), 1)
 
     def test_short_quotation_passes(self):
-        """Short in-line quotations are fine."""
-        issues = self._run_check([('"cita breve" según García (2020).', "Normal")])
+        """Short in-line quotations with a page locator are fine."""
+        issues = self._run_check([('"cita breve" (García, 2020, p. 15).', "Normal")])
         self.assertEqual(issues, [])
 
     def test_references_section_is_not_scanned(self):

@@ -30,6 +30,8 @@ _NARRATIVE_CITATION = re.compile(
 QUOTE_OPEN = ('"', "\u201c", "\u00ab")
 BLOCK_QUOTE_MIN_WORDS = 40
 
+_PAGE_RE = re.compile(r",\s*(?:pp?\.\s*\d|p[aá]rr\.\s*\d)", re.IGNORECASE)
+
 
 _ET_AL = "et al."
 
@@ -124,6 +126,7 @@ class CitationsCheck:
             "ampersand": self._check_ampersand_dispatch,
             "et_al": self._check_et_al_dispatch,
             "block_quote": self._check_block_quote_dispatch,
+            "page": self._check_page_dispatch,
         }
         for p_info in ctx.docx.get_paragraphs_info():
             text = p_info.text
@@ -164,6 +167,11 @@ class CitationsCheck:
         self, text: str, ctx: VerificationContext, issues: list[VerificationIssue]
     ) -> None:
         self._check_block_quote(text, ctx.strict, issues)
+
+    def _check_page_dispatch(
+        self, text: str, ctx: VerificationContext, issues: list[VerificationIssue]
+    ) -> None:
+        self._check_short_quote_page(text, ctx.strict, issues)
 
     def _check_ampersand(self, text: str, issues: list[VerificationIssue]) -> None:
         """Flag parenthetical citations joined with the Spanish 'y'."""
@@ -274,6 +282,31 @@ class CitationsCheck:
         if stripped[:1] not in QUOTE_OPEN:
             return False
         return len(stripped.split()) >= BLOCK_QUOTE_MIN_WORDS
+
+    def _check_short_quote_page(
+        self, text: str, strict: bool, issues: list[VerificationIssue]
+    ) -> None:
+        """Flag short (<40 words) quotations missing a page locator."""
+        stripped = text.strip()
+        if stripped[:1] not in QUOTE_OPEN:
+            return
+        if len(stripped.split()) >= BLOCK_QUOTE_MIN_WORDS:
+            return
+        if _YEAR_TAIL.search(stripped) is None and "et al." not in stripped:
+            has_citation = bool(_PAREN_FULL.search(stripped))
+            if not has_citation:
+                return
+        if _PAGE_RE.search(stripped):
+            return
+        issues.append(
+            VerificationIssue(
+                check=f"{CheckCategory.CITATIONS}.page_missing",
+                severity="error" if strict else "warning",
+                expected="Short quotation with page locator (p./pp.)",
+                actual="Quotation without 'p.'/'pp.' locator",
+                evidence="Textual quotations under 40 words must include the page",
+            )
+        )
 
     @staticmethod
     def _author_count(segment: str) -> int:

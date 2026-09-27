@@ -44,7 +44,10 @@ class CoverPageCheck:
         cover_elements = {
             "title": False,
             "author": False,
+            "program": False,
             "institution": False,
+            "subject": False,
+            "instructor": False,
             "date": False,
         }
         self._scan_cover_region(paragraphs_info[:first_heading_index], ctx, cover_elements, issues)
@@ -95,7 +98,10 @@ class CoverPageCheck:
             return
         self._check_title_paragraph(p_info, text, ctx, cover_elements, issues)
         self._check_author_paragraph(p_info, text, ctx, cover_elements, issues)
+        self._check_program_paragraph(p_info, text, ctx, cover_elements, issues)
         self._check_institution_paragraph(p_info, text, ctx, cover_elements, issues)
+        self._check_subject_paragraph(text, ctx, cover_elements)
+        self._check_instructor_paragraph(text, ctx, cover_elements)
         self._check_date_paragraph(text, ctx, cover_elements)
 
     def _check_title_paragraph(
@@ -131,6 +137,74 @@ class CoverPageCheck:
                     evidence=f"Cover title lacks bold formatting: '{text[:50]}...'",
                 )
             )
+        self._check_title_case(text, issues)
+
+    _TITLE_MINOR_WORDS = frozenset(
+        {
+            "a",
+            "ante",
+            "bajo",
+            "con",
+            "contra",
+            "de",
+            "del",
+            "desde",
+            "durante",
+            "e",
+            "el",
+            "en",
+            "entre",
+            "hacia",
+            "hasta",
+            "la",
+            "las",
+            "los",
+            "mediante",
+            "o",
+            "para",
+            "por",
+            "según",
+            "sin",
+            "sobre",
+            "tras",
+            "u",
+            "un",
+            "una",
+            "y",
+            "al",
+        }
+    )
+
+    def _check_title_case(self, text: str, issues: list[VerificationIssue]) -> None:
+        """Warn when the cover title is not in Title Case (never rewrites it).
+
+        Spanish minor words (de, la, en, y, ...) may stay lowercase; every
+        other word should start with an uppercase letter.
+        """
+        words = [w.strip('¿?¡!"“”«»,.:;') for w in text.split()]
+        words = [w for w in words if w]
+        if not words:
+            return
+        bad = []
+        first, rest = words[0], words[1:]
+        if first[0].isalpha() and not first[0].isupper():
+            bad.append(first)
+        bad.extend(
+            w
+            for w in rest
+            if w[0].isalpha() and not w[0].isupper() and w.casefold() not in self._TITLE_MINOR_WORDS
+        )
+        if not bad:
+            return
+        issues.append(
+            VerificationIssue(
+                check=f"{CheckCategory.COVER_PAGE}.title_case",
+                severity="warning",
+                expected="Title in Title Case (major words capitalized)",
+                actual=f"Lowercase major words: {', '.join(bad[:3])}",
+                evidence="APA titles use Title Case; minor words may stay lowercase",
+            )
+        )
 
     def _check_author_paragraph(
         self,
@@ -185,6 +259,54 @@ class CoverPageCheck:
             )
         )
 
+    def _check_program_paragraph(
+        self,
+        p_info: DOCXParagraphInfo,
+        text: str,
+        ctx: VerificationContext,
+        cover_elements: dict[str, bool],
+        issues: list[VerificationIssue],
+    ) -> None:
+        program = ctx.meta.program
+        if not program or program not in text:
+            return
+        cover_elements["program"] = True
+        if not ctx.strict or p_info.alignment == "center":
+            return
+        issues.append(
+            VerificationIssue(
+                check=f"{CheckCategory.COVER_PAGE}.program_alignment",
+                severity="error",
+                expected="Program/department centered",
+                actual=f"Alignment: {p_info.alignment}",
+                evidence=f"Program is not centered: '{text[:50]}...'",
+            )
+        )
+
+    def _check_subject_paragraph(
+        self,
+        text: str,
+        ctx: VerificationContext,
+        cover_elements: dict[str, bool],
+    ) -> None:
+        subject = ctx.meta.subject
+        code = getattr(ctx.meta, "subject_code", None)
+        if subject and subject in text:
+            cover_elements["subject"] = True
+            return
+        if code and code in text:
+            cover_elements["subject"] = True
+
+    def _check_instructor_paragraph(
+        self,
+        text: str,
+        ctx: VerificationContext,
+        cover_elements: dict[str, bool],
+    ) -> None:
+        instructor = ctx.meta.instructor
+        if instructor and instructor in text:
+            cover_elements["instructor"] = True
+
     def _check_date_paragraph(
         self,
         text: str,
@@ -207,7 +329,10 @@ class CoverPageCheck:
         severity: Literal["error", "warning"] = "error" if ctx.strict else "warning"
         self._check_missing_title(cover_elements, severity, issues)
         self._check_missing_author(cover_elements, ctx, severity, issues)
+        self._check_missing_program(cover_elements, ctx, issues)
         self._check_missing_institution(cover_elements, ctx, issues)
+        self._check_missing_subject(cover_elements, ctx, issues)
+        self._check_missing_instructor(cover_elements, ctx, issues)
         self._check_missing_date(cover_elements, ctx, issues)
 
     def _check_missing_title(
@@ -268,6 +393,62 @@ class CoverPageCheck:
                 expected="Institutional affiliation on cover page",
                 actual="Affiliation not found in the cover region",
                 evidence="The configured institutional affiliation is missing from the cover",
+            )
+        )
+
+    def _check_missing_program(
+        self,
+        cover_elements: dict[str, bool],
+        ctx: VerificationContext,
+        issues: list[VerificationIssue],
+    ) -> None:
+        if not ctx.strict or not ctx.meta.program or cover_elements["program"]:
+            return
+        issues.append(
+            VerificationIssue(
+                check=f"{CheckCategory.COVER_PAGE}.program_present",
+                severity="error",
+                expected="Program/department on cover page",
+                actual="Program not found in the cover region",
+                evidence="The configured program is missing from the cover",
+            )
+        )
+
+    def _check_missing_subject(
+        self,
+        cover_elements: dict[str, bool],
+        ctx: VerificationContext,
+        issues: list[VerificationIssue],
+    ) -> None:
+        subject = ctx.meta.subject
+        code = getattr(ctx.meta, "subject_code", None)
+        if not ctx.strict or (not subject and not code) or cover_elements["subject"]:
+            return
+        issues.append(
+            VerificationIssue(
+                check=f"{CheckCategory.COVER_PAGE}.subject_present",
+                severity="error",
+                expected="Course name and code on cover page",
+                actual="Subject not found in the cover region",
+                evidence="The configured course is missing from the cover",
+            )
+        )
+
+    def _check_missing_instructor(
+        self,
+        cover_elements: dict[str, bool],
+        ctx: VerificationContext,
+        issues: list[VerificationIssue],
+    ) -> None:
+        if not ctx.strict or not ctx.meta.instructor or cover_elements["instructor"]:
+            return
+        issues.append(
+            VerificationIssue(
+                check=f"{CheckCategory.COVER_PAGE}.instructor_present",
+                severity="error",
+                expected="Instructor name on cover page",
+                actual="Instructor not found in the cover region",
+                evidence="The configured instructor is missing from the cover",
             )
         )
 
