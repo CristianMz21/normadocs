@@ -45,13 +45,13 @@ jobs:
 
       - name: Checkout repository
         if: steps.sonar_gate.outputs.available == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # SonarCloud needs full history for blame/SCM metrics
 
       - name: Set up Python
         if: steps.sonar_gate.outputs.available == 'true'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: "pip"
@@ -59,7 +59,7 @@ jobs:
 
       - name: Install UV
         if: steps.sonar_gate.outputs.available == 'true'
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -86,7 +86,7 @@ jobs:
 
       - name: SonarCloud Scan
         if: steps.sonar_gate.outputs.available == 'true'
-        uses: SonarSource/sonarqube-scan-action@689fb39b34b9aa95ebc5f8f119343ddd51542402 # v4
+        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
