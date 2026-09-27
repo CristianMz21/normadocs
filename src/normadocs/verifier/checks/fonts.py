@@ -17,8 +17,14 @@ if TYPE_CHECKING:
 
 
 APA_BODY_FONT = "Times New Roman"
-APA_BODY_FONT_SIZE = 12.0
-FONT_SIZE_TOLERANCE = 1.0
+
+ALLOWED_FONT_PROFILES: tuple[tuple[str, float], ...] = (
+    ("times new roman", 12.0),
+    ("arial", 11.0),
+    ("calibri", 11.0),
+    ("georgia", 11.0),
+)
+PROFILE_SIZE_TOLERANCE = 0.5
 
 
 class FontsCheck:
@@ -35,22 +41,21 @@ class FontsCheck:
         """
         issues: list[VerificationIssue] = []
         paragraphs_info = ctx.docx.get_paragraphs_info()
-        body_fonts, body_font_sizes, strict_font_errors, strict_size_errors = (
-            self._collect_font_stats(paragraphs_info, ctx)
+        body_fonts, body_font_sizes, font_to_sizes, strict_font_errors = self._collect_font_stats(
+            paragraphs_info, ctx
         )
         self._report_strict_font_errors(strict_font_errors, issues)
-        self._report_strict_size_errors(strict_size_errors, issues)
         self._report_body_font(body_fonts, issues)
-        self._report_body_font_size(body_font_sizes, issues)
+        self._report_body_font_size(body_font_sizes, body_fonts, font_to_sizes, issues)
         return issues
 
     def _collect_font_stats(
         self, paragraphs_info: list[DOCXParagraphInfo], ctx: VerificationContext
-    ) -> tuple[dict[str, int], dict[float, int], list[str], list[str]]:
+    ) -> tuple[dict[str, int], dict[float, int], dict[str, dict[float, int]], list[str]]:
         body_fonts: dict[str, int] = {}
         body_font_sizes: dict[float, int] = {}
+        font_to_sizes: dict[str, dict[float, int]] = {}
         strict_font_errors: list[str] = []
-        strict_size_errors: list[str] = []
         for index, p_info in enumerate(paragraphs_info, start=1):
             if not p_info.text.strip():
                 continue
@@ -60,11 +65,11 @@ class FontsCheck:
                     index,
                     body_fonts,
                     body_font_sizes,
+                    font_to_sizes,
                     ctx,
                     strict_font_errors,
-                    strict_size_errors,
                 )
-        return body_fonts, body_font_sizes, strict_font_errors, strict_size_errors
+        return body_fonts, body_font_sizes, font_to_sizes, strict_font_errors
 
     def _collect_single_run(
         self,
@@ -72,9 +77,9 @@ class FontsCheck:
         index: int,
         body_fonts: dict[str, int],
         body_font_sizes: dict[float, int],
+        font_to_sizes: dict[str, dict[float, int]],
         ctx: VerificationContext,
         strict_font_errors: list[str],
-        strict_size_errors: list[str],
     ) -> None:
         font_name_obj = run.get("font_name")
         font_name = str(font_name_obj) if font_name_obj else ""
@@ -86,28 +91,31 @@ class FontsCheck:
         if isinstance(font_size, int):
             size_pt = self._pt_from_emu(font_size)
             body_font_sizes[size_pt] = body_font_sizes.get(size_pt, 0) + 1
+            if font_name:
+                sizes = font_to_sizes.setdefault(self._normalize_font(font_name), {})
+                sizes[size_pt] = sizes.get(size_pt, 0) + 1
         if ctx.strict and run_text.strip():
-            self._check_strict_font(font_name, index, strict_font_errors)
-            self._check_strict_size(font_size, index, strict_size_errors)
+            self._check_strict_profile(font_name, font_size, index, strict_font_errors)
 
-    def _check_strict_font(self, font_name: str, index: int, strict_font_errors: list[str]) -> None:
-        if self._normalize_font(font_name or "") == APA_BODY_FONT.lower():
-            return
-        strict_font_errors.append(f"paragraph {index}: {font_name or 'missing font'}")
-
-    def _check_strict_size(
-        self, font_size: object, index: int, strict_size_errors: list[str]
+    def _check_strict_profile(
+        self,
+        font_name: str,
+        font_size: object,
+        index: int,
+        errors: list[str],
     ) -> None:
-        if font_size is None:
-            strict_size_errors.append(f"paragraph {index}: missing font size")
-            return
-        if not isinstance(font_size, int):
-            strict_size_errors.append(f"paragraph {index}: missing font size")
-            return
-        size_pt = self._pt_from_emu(font_size)
-        if abs(size_pt - APA_BODY_FONT_SIZE) <= 0.01:
-            return
-        strict_size_errors.append(f"paragraph {index}: {size_pt:.1f}pt")
+        """Verify a run matches one of the allowed APA profiles (name + size)."""
+        normalized = self._normalize_font(font_name or "")
+        size_pt: float | None = None
+        if isinstance(font_size, int):
+            size_pt = self._pt_from_emu(font_size)
+        for profile_name, profile_size in ALLOWED_FONT_PROFILES:
+            if normalized != profile_name:
+                continue
+            if size_pt is not None and abs(size_pt - profile_size) <= PROFILE_SIZE_TOLERANCE:
+                return
+        actual_size = f"{size_pt:.1f}pt" if size_pt is not None else "missing size"
+        errors.append(f"paragraph {index}: {font_name or 'missing font'} {actual_size}")
 
     def _report_strict_font_errors(
         self, strict_font_errors: list[str], issues: list[VerificationIssue]
@@ -116,26 +124,11 @@ class FontsCheck:
             return
         issues.append(
             VerificationIssue(
-                check=f"{CheckCategory.FONTS}.font_consistency",
+                check=f"{CheckCategory.FONTS}.profile_mismatch",
                 severity="error",
-                expected="Times New Roman on every text run",
+                expected="TNR 12, Arial 11, Calibri 11, or Georgia 11 on every run",
                 actual="; ".join(strict_font_errors[:5]),
-                evidence=f"{len(strict_font_errors)} text run(s) use a different or missing font",
-            )
-        )
-
-    def _report_strict_size_errors(
-        self, strict_size_errors: list[str], issues: list[VerificationIssue]
-    ) -> None:
-        if not strict_size_errors:
-            return
-        issues.append(
-            VerificationIssue(
-                check=f"{CheckCategory.FONTS}.font_size_consistency",
-                severity="error",
-                expected="12pt on every text run",
-                actual="; ".join(strict_size_errors[:5]),
-                evidence=f"{len(strict_size_errors)} text run(s) use a different or missing size",
+                evidence=f"{len(strict_font_errors)} text run(s) use a disallowed font/size",
             )
         )
 
@@ -145,33 +138,49 @@ class FontsCheck:
         if not body_fonts:
             return
         most_common_font = max(body_fonts, key=lambda k: body_fonts[k])
-        if "times new roman" in most_common_font.lower():
+        allowed_names = {name for name, _ in ALLOWED_FONT_PROFILES}
+        if most_common_font.lower() in allowed_names:
             return
         issues.append(
             VerificationIssue(
                 check=f"{CheckCategory.FONTS}.body_font",
                 severity="error",
-                expected="Times New Roman (or compatible serif)",
+                expected="TNR, Arial, Calibri, or Georgia",
                 actual=f"{most_common_font}",
-                evidence=f"Font = '{most_common_font}' (expected 'Times New Roman')",
+                evidence=f"Font = '{most_common_font}' (not an allowed APA profile)",
             )
         )
 
     def _report_body_font_size(
-        self, body_font_sizes: dict[float, int], issues: list[VerificationIssue]
+        self,
+        body_font_sizes: dict[float, int],
+        body_fonts: dict[str, int],
+        font_to_sizes: dict[str, dict[float, int]],
+        issues: list[VerificationIssue],
     ) -> None:
-        if not body_font_sizes:
+        if not body_font_sizes or not body_fonts:
             return
-        most_common_size = max(body_font_sizes, key=lambda k: body_font_sizes[k])
-        if abs(most_common_size - APA_BODY_FONT_SIZE) <= FONT_SIZE_TOLERANCE:
+        dominant_font = max(body_fonts, key=lambda k: body_fonts[k])
+        profile_size: float | None = None
+        for name, size in ALLOWED_FONT_PROFILES:
+            if name == dominant_font:
+                profile_size = size
+                break
+        if profile_size is None:
+            return
+        sizes = font_to_sizes.get(dominant_font, {})
+        if not sizes:
+            return
+        most_common_size = max(sizes, key=lambda k: sizes[k])
+        if abs(most_common_size - profile_size) <= PROFILE_SIZE_TOLERANCE:
             return
         issues.append(
             VerificationIssue(
                 check=f"{CheckCategory.FONTS}.body_font_size",
                 severity="error",
-                expected=f"{APA_BODY_FONT_SIZE:.0f}pt",
+                expected=f"{profile_size:.0f}pt for {dominant_font}",
                 actual=f"{most_common_size:.1f}pt",
-                evidence=f"Size = {most_common_size:.1f}pt (expected {APA_BODY_FONT_SIZE:.0f}pt)",
+                evidence=f"Size = {most_common_size:.1f}pt (profile requires {profile_size:.0f}pt)",
             )
         )
 

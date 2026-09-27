@@ -128,13 +128,14 @@ class TestAPAVerifier(unittest.TestCase):
             verifier = APAVerifier(pdf_path=pdf_path, docx_path=docx_path)
             checks = verifier._init_checks()
 
-            assert len(checks) == 14
+            assert len(checks) == 15
             check_categories = [c[0] for c in checks]
             assert "margins" in check_categories
             assert "fonts" in check_categories
             assert "spacing" in check_categories
             assert "headings" in check_categories
             assert "paragraphs" in check_categories
+            assert "blank_lines" in check_categories
             assert "citations" in check_categories
             assert "equations" in check_categories
         finally:
@@ -274,7 +275,14 @@ class TestAPAVerifierEndToEnd(unittest.TestCase):
             para.paragraph_format.first_line_indent = Inches(0.5)
             para.paragraph_format.line_spacing = 2.0
             para.alignment = alignment
-            style_run(para.add_run(f"Body paragraph {i + 1} of the document text."))
+            if i == 0:
+                style_run(
+                    para.add_run(
+                        "Como muestra la Tabla 1 y la Figura 1 (Alpha, 2023; Bravo, 2024, p. 2)."
+                    )
+                )
+            else:
+                style_run(para.add_run(f"Body paragraph {i + 1} of the document text."))
 
         caption = doc.add_paragraph()
         caption.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -299,9 +307,9 @@ class TestAPAVerifierEndToEnd(unittest.TestCase):
         ref_heading.paragraph_format.space_after = Inches(0)
         style_run(ref_heading.add_run("Referencias"), bold=True)
 
-        for text in (
-            "Alpha, A. (2023). First work. Publisher.",
-            "Bravo, B. (2024). Second work. Journal.",
+        for text, title in (
+            ("Alpha, A. (2023). ", "First work"),
+            ("Bravo, B. (2024). ", "Second work"),
         ):
             ref = doc.add_paragraph()
             ref.paragraph_format.left_indent = Inches(0.5)
@@ -309,6 +317,11 @@ class TestAPAVerifierEndToEnd(unittest.TestCase):
             ref.paragraph_format.line_spacing = 2.0
             ref.alignment = WD_ALIGN_PARAGRAPH.LEFT
             style_run(ref.add_run(text))
+            title_run = ref.add_run(title)
+            title_run.font.name = "Times New Roman"
+            title_run.font.size = Pt(12)
+            title_run.italic = True
+            style_run(ref.add_run(". Publisher."))
 
         doc.save(str(path))
         return path

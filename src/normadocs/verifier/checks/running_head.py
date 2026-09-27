@@ -111,7 +111,7 @@ class RunningHeadCheck:
     ) -> None:
         if not ctx.meta.short_title:
             return
-        if "PAGE" in default_header.upper() or default_header.strip().isdigit():
+        if "PAGE" in default_header.upper() or any(c.isdigit() for c in default_header):
             return
         issues.append(
             VerificationIssue(
