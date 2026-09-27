@@ -181,9 +181,18 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
+      # Matrix legs must report a conclusion for branch protection, so the
+      # docs-only skip is step-level (not job-level): docs-only runs execute
+      # only the echo step below (~30s per leg instead of the full suite).
+      - name: Docs-only change (tests skipped by policy)
+        if: ${{ needs.changes.outputs.code != 'true' }}
+        run: echo "Docs-only change: full matrix runs on code changes. Local gate: make check."
+
       - uses: actions/checkout@v6
+        if: needs.changes.outputs.code == 'true'
 
       - name: Set up Python ${{ matrix.python-version }}
+        if: needs.changes.outputs.code == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -191,37 +200,42 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install UV
+        if: needs.changes.outputs.code == 'true'
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: false
 
       - name: Install system deps
+        if: needs.changes.outputs.code == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y pandoc
 
       - name: Install dependencies (locked)
+        if: needs.changes.outputs.code == 'true'
         run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Install project (editable, no deps)
+        if: needs.changes.outputs.code == 'true'
         # requirements-ci.txt holds deps only; install the project itself so
         # system python (which runs pytest) can import normadocs.
         run: pip install --no-deps -e .
 
       - name: Run tests with coverage (warnings as errors)
+        if: needs.changes.outputs.code == 'true'
         run: >-
           python -m pytest tests/ -W error --cov=normadocs
           --cov-report=term-missing --cov-report=xml --cov-fail-under=78
 
       - name: Upload coverage (3.13 only)
-        if: matrix.python-version == '3.13'
+        if: matrix.python-version == '3.13' && needs.changes.outputs.code == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-report
           path: coverage.xml
 
       - name: Upload coverage to Codecov (3.13 only)
-        if: matrix.python-version == '3.13'
+        if: matrix.python-version == '3.13' && needs.changes.outputs.code == 'true'
         uses: codecov/codecov-action@f2274c2c340e0c81c8f7dc407b2a477b8935f171 # v6
         with:
           file: coverage.xml
