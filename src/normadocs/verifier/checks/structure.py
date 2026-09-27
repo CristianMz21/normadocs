@@ -28,16 +28,62 @@ DEVELOPMENT_NAMES = frozenset(
         "development",
         "marco teorico",
         "theoretical framework",
+        "bases teoricas",
+        "antecedentes",
+        "conceptos",
         "analisis",
         "analysis",
         "metodo",
         "metodos",
         "method",
         "methods",
+        "metodologia",
+        "methodology",
         "resultados",
         "results",
         "discusion",
         "discussion",
+        "planteamiento",
+        "planteamiento del problema",
+        "problem statement",
+        "justificacion",
+        "justification",
+        "objetivos",
+        "objetivo general",
+        "objetivos especificos",
+        "objectives",
+        "recomendaciones",
+        "recomendacion",
+        "recommendations",
+    }
+)
+INFORME_ORDER = (
+    "planteamiento",
+    "justificacion",
+    "objetivos",
+    "marco",
+    "metodologia",
+    "metodo",
+    "resultados",
+    "discusion",
+    "conclusiones",
+    "conclusion",
+    "recomendaciones",
+    "referencias",
+    "references",
+)
+INFORME_SUBSECTIONS = frozenset(
+    {
+        "objetivo general",
+        "objetivos especificos",
+        "antecedentes",
+        "bases teoricas",
+        "conceptos",
+        "enfoque",
+        "tipo de investigacion",
+        "tecnicas",
+        "fuentes",
+        "procedimiento",
     }
 )
 KEYWORD_PREFIXES = ("palabras clave:", "keywords:")
@@ -159,6 +205,8 @@ class StructureCheck:
         self._check_abstract(sections, headings, paragraphs, ctx, issues)
         self._check_keywords(nonempty, sections, headings, paragraphs, ctx, issues)
         self._check_section_order(sections, ctx, issues)
+        self._check_informe_order(headings, ctx, issues)
+        self._check_objetivos(headings, paragraphs, ctx, issues)
         self._check_content_after_references(sections, headings, ctx, issues)
         return issues
 
@@ -216,7 +264,16 @@ class StructureCheck:
         issues: list[VerificationIssue],
     ) -> None:
         title = self._normalize(ctx.meta.title)
-        _first_heading_index, first_heading, first_level = headings[0]
+        # Skip a leading Resumen/Abstract: with an abstract the body (opened
+        # by the repeated title) starts after it, per APA 7 ordering.
+        body_headings = [
+            (index, heading, level)
+            for index, heading, level in headings
+            if self._normalize(heading.text) not in ABSTRACT_NAMES
+        ]
+        if not body_headings:
+            return
+        _first_heading_index, first_heading, first_level = body_headings[0]
         if first_level != 1:
             issues.append(
                 self._issue(
@@ -348,7 +405,9 @@ class StructureCheck:
         ctx: VerificationContext,
         issues: list[VerificationIssue],
     ) -> None:
-        for name in ("introduction", "development", "conclusion", "references"):
+        # Introduction is optional: per APA the repeated title serves as the
+        # opening when no explicit "Introduccion" heading exists.
+        for name in ("development", "conclusion", "references"):
             if sections[name]:
                 continue
             issues.append(
@@ -371,6 +430,8 @@ class StructureCheck:
             for _index, paragraph, level in sections[name]:
                 if level == 1:
                     continue
+                if name == "development" and self._is_informe_subsection(paragraph.text):
+                    continue
                 issues.append(
                     self._issue(
                         ctx,
@@ -380,6 +441,14 @@ class StructureCheck:
                         "Main report sections must use level-1 headings",
                     )
                 )
+
+    @staticmethod
+    def _is_informe_subsection(text: str) -> bool:
+        """Return whether a heading is an informe subsection (any level allowed)."""
+        normalized = StructureCheck._normalize(text)
+        return any(
+            normalized == sub or normalized.startswith(f"{sub} ") for sub in INFORME_SUBSECTIONS
+        )
 
     def _check_section_content(
         self,
@@ -504,6 +573,104 @@ class StructureCheck:
                     "The report sections are not in APA academic order",
                 )
             )
+
+    def _informe_rank(self, normalized: str) -> int | None:
+        """Return the informe order rank for a heading, or None if not informe."""
+        for rank, key in enumerate(INFORME_ORDER):
+            if normalized == key or normalized.startswith(f"{key} "):
+                return rank
+        return None
+
+    def _check_informe_order(
+        self,
+        headings: list[tuple[int, DOCXParagraphInfo, int]],
+        ctx: VerificationContext,
+        issues: list[VerificationIssue],
+    ) -> None:
+        """Validate relative order of informe sections when 2+ are present."""
+        ranked: list[tuple[int, str]] = []
+        for _, p, _ in headings[1:]:
+            rank = self._informe_rank(self._normalize(p.text))
+            if rank is not None:
+                ranked.append((rank, p.text.strip()))
+        for (left_rank, left_text), (right_rank, right_text) in pairwise(ranked):
+            if left_rank <= right_rank:
+                continue
+            issues.append(
+                self._issue(
+                    ctx,
+                    "informe_order",
+                    "Informe order: planteamiento, justificacion, objetivos, "
+                    "marco, metodologia, resultados, discusion, conclusiones, "
+                    "referencias",
+                    f"'{left_text}' appears before '{right_text}'",
+                    "The informe sections are not in academic order",
+                )
+            )
+            break
+
+    def _check_objetivos(
+        self,
+        headings: list[tuple[int, DOCXParagraphInfo, int]],
+        paragraphs: list[DOCXParagraphInfo],
+        ctx: VerificationContext,
+        issues: list[VerificationIssue],
+    ) -> None:
+        """Require 1 general objective + 3-5 specific objectives when present."""
+        total = len(paragraphs)
+        normalized = [(idx, self._normalize(p.text)) for idx, p, _ in headings]
+        general = [i for i, n in normalized if n.startswith("objetivo general")]
+        specific = [i for i, n in normalized if n.startswith("objetivos especificos")]
+        if not general and not specific:
+            return
+        if not general:
+            issues.append(
+                self._issue(
+                    ctx,
+                    "informe_objetivos_general",
+                    "One 'Objetivo general' heading",
+                    "Section not found",
+                    "The informe requires exactly one general objective",
+                )
+            )
+        if not specific:
+            return
+        spec_idx = specific[0]
+        end = self._section_end(headings, spec_idx, total)
+        count = self._count_specific_objectives(paragraphs, spec_idx + 1, end)
+        if 3 <= count <= 5:
+            return
+        issues.append(
+            self._issue(
+                ctx,
+                "informe_objetivos_count",
+                "3 to 5 specific objectives",
+                f"{count} specific objective(s) found",
+                "The informe requires between 3 and 5 specific objectives",
+            )
+        )
+
+    @staticmethod
+    def _count_specific_objectives(
+        paragraphs: list[DOCXParagraphInfo], start: int, end: int
+    ) -> int:
+        """Count numbered/bulleted objective items in a section range."""
+        count = 0
+        for paragraph in paragraphs[start:end]:
+            text = paragraph.text.strip()
+            if not text:
+                continue
+            if paragraph.is_list_item:
+                count += 1
+                continue
+            if text[:1] in ("•", "-", "*", "+"):
+                count += 1
+                continue
+            head, _, _ = text.partition(" ")
+            head = head.rstrip(".)")
+            if head.isdigit():
+                count += 1
+        return count
 
     def _check_content_after_references(
         self,
