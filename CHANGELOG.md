@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-09-27
+
+### Fixed
+
+- **CI credit usage**: heavy jobs skip docs-only changes (`dorny/paths-filter` gate + `mkdocs build --strict` validation); matrix legs report via echo step and `if: always()` keeps mergeability; Dependabot moved to monthly grouped updates.
+- **Docs refresh**: APA 7 standard pages, user-path guides, index/community/agent contract, reference pages, README and contributing guides updated for 0.3.x.
+
 ## [0.3.1] - 2026-09-27
 
 ### Fixed
