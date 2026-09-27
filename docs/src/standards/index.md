@@ -13,11 +13,14 @@ American Psychological Association format, commonly used in social sciences.
 - Strict structural validation for academic reports
 - Student cover page with page number and no running-head text by default
 - Optional professional running head when using the generic `apa` profile
-- Cover page, abstract and keywords support
+- Cover page (7 fields), abstract and keywords support
 - 5 heading levels with specific formatting
 - First-line indent in body paragraphs
-- Block quotes require manual review in the current formatter
+- Continuous body: page breaks only before the body title, References, appendices
+- Block quotes over 40 words formatted automatically (0.5-inch indent)
+- Ordered lists keep native numbering, no blank lines between items
 - Tables with horizontal borders only
+- `blank_lines` check rejects stray blank lines in strict mode
 - Figures with label + title above, nota below
 
 **Configuration:** `apa7.yaml`
@@ -29,7 +32,7 @@ work and can use `short_title` for a running head.
 
 **Student configuration:** `apa7estudiante.yaml`
 
-**Example Document:** `examples/example_apa.md`
+**Example Documents:** `examples/informe_apa7_ejemplo.md` (student), `examples/example_apa.md` (professional)
 
 [See APA Configuration →](apa7.md)
 
