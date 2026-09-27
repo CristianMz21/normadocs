@@ -36,6 +36,8 @@ class TestTablesCheckCompliant(unittest.TestCase):
         section.page_width = Inches(8.5)
         section.page_height = Inches(11)
 
+        doc.add_paragraph("As shown in Table 1, the results improve.")
+
         caption_para = doc.add_paragraph()
         caption_run = caption_para.add_run("Table 1")
         caption_run.bold = True

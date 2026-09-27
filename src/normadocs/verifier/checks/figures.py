@@ -10,6 +10,7 @@ Verifies figure formatting meets APA 7th Edition requirements:
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, TypedDict
 
 from docx.oxml.ns import qn
@@ -46,6 +47,7 @@ class FiguresCheck:
         figure_captions = self._collect_figure_captions(paragraphs_info)
         self._check_all_captions(figure_captions, ctx, issues)
         self._check_numbering_sequence(figure_captions, issues)
+        self._check_mentioned_before(figure_captions, paragraphs_info, ctx, issues)
         self._check_caption_position(figure_captions, ctx, issues)
         self._check_missing_via_pdf(figure_captions, ctx, issues)
         return issues
@@ -159,6 +161,36 @@ class FiguresCheck:
     def _is_sequential(numbers: list[int]) -> bool:
         s = sorted(numbers)
         return bool(s) and s[0] == 1 and s[-1] == len(s) and len(set(s)) == len(s)
+
+    def _check_mentioned_before(
+        self,
+        figure_captions: list[FigureCaption],
+        paragraphs_info: list[DOCXParagraphInfo],
+        ctx: VerificationContext,
+        issues: list[VerificationIssue],
+    ) -> None:
+        """Verify each figure is mentioned in the text before its caption."""
+        for caption_data in figure_captions:
+            parts = caption_data["text"].split()
+            if len(parts) < 2 or not parts[1].rstrip(".").isdigit():
+                continue
+            number = parts[1].rstrip(".")
+            pattern = re.compile(rf"\b(Figura|Figure)\s+{number}\b", re.IGNORECASE)
+            caption_idx = caption_data["index"]
+            mentioned = any(pattern.search(p.text) for p in paragraphs_info[:caption_idx])
+            # Exclude the caption paragraph itself from the match window by
+            # construction (slice ends before caption_idx).
+            if mentioned:
+                continue
+            issues.append(
+                VerificationIssue(
+                    check=f"{CheckCategory.FIGURES}.not_cited_before",
+                    severity="error" if ctx.strict else "warning",
+                    expected=f"Figure {number} mentioned in the text before it appears",
+                    actual=f"No in-text mention of Figure {number} before its caption",
+                    evidence="APA requires figures to be mentioned before they appear",
+                )
+            )
 
     def _check_caption_position(
         self,

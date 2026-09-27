@@ -3,6 +3,7 @@
 from .blank_lines import BlankLinesCheck
 from .citations import CitationsCheck
 from .cover_page import CoverPageCheck
+from .cross_refs import CrossRefsCheck
 from .equations import EquationsCheck
 from .figures import FiguresCheck
 from .fonts import FontsCheck
@@ -20,6 +21,7 @@ __all__ = [
     "BlankLinesCheck",
     "CitationsCheck",
     "CoverPageCheck",
+    "CrossRefsCheck",
     "EquationsCheck",
     "FiguresCheck",
     "FontsCheck",
