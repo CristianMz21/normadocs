@@ -25,8 +25,38 @@ env:
   UV_SYSTEM_PYTHON: 1
 
 jobs:
+  changes:
+    name: Detect code changes
+    # Docs-only changes skip the Sonar scan to save Actions credits.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'requirements-ci.txt'
+              - 'uv.lock'
+              - 'Makefile'
+              - 'Dockerfile'
+              - 'docker/**'
+              - '.github/workflows/**'
+
   sonar:
     name: SonarCloud Analysis
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: pypi
