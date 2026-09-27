@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Release pipeline** (`release.yml`): install the project editable (`pip install --no-deps -e .`) before pytest so the locked system python can import `normadocs` (same pattern as `ci.yml`); the `v0.3.0` tag run failed only on this step.
+- **Packaging** (`pyproject.toml`): pin `hatchling>=1.21,<1.28` — newer backends emit `Metadata-Version: 2.5` wheels, which PyPI rejects (max 2.4).
 - **CI credit usage**: `ci.yml`, `sonarcloud.yml` and `docs.yml` now trigger on `pull_request` to `main` only (plus `push` to `main`). Full gates stay ultra-strict before merge; feature branches validate locally via `make check`.
 
 ## [0.3.0] - 2026-09-27
