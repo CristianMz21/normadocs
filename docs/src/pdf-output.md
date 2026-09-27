@@ -71,6 +71,15 @@ pip install 'normadocs[pdf]'
 If both are installed, NormaDocs uses LibreOffice. The choice is automatic
 based on which binary is on `PATH`.
 
+## Strict verification on PDF
+
+With an APA style, `--format pdf` and `--format all` run the strict APA
+verifier on the result by default (`--verify-apa`, `--apa-strict`). A
+document that fails any rule — margins, fonts, blank lines, hanging
+indents, cross-references — exits non-zero with a report (`--apa-report`).
+Generate with `--format docx` first while drafting; switch to `all` for
+the verified deliverable.
+
 ## Common failure modes
 
 - **`soffice: command not found`** — LibreOffice is not installed or not
