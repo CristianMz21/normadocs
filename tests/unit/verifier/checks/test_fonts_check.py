@@ -71,18 +71,18 @@ class TestFontsCheckCompliant(unittest.TestCase):
         self.assertEqual(errors, [], f"Expected no errors for TNR 12pt but got: {errors}")
 
     def test_times_new_roman_11pt_passes_within_tolerance(self) -> None:
-        """Times New Roman 11pt should pass (within 1pt tolerance)."""
+        """Times New Roman 11pt is rejected (profile requires exactly 12pt)."""
         docx_path = self._create_docx(font_name="Times New Roman", font_size=11)
         issues = self._run_check(docx_path)
         errors = [i for i in issues if i.severity == "error"]
-        self.assertEqual(errors, [], f"Expected no errors for TNR 11pt but got: {errors}")
+        self.assertGreater(len(errors), 0, f"Expected errors for TNR 11pt but got: {issues}")
 
     def test_times_new_roman_13pt_passes_within_tolerance(self) -> None:
-        """Times New Roman 13pt should pass (within 1pt tolerance)."""
+        """Times New Roman 13pt is rejected (profile requires exactly 12pt)."""
         docx_path = self._create_docx(font_name="Times New Roman", font_size=13)
         issues = self._run_check(docx_path)
         errors = [i for i in issues if i.severity == "error"]
-        self.assertEqual(errors, [], f"Expected no errors for TNR 13pt but got: {errors}")
+        self.assertGreater(len(errors), 0, f"Expected errors for TNR 13pt but got: {issues}")
 
 
 class TestFontsCheckViolation(unittest.TestCase):

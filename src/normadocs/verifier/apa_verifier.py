@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from . import CheckCategory, VerificationIssue, VerificationResult
 from .checks import (
+    BlankLinesCheck,
     CitationsCheck,
     CoverPageCheck,
     EquationsCheck,
@@ -129,6 +130,7 @@ class APAVerifier:
             (CheckCategory.RUNNING_HEAD, RunningHeadCheck()),
             (CheckCategory.SPACING, SpacingCheck()),
             (CheckCategory.PARAGRAPHS, ParagraphsCheck()),
+            (CheckCategory.BLANK_LINES, BlankLinesCheck()),
             (CheckCategory.HEADINGS, HeadingsCheck()),
             (CheckCategory.COVER_PAGE, CoverPageCheck()),
             (CheckCategory.TABLES, TablesCheck()),

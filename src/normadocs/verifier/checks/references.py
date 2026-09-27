@@ -253,14 +253,25 @@ class ReferencesCheck:
         self, p_info: Any, text: str, index: int, issues: list[VerificationIssue]
     ) -> None:
         has_italic = any(run.get("italic") for run in p_info.runs)
-        if has_italic or not self._JOURNAL_VOLUME.search(text):
+        if has_italic:
+            return
+        if self._JOURNAL_VOLUME.search(text):
+            issues.append(
+                VerificationIssue(
+                    check=f"{CheckCategory.REFERENCES}.italic_source",
+                    severity="warning",
+                    expected="Journal name and volume in italics",
+                    actual="No italicized source in a journal-style entry",
+                    evidence=f"Reference {index} looks like a journal article without italics",
+                )
+            )
             return
         issues.append(
             VerificationIssue(
-                check=f"{CheckCategory.REFERENCES}.italic_source",
+                check=f"{CheckCategory.REFERENCES}.book_title_italic",
                 severity="warning",
-                expected="Journal name and volume in italics",
-                actual="No italicized source in a journal-style entry",
-                evidence=f"Reference {index} looks like a journal article without italics",
+                expected="Standalone work title in italics",
+                actual="No italicized title in a book-style entry",
+                evidence=f"Reference {index} looks like a book without an italic title",
             )
         )

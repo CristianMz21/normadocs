@@ -12,6 +12,7 @@ from typing import Any, cast
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+from docx.oxml.ns import qn
 from docx.styles.style import BaseStyle, ParagraphStyle
 from docx.text.paragraph import Paragraph
 
@@ -54,6 +55,7 @@ class DOCXParagraphInfo:
     space_after: float | None
     line_spacing: float | None
     runs: list[dict[str, Any]] = field(default_factory=list)
+    is_list_item: bool = False
 
 
 @dataclass
@@ -195,7 +197,16 @@ class DOCXAnalyzer:
             space_after=self._effective_spacing(p, "space_after"),
             line_spacing=self._effective_line_spacing(p),
             runs=self._extract_runs_data(p),
+            is_list_item=self._has_list_numbering(p),
         )
+
+    @staticmethod
+    def _has_list_numbering(p: Paragraph) -> bool:
+        """Return whether the paragraph carries Word list numbering."""
+        p_pr = p._element.find(qn("w:pPr"))
+        if p_pr is None:
+            return False
+        return p_pr.find(qn("w:numPr")) is not None
 
     def _extract_runs_data(self, p: Paragraph) -> list[dict[str, Any]]:
         style_font = p.style.font if p.style is not None else None

@@ -11,7 +11,7 @@ Verifies heading formatting meets APA 7th Edition requirements:
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from .. import CheckCategory, VerificationIssue
 
@@ -36,7 +36,7 @@ class HeadingsCheck:
         """
         issues: list[VerificationIssue] = []
         headings_found = self._collect_headings(ctx)
-        self._check_all_levels(headings_found, issues)
+        self._check_all_levels(headings_found, issues, ctx.strict)
         return issues
 
     def _collect_headings(self, ctx: VerificationContext) -> dict[int, list[dict[str, Any]]]:
@@ -69,11 +69,13 @@ class HeadingsCheck:
         self,
         headings_found: dict[int, list[dict[str, Any]]],
         issues: list[VerificationIssue],
+        strict: bool = True,
     ) -> None:
+        level3 = self._check_level3
         dispatch = {
             1: self._check_level1,
             2: self._check_level2,
-            3: self._check_level3,
+            3: lambda h, i: level3(h, i, strict),
             4: self._check_level4,
             5: self._check_level5,
         }
@@ -142,15 +144,18 @@ class HeadingsCheck:
                 )
             )
 
-    def _check_level3(self, heading: dict[str, Any], issues: list[VerificationIssue]) -> None:
+    def _check_level3(
+        self, heading: dict[str, Any], issues: list[VerificationIssue], strict: bool = True
+    ) -> None:
         runs = heading.get("runs", [])
         has_bold = self._has_bold(runs)
         has_italic = self._has_italic(runs)
+        severity: Literal["error", "warning"] = "error" if strict else "warning"
         if heading["alignment"] != "left":
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.HEADINGS}.level3_alignment",
-                    severity="warning",
+                    severity=severity,
                     expected="Left-aligned",
                     actual=f"{heading['alignment']}",
                     page=1,
@@ -161,7 +166,7 @@ class HeadingsCheck:
             issues.append(
                 VerificationIssue(
                     check=f"{CheckCategory.HEADINGS}.level3_bold_italic",
-                    severity="warning",
+                    severity=severity,
                     expected="Bold + Italic",
                     actual=f"bold={has_bold}, italic={has_italic}",
                     page=1,
