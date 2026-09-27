@@ -17,8 +17,66 @@ env:
   UV_SYSTEM_PYTHON: 1
 
 jobs:
+  changes:
+    name: Detect code changes
+    # Docs-only PRs (docs/**, markdown, changelog) skip the heavy jobs to
+    # save Actions credits. Skipped required checks still satisfy branch
+    # protection; docs PRs are validated by docs-build below + docs.yml.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'requirements-ci.txt'
+              - 'uv.lock'
+              - 'Makefile'
+              - 'Dockerfile'
+              - 'docker/**'
+              - '.github/workflows/**'
+
+  docs-build:
+    name: Docs Build (strict)
+    # Always runs: the meaningful validation for docs-only changes.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: "pip"
+          cache-dependency-path: "docs/requirements.lock"
+
+      - name: Install documentation dependencies (locked)
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r docs/requirements.lock
+
+      - name: Build documentation (strict)
+        run: mkdocs build --strict
+        working-directory: docs
+
   quality:
     name: Lint & Type Check
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -63,6 +121,8 @@ jobs:
 
   security:
     name: Security Scan
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -110,7 +170,8 @@ jobs:
 
   tests:
     name: Tests (Python ${{ matrix.python-version }})
-    needs: [quality, security]
+    needs: [quality, security, changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -168,7 +229,8 @@ jobs:
 
   build-check:
     name: Build Distribution
-    needs: tests
+    needs: [tests, changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -206,7 +268,7 @@ jobs:
 
   annotations-check:
     name: Ensure Zero Annotations
-    needs: [quality, security, gitleaks, tests, build-check]
+    needs: [quality, security, gitleaks, tests, build-check, changes, docs-build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
