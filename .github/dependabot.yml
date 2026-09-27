@@ -3,14 +3,26 @@ updates:
   - package-ecosystem: pip
     directory: /
     schedule:
-      interval: weekly
+      # Monthly (not weekly) + single grouped PR: each Dependabot PR burns
+      # a full CI matrix (3.10-3.13) + CodeQL + Sonar. Security updates
+      # still flow; feature bumps arrive in one reviewable PR per month.
+      interval: monthly
     labels:
       - dependencies
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 2
+    groups:
+      pip-deps:
+        patterns:
+          - "*"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     labels:
       - dependencies
+    open-pull-requests-limit: 2
+    groups:
+      gh-actions:
+        patterns:
+          - "*"
