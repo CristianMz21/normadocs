@@ -28,7 +28,7 @@ El archivo generado será `ExportDocs/informe_APA7ESTUDIANTE.docx`.
 
 | Opción | Descripción | Predeterminado |
 |---|---|---|
-| `--style`, `-s` | `apa7estudiante`, `apa`, `icontec` o `ieee` | `apa7estudiante` |
+| `--style`, `-s` | `apa7estudiante` (`apa7` alias), `apa`, `icontec` o `ieee` | `apa7estudiante` |
 | `--format`, `-f` | `docx`, `pdf` o `all` | `docx` |
 | `--output-dir`, `-o` | Directorio de salida | `ExportDocs` |
 | `--bibliography`, `-b` | Archivo BibTeX `.bib` | Ninguno |
@@ -39,6 +39,12 @@ El archivo generado será `ExportDocs/informe_APA7ESTUDIANTE.docx`.
 
 La verificación APA solo se ejecuta cuando el estilo es APA y se genera PDF con
 `--format pdf` o `--format all`. ICONTEC e IEEE no se validan como APA.
+
+En modo estricto (defecto) también rigen: portada de 7 campos con Title Case
+(solo aviso), cuerpo continuo sin líneas en blanco (`blank_lines`), Resumen en
+página propia, citas en bloque de +40 palabras con sangría 0.5", listas
+ordenadas sin líneas intermedias y tablas solo con bordes horizontales. Ver
+[reglas APA 7](../standards/apa7.md).
 
 ## LanguageTool
 

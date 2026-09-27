@@ -26,6 +26,15 @@ sudo apt install libreoffice
 pip install normadocs[pdf]
 ```
 
+Para bloques de código como imágenes (`{code}`, incl. SQL con `sqlparse`):
+
+```bash
+pip install "normadocs[codeimage]"
+# además necesitas wkhtmltopdf en PATH para renderizar
+```
+
+Sin el extra, el código se conserva como texto: degradación graceful.
+
 ## 2. Crear el Markdown
 
 Guarda este ejemplo como `informe.md`. Sustituye los datos de ejemplo; no
@@ -35,13 +44,18 @@ uses valores inventados en un trabajo real.
 ---
 title: "Efectos del aprendizaje automático en la educación"
 author: "Nombre completo"
-affiliation: "Programa académico"
+program: "Programa académico"
 institution: "Institución educativa"
+subject: "Materia"
+subject_code: "COD-2026"
 instructor: "Nombre del docente"
 date: "2026-08-13"
 ---
 
 # Resumen
+
+Resumen opcional de hasta 250 palabras. Abre su propia página; si el título
+lo precede, NormaDocs lo reubica para abrir el cuerpo.
 
 Resumen opcional de hasta 250 palabras.
 

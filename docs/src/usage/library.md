@@ -102,7 +102,8 @@ if not result.passed:
 
 `result.errors` contiene `check`, `expected`, `actual`, `evidence` y, cuando se
 conoce, página y coordenadas. Un agente debe conservar esa información al
-explicar un fallo.
+explicar un fallo. Categorías 0.3.x incluyen `blank_lines` (líneas en blanco
+indebidas) y `cross_refs` (citas sin referencia y viceversa).
 
 ## Otros estándares
 

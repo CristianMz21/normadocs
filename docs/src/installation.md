@@ -27,7 +27,14 @@ pip install normadocs
 
 # PDF generation plus strict APA PDF verification
 pip install "normadocs[pdf,pdf-verifier]"
+
+# Code blocks as images ({code} fences, SQL auto-format via sqlparse)
+pip install "normadocs[codeimage]"
+# plus wkhtmltopdf on PATH for image rendering
 ```
+
+> NormaDocs is Production/Stable since 0.3.0. Without the `codeimage`
+> extra, SQL/code blocks stay as text (graceful degradation).
 
 ### From Source
 
