@@ -54,6 +54,7 @@ class TablesCheck:
         table_numbers = self._collect_table_captions(paragraphs_info)
         self._check_all_tables(tables_info, table_numbers, paragraphs_info, ctx, issues)
         self._check_numbering_sequence(table_numbers, issues)
+        self._check_mentioned_before(table_numbers, paragraphs_info, ctx, issues)
         self._check_table_notes(ctx, issues)
         return issues
 
@@ -193,18 +194,40 @@ class TablesCheck:
         self, idx: int, ctx: VerificationContext, issues: list[VerificationIssue]
     ) -> None:
         table_element = ctx.docx.tables[idx]._tbl
+        if self._has_table_level_verticals(table_element):
+            self._report_vertical_borders(idx, issues)
+            return
+        if self._has_cell_level_verticals(table_element):
+            self._report_vertical_borders(idx, issues)
+
+    @staticmethod
+    def _has_table_level_verticals(table_element: Any) -> bool:
         properties = table_element.tblPr
         borders = properties.find(qn("w:tblBorders")) if properties is not None else None
         if borders is None:
-            return
-        vertical_edges = ("left", "right", "insideV")
-        has_vertical = any(
+            return False
+        return TablesCheck._borders_have_verticals(borders)
+
+    def _has_cell_level_verticals(self, table_element: Any) -> bool:
+        for tc in table_element.findall(f".//{qn('w:tc')}"):
+            tc_pr = tc.find(qn("w:tcPr"))
+            if tc_pr is None:
+                continue
+            borders = tc_pr.find(qn("w:tcBorders"))
+            if borders is not None and self._borders_have_verticals(borders):
+                return True
+        return False
+
+    @staticmethod
+    def _borders_have_verticals(borders: Any) -> bool:
+        vertical_edges = ("left", "right", "insideV", "start", "end")
+        return any(
             (edge := borders.find(qn(f"w:{name}"))) is not None
             and edge.get(qn("w:val")) not in {None, "nil", "none"}
             for name in vertical_edges
         )
-        if not has_vertical:
-            return
+
+    def _report_vertical_borders(self, idx: int, issues: list[VerificationIssue]) -> None:
         issues.append(
             VerificationIssue(
                 check=f"{CheckCategory.TABLES}.vertical_borders",
@@ -242,6 +265,38 @@ class TablesCheck:
     def _is_sequential(numbers: list[int]) -> bool:
         s = sorted(numbers)
         return bool(s) and s[0] == 1 and s[-1] == len(s) and len(set(s)) == len(s)
+
+    def _check_mentioned_before(
+        self,
+        table_numbers: list[TableCaption],
+        paragraphs_info: list[DOCXParagraphInfo],
+        ctx: VerificationContext,
+        issues: list[VerificationIssue],
+    ) -> None:
+        """Verify each table is mentioned in the text before its caption."""
+        for caption_data in table_numbers:
+            parts = caption_data["text"].split()
+            if len(parts) < 2 or not parts[1].rstrip(".").isdigit():
+                continue
+            number = parts[1].rstrip(".")
+            pattern = re.compile(rf"\b(Tabla|Table)\s+{number}\b", re.IGNORECASE)
+            caption_idx = caption_data["index"]
+            mentioned = any(
+                pattern.search(p.text)
+                for p in paragraphs_info[:caption_idx]
+                if not _CAPTION_RE.match(p.text.strip())
+            )
+            if mentioned:
+                continue
+            issues.append(
+                VerificationIssue(
+                    check=f"{CheckCategory.TABLES}.not_cited_before",
+                    severity="error" if ctx.strict else "warning",
+                    expected=f"Table {number} mentioned in the text before it appears",
+                    actual=f"No in-text mention of Table {number} before its caption",
+                    evidence="APA requires tables to be mentioned before they appear",
+                )
+            )
 
     def _check_table_notes(self, ctx: VerificationContext, issues: list[VerificationIssue]) -> None:
         """Verify each table has an APA-formatted 'Nota.' below it."""

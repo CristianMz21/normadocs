@@ -14,6 +14,7 @@ from .checks import (
     BlankLinesCheck,
     CitationsCheck,
     CoverPageCheck,
+    CrossRefsCheck,
     EquationsCheck,
     FiguresCheck,
     FontsCheck,
@@ -138,6 +139,7 @@ class APAVerifier:
             (CheckCategory.FIGURES, FiguresCheck()),
             (CheckCategory.REFERENCES, ReferencesCheck()),
             (CheckCategory.CITATIONS, CitationsCheck()),
+            (CheckCategory.CROSS_REFS, CrossRefsCheck()),
             (CheckCategory.EQUATIONS, EquationsCheck()),
         ]
 

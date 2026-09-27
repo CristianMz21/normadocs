@@ -108,6 +108,29 @@ class TestStructureCheck(unittest.TestCase):
         self.assertTrue(any("abstract_length" in i.check for i in issues))
         self.assertTrue(any("abstract_order" in i.check for i in issues))
 
+    def test_title_after_abstract_satisfies_title_repeated(self) -> None:
+        """With a leading Resumen, the title opening the body must pass."""
+        issues = self._run(
+            self._paragraphs(
+                ("Informe de prueba", None),
+                ("Autor", None),
+                ("2026", None),
+                ("Resumen", "Heading 1"),
+                ("Resumen del informe con palabras suficientes.", None),
+                ("Informe de prueba", "Heading 1"),
+                ("Introducción", "Heading 1"),
+                ("Contenido introductorio.", None),
+                ("Desarrollo", "Heading 1"),
+                ("Contenido principal.", None),
+                ("Conclusiones", "Heading 1"),
+                ("Conclusión.", None),
+                ("Referencias", "Heading 1"),
+                ("Autor, A. (2026). Obra consultada.", None),
+            )
+        )
+        title_issues = [i for i in issues if "title_repeated" in i.check]
+        self.assertEqual(title_issues, [], f"Unexpected title issues: {title_issues}")
+
     def test_heading_after_references_is_rejected(self) -> None:
         """Only appendix headings may follow References."""
         issues = self._run(

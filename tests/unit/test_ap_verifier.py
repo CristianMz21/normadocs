@@ -128,7 +128,7 @@ class TestAPAVerifier(unittest.TestCase):
             verifier = APAVerifier(pdf_path=pdf_path, docx_path=docx_path)
             checks = verifier._init_checks()
 
-            assert len(checks) == 15
+            assert len(checks) == 16
             check_categories = [c[0] for c in checks]
             assert "margins" in check_categories
             assert "fonts" in check_categories
@@ -137,6 +137,7 @@ class TestAPAVerifier(unittest.TestCase):
             assert "paragraphs" in check_categories
             assert "blank_lines" in check_categories
             assert "citations" in check_categories
+            assert "cross_refs" in check_categories
             assert "equations" in check_categories
         finally:
             docx_path.unlink(missing_ok=True)
