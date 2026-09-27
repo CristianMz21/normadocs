@@ -24,3 +24,5 @@ spacing:
 - Margins: 1 inch all sides
 - Page numbers: Top right header
 - Columns: Two-column layout for final paper (not implemented)
+
+> Do not run `APAVerifier` on IEEE output: its contract is APA 7, not IEEE.

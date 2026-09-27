@@ -421,6 +421,6 @@ normadocs document.md --language-tool --lt-report errors.json
 | Right margin | 1" | 2cm | 1" |
 | Table caption prefix | Table | Tabla | Table |
 | Figure caption prefix | Figure | Figura | Fig. |
-| Running head | Yes | No | No |
-| Abstract page | No | Yes | No |
+| Running head | Professional `apa` only (student: No) | No | No |
+| Abstract page | Resumen on own page (student) | Yes | No |
 | Keywords section | Yes | Yes | Yes |

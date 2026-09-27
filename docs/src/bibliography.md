@@ -79,3 +79,11 @@ matching CSL file from the upstream repository and pass it explicitly.
   https://validator.citationstyles.org/.
 
 See [Troubleshooting](troubleshooting.md) for more.
+
+## APA post-checks (0.3.x)
+
+After Pandoc renders, the strict APA verifier cross-checks citations against
+references in both directions (`CrossRefsCheck`): every `@key` cited in the
+text must have a reference entry, and every entry should be cited. Journal
+names and volumes render in italics, book titles in italics; short quotations
+carry page locators. Fix these in the Markdown/`.bib`, never in the DOCX.

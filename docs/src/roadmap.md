@@ -10,8 +10,10 @@ phases as the project evolves and as contributors take on different areas.
 
 ## Near-term
 
-- Keep `make check` fully green (ruff, mypy `--strict`, bandit, pytest
-  with `--cov-fail-under=78`).
+- Keep `make check` fully green (ruff, mypy `--strict`, pyright, bandit,
+  pytest with `--cov-fail-under=78`).
+- Validate feature branches locally before pushing; CI runs the full gates
+  only on pull requests to `main`, docs-only changes run `mkdocs build --strict`.
 - Improve ICONTEC examples for Colombian academic workflows (thesis
   chapters, anteproyectos, working papers).
 - Add the Windows installation guide.

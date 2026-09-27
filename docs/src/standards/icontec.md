@@ -214,3 +214,6 @@ normadocs document.md -s icontec -f all
 # With abstract keywords
 normadocs document.md -s icontec --language-tool
 ```
+
+> Do not run `APAVerifier` (CLI `--verify-apa`, library `strict=True`) on
+> ICONTEC output: its contract is APA 7, not NTC 1486.
