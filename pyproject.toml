@@ -94,7 +94,9 @@ Changelog = "https://github.com/CristianMz21/normadocs/blob/main/CHANGELOG.md"
 normadocs = "normadocs.cli:app"
 
 [build-system]
-requires = ["hatchling"]
+# Pin hatchling <1.28: newer versions emit Metadata-Version 2.5 wheels,
+# which PyPI rejects (supports max 2.4). Re-check before bumping.
+requires = ["hatchling>=1.21,<1.28"]
 build-backend = "hatchling.build"
 
 # ── Ruff ──────────────────────────────────────────────────────────────
