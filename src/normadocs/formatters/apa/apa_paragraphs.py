@@ -26,7 +26,7 @@ from ...config import (
     NORMAL_STYLE,
     W_VAL,
 )
-from ...utils.docx_helpers import paragraph_style_name
+from ...utils.docx_helpers import has_page_break_before, paragraph_style_name
 from .apa_citations import REFERENCE_HEADINGS
 
 if TYPE_CHECKING:
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 _HEADING_1 = HEADING_1_STYLE
 _HEADING_5 = HEADING_5_STYLE
 _RUN_IN_HEADINGS = (HEADING_4_STYLE, _HEADING_5)
+_BLOCK_QUOTE_STYLES = frozenset({"Block Text", "Block Quote", "Quote"})
 
 _CITATION_RE = re.compile(
     r"\(([A-ZÁ-Ú][a-záéíóúñ]+(?: et al\.)?)\s+y\s+([A-ZÁ-Ú][a-záéíóúñ]+),\s*(\d{4})\)"
@@ -166,16 +167,13 @@ class APAParagraphsHandler:
 
     @staticmethod
     def _has_page_break_before(paragraph: ParagraphType) -> bool:
-        """Return whether the nearest preceding body content is a page break."""
-        previous = paragraph._element.getprevious()
-        while previous is not None:
-            if any(br.get(qn("w:type")) == "page" for br in previous.iter(qn("w:br"))):
-                return True
-            if previous.tag == qn("w:p") and not "".join(previous.itertext()).strip():
-                previous = previous.getprevious()
-                continue
-            return False
-        return False
+        """Return whether the nearest preceding body content is a page break.
+
+        Delegates to the shared bookmark-transparent scan so the setter
+        below never stacks ``page_break_before`` on top of an explicit
+        preprocessor break (which renders as a blank page).
+        """
+        return has_page_break_before(paragraph)
 
     def _set_page_break_before(self, paragraph: ParagraphType) -> None:
         """Add a page break only when one is not already immediately before it.
@@ -244,6 +242,7 @@ class APAParagraphsHandler:
         state.in_abstract = True
         state.in_toc = False
         state.in_references = False
+        self._set_page_break_before(p)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         for run in p.runs:
             run.bold = True
@@ -356,6 +355,9 @@ class APAParagraphsHandler:
         if state.in_abstract:
             self._format_abstract_body(p, state, text_strip)
             return
+        if style_name in _BLOCK_QUOTE_STYLES:
+            self._format_pandoc_block_text(p, state, text_strip)
+            return
         if self._is_body_style(style_name):
             self._format_normal_body(p, state, text_strip)
 
@@ -403,9 +405,35 @@ class APAParagraphsHandler:
             self._set_page_break_before(p)
             state.just_left_abstract = False
         if self._is_block_quote(text_strip):
+            state.first_paragraph_after_heading = False
             self._convert_block_quote(p, text_strip)
             return
         self._apply_first_line_rule(p, state)
+
+    def _format_pandoc_block_text(
+        self, p: ParagraphType, state: ParagraphState, text_strip: str
+    ) -> None:
+        """Format pandoc blockquote paragraphs as APA 8.27 blocks.
+
+        Pandoc renders Markdown ``>`` quotes with the ``Block Text`` style
+        and no surrounding quotation marks, so the quoted-text detector
+        never fires. Long blocks (>= min_words) go through the shared
+        converter for indent and closing fixes; short ones still get the
+        block indent with no first-line indent.
+        """
+        if not text_strip:
+            return
+        if state.just_left_abstract:
+            self._set_page_break_before(p)
+            state.just_left_abstract = False
+        state.first_paragraph_after_heading = False
+        min_words = cast(int, self._get_block_quote_config().get("min_words", 40))
+        if len(text_strip.split()) >= min_words:
+            self._convert_block_quote(p, text_strip)
+        else:
+            p.paragraph_format.left_indent = Inches(0.5)
+            p.paragraph_format.first_line_indent = Inches(0)
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     def _apply_first_line_rule(self, p: ParagraphType, state: ParagraphState) -> None:
         """Apply first-line indent rule based on heading proximity."""
@@ -683,7 +711,9 @@ class APAParagraphsHandler:
     def format_lists(self) -> None:
         """Apply APA 7 list formatting.
 
-        Regular bullet lists: bullet at 0.5in, text at 0.75in, hanging indent.
+        Unordered lists: bullet at 0.5in, text at 0.75in, hanging indent.
+        Ordered lists: Word numbering is preserved (numbers, not bullets),
+        keeping pandoc's numbering layout so sequential items stay ordered.
         Reference entries: no bullet, hanging indent at 0.5in (APA 7 standard).
         """
         from .apa_styles import APAStylesHandler
@@ -696,23 +726,78 @@ class APAParagraphsHandler:
                 text_lower = p.text.lower().strip().rstrip(".")
                 in_references = _is_references_heading(text_lower)
                 continue
-            if self._should_skip_list_paragraph(p):
+            num_pr = self._get_num_pr(p)
+            if num_pr is None:
                 continue
             if in_references:
                 self._format_reference_list(p)
+            elif self._is_ordered_list(p, num_pr):
+                self._format_ordered_list(p)
             else:
                 self._format_bullet_list(p, styles_handler)
 
-    def _should_skip_list_paragraph(self, p: ParagraphType) -> bool:
-        """Return whether paragraph lacks list numbering."""
+    def _get_num_pr(self, p: ParagraphType) -> Any | None:
+        """Return the numbering properties element, if the paragraph is a list item."""
         p_pr = p._element.find(qn("w:pPr"))
         if p_pr is None:
-            return True
-        num_pr = p_pr.find(qn("w:numPr"))
-        if num_pr is None:
-            return True
-        p_pr.remove(num_pr)
-        return False
+            return None
+        return p_pr.find(qn("w:numPr"))
+
+    def _should_skip_list_paragraph(self, p: ParagraphType) -> bool:
+        """Return whether paragraph lacks list numbering."""
+        return self._get_num_pr(p) is None
+
+    _ORDERED_NUM_FMTS = frozenset(
+        {"decimal", "upperLetter", "lowerLetter", "upperRoman", "lowerRoman"}
+    )
+
+    def _is_ordered_list(self, p: ParagraphType, num_pr: Any) -> bool:
+        """Return whether a list item uses ordered (numeric/letter) markers."""
+        num_id_el = num_pr.find(qn("w:numId"))
+        if num_id_el is None:
+            return False
+        num_id = num_id_el.get(qn("w:val"))
+        ilvl_el = num_pr.find(qn("w:ilvl"))
+        ilvl = ilvl_el.get(qn("w:val")) if ilvl_el is not None else "0"
+        num_fmt = self._num_fmt_for(num_id, ilvl)
+        return num_fmt in self._ORDERED_NUM_FMTS
+
+    def _num_fmt_for(self, num_id: str | None, ilvl: str | None) -> str | None:
+        """Resolve the numbering format for a numId/level via numbering.xml."""
+        if num_id is None:
+            return None
+        level = ilvl if ilvl is not None else "0"
+        try:
+            numbering = self.doc.part.numbering_part.element
+        except (AttributeError, KeyError):
+            return None
+        abstract_id = self._abstract_id_for(numbering, num_id)
+        if abstract_id is None:
+            return None
+        for abstract in numbering.findall(qn("w:abstractNum")):
+            if abstract.get(qn("w:abstractNumId")) != abstract_id:
+                continue
+            for lvl in abstract.findall(qn("w:lvl")):
+                if lvl.get(qn("w:ilvl")) != level:
+                    continue
+                fmt = lvl.find(qn("w:numFmt"))
+                return fmt.get(qn("w:val")) if fmt is not None else None
+        return None
+
+    @staticmethod
+    def _abstract_id_for(numbering: Any, num_id: str) -> str | None:
+        """Find the abstractNumId backing a concrete numId."""
+        for num in numbering.findall(qn("w:num")):
+            if num.get(qn("w:numId")) != num_id:
+                continue
+            abstract_el = num.find(qn("w:abstractNumId"))
+            return abstract_el.get(qn("w:val")) if abstract_el is not None else None
+        return None
+
+    def _format_ordered_list(self, p: ParagraphType) -> None:
+        """Keep Word numbering, enforcing the 0.5in APA hanging indent."""
+        p.paragraph_format.left_indent = Inches(0.5)
+        p.paragraph_format.first_line_indent = Inches(-0.5)
 
     def _format_reference_list(self, p: ParagraphType) -> None:
         """Apply hanging indent without bullet for references."""
@@ -721,6 +806,11 @@ class APAParagraphsHandler:
 
     def _format_bullet_list(self, p: ParagraphType, styles_handler: Any) -> None:
         """Apply bullet formatting with hanging indent and tab."""
+        p_pr = p._element.find(qn("w:pPr"))
+        if p_pr is not None:
+            num_pr = p_pr.find(qn("w:numPr"))
+            if num_pr is not None:
+                p_pr.remove(num_pr)
         p.paragraph_format.left_indent = Inches(0.75)
         p.paragraph_format.first_line_indent = Inches(-0.25)
         tab_stops = p.paragraph_format.tab_stops

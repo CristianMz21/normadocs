@@ -417,19 +417,59 @@ It should be joined into one line.
         result, _meta = preprocessor.process(text)
         self.assertIn("This is a long paragraph", result)
 
+    def test_process_relocates_title_before_body_with_resumen(self):
+        """Title H1 before Resumen moves to body start (no lone title on p2)."""
+        text = """---
+title: Mi Trabajo
+---
+
+# Mi Trabajo
+
+# Resumen
+
+Texto del resumen.
+
+# Introducción
+
+Texto del cuerpo.
+"""
+        preprocessor = MarkdownPreprocessor()
+        result, _meta = preprocessor.process(text)
+        title_idx = result.index("# Mi Trabajo")
+        resumen_idx = result.index("# Resumen")
+        intro_idx = result.index("# Introducción")
+        self.assertGreater(title_idx, resumen_idx)
+        self.assertLess(title_idx, intro_idx)
+
+    def test_process_keeps_title_when_no_resumen(self):
+        """Without Resumen the leading title H1 stays first."""
+        text = """---
+title: Mi Trabajo
+---
+
+# Mi Trabajo
+
+# Introducción
+
+Texto del cuerpo.
+"""
+        preprocessor = MarkdownPreprocessor()
+        result, _meta = preprocessor.process(text)
+        self.assertLess(result.index("# Mi Trabajo"), result.index("# Introducción"))
+
     def test_process_inserts_pagebreak_before_h1(self):
-        """Page break inserted before # heading (except first)."""
+        """Page break inserted only before references/appendix H1 headings."""
         text = """# Title
 
 # Section One
 
-# Section Two
+# Referencias
 """
         preprocessor = MarkdownPreprocessor()
         result, _meta = preprocessor.process(text)
         breaks = result.count('<w:br w:type="page"/>')
-        # 2 breaks: before Section One and Section Two (Title is first, no break)
-        self.assertEqual(breaks, 2)
+        # 1 break: only before Referencias (body text is continuous).
+        self.assertEqual(breaks, 1)
 
     def test_process_skips_short_h1_headings(self):
         """Short # headings (< 3 chars) don't get page breaks."""

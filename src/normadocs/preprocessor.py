@@ -6,7 +6,7 @@ import re
 
 import yaml
 
-from .config import METADATA_FIELDS, PAGEBREAK_OPENXML
+from .config import METADATA_FIELDS, PAGEBREAK_OPENXML, is_section_break_heading, normalize_heading
 from .models import DocumentMetadata
 
 _OUTER_RE = re.compile(r"^\s*-{20,}\s*$")
@@ -81,6 +81,7 @@ class MarkdownPreprocessor:
             "center",
             "instructor",
             "subject",
+            "subject_code",
             "location",
             "date",
             "short_title",
@@ -134,7 +135,17 @@ class MarkdownPreprocessor:
         parts.append("&nbsp;\n")
         parts.append("")
 
-        fields = ["author", "program", "ficha", "institution", "center", "instructor", "date"]
+        fields = [
+            "author",
+            "program",
+            "institution",
+            "subject",
+            "subject_code",
+            "instructor",
+            "date",
+            "ficha",
+            "center",
+        ]
         for field in fields:
             val = getattr(meta, field, None)
             if val:
@@ -615,10 +626,57 @@ class MarkdownPreprocessor:
         return len(heading_text) > 2
 
     @staticmethod
+    def _relocate_title_before_body(joined_lines: list[str], title: str) -> list[str]:
+        """Move a leading title H1 to the start of the body when Resumen exists.
+
+        APA 7 order is cover, Resumen (p2), then body opened by the repeated
+        title. When the author writes the title H1 before the Resumen H1,
+        leaving it there would strand the title alone on p2. Relocating it
+        before the first H1 after the abstract lets the formatter open the
+        body page with the repeated title and flow continuously.
+        """
+        if not title.strip():
+            return joined_lines
+        title_norm = normalize_heading(title)
+        first_h1 = -1
+        resumen_h1 = -1
+        for i, line in enumerate(joined_lines):
+            stripped = line.strip().replace("\r", "")
+            if not MarkdownPreprocessor._is_heading_level_1(stripped):
+                continue
+            heading_norm = normalize_heading(stripped[2:].strip())
+            if first_h1 < 0:
+                first_h1 = i
+                if heading_norm != title_norm:
+                    return joined_lines
+            elif heading_norm in ("resumen", "abstract"):
+                resumen_h1 = i
+                break
+        if first_h1 < 0 or resumen_h1 < 0:
+            return joined_lines
+        next_h1 = -1
+        for i in range(resumen_h1 + 1, len(joined_lines)):
+            stripped = joined_lines[i].strip().replace("\r", "")
+            if MarkdownPreprocessor._is_heading_level_1(stripped):
+                next_h1 = i
+                break
+        if next_h1 < 0:
+            return joined_lines
+        relocated = list(joined_lines)
+        title_line = relocated.pop(first_h1)
+        relocated.insert(next_h1 - 1, title_line)
+        return relocated
+
+    @staticmethod
     def _build_output_parts(joined_lines: list[str]) -> list[str]:
-        """Add page breaks before H1 and escape numbered TOC lines."""
+        """Add page breaks only before references/appendices; escape numbered TOC lines.
+
+        APA 7 body text is continuous: sections such as Metodologia or
+        Resultados must not start on a new page. Only Referencias (and
+        appendices) open a fresh page; the cover-to-body break is handled
+        by the formatter.
+        """
         output_parts: list[str] = []
-        found_first_heading = False
 
         for line in joined_lines:
             stripped = line.strip().replace("\r", "")
@@ -628,9 +686,9 @@ class MarkdownPreprocessor:
                 continue
 
             if MarkdownPreprocessor._is_heading_level_1(stripped):
-                if found_first_heading:
+                heading_text = stripped[2:].strip()
+                if is_section_break_heading(heading_text):
                     output_parts.append(PAGEBREAK_OPENXML)
-                found_first_heading = True
 
             if MarkdownPreprocessor._is_numbered_toc_line(stripped):
                 line = _NUMBERED_TOC_ESCAPE_RE.sub(r"\1\\. ", line)
@@ -645,7 +703,7 @@ class MarkdownPreprocessor:
           1. Extract metadata from YAML frontmatter
           2. Skip YAML frontmatter in content
           3. Join hard-wrapped lines into proper paragraphs
-          4. Insert page breaks before every # heading (level 1)
+          4. Insert page breaks only before references/appendix H1 headings
           5. Skip ## and ### headings (they stay in the same page)
         """
         lines = text.split("\n")
@@ -661,6 +719,8 @@ class MarkdownPreprocessor:
         content_lines = self._convert_math_fences(content_lines)
 
         joined_lines = self._join_wrapped_lines(content_lines)
+
+        joined_lines = self._relocate_title_before_body(joined_lines, meta.title or "")
 
         output_parts = self._build_output_parts(joined_lines)
 

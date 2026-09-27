@@ -39,6 +39,7 @@ _CAMEL_SPLIT_RE = re.compile(r"([a-záéíóúñ])([A-ZÁÉÍÓÚÑ])")
 _MONEY_SPLIT_RE = re.compile(r"(\$\d+,\d+,\d+)\s+(\d{1,2})")
 _MULTI_SPACE_RE = re.compile(r"\s{2,}")
 _CAPTION_LABEL_RE = re.compile(r"^(Tabla|Figura)\s+\d+")
+_CAPTION_RE = re.compile(r"^(Tabla|Table|Figura|Figure)\s+\d+")
 
 
 def _parse_source_caption(text: str) -> tuple[int, str] | None:
@@ -133,6 +134,7 @@ class APATablesHandler:
         self._apply_col_widths(table, col_widths)
         self._configure_table_header(table)
         self._prevent_row_split(table)
+        self._keep_table_together(table)
         self._configure_table_look(table)
         self._clean_cells(table, font_size)
         self._apply_final_cell_formatting(table)
@@ -363,6 +365,52 @@ class APATablesHandler:
             cant_split.set(qn(_W_VAL), "1")
             tr_pr.append(cant_split)
 
+    def _keep_table_together(self, table: TableType) -> None:
+        """Chain caption/title paragraphs to the table with keepNext.
+
+        w:keepNext is only valid on paragraphs (not table rows): chaining
+        the caption and title keeps them together with the start of the
+        table, so small tables move as one block instead of splitting.
+        Tables taller than a page still split, with the header repeated
+        via tblHeader and rows kept intact via cantSplit.
+        """
+        for paragraph in self._caption_paragraphs_for(table):
+            p_pr = paragraph._element.get_or_add_pPr()
+            if p_pr.find(qn("w:keepNext")) is None:
+                p_pr.append(OxmlElement("w:keepNext"))
+
+    def _caption_paragraphs_for(self, table: TableType) -> list[Any]:
+        """Return caption/title paragraphs directly preceding a table."""
+        found: list[Any] = []
+        element = table._tbl.getprevious()
+        while element is not None and len(found) < 2:
+            if element.tag != qn("w:p"):
+                break
+            text = "".join(element.itertext()).strip()
+            if not text:
+                element = element.getprevious()
+                continue
+            from docx.text.paragraph import Paragraph
+
+            paragraph = Paragraph(element, self.doc)
+            if paragraph_style_name(paragraph).startswith("Heading"):
+                break
+            if _CAPTION_RE.match(text) or self._is_italic_title(paragraph):
+                found.append(paragraph)
+                element = element.getprevious()
+                continue
+            break
+        return found
+
+    @staticmethod
+    def _is_italic_title(paragraph: Any) -> bool:
+        """Return whether a paragraph is an all-italic caption title."""
+        text = paragraph.text.strip()
+        if not text or len(text) >= 80:
+            return False
+        runs = paragraph.runs
+        return bool(runs) and all(r.italic for r in runs if r.text.strip())
+
     def _configure_table_look(self, table: TableType) -> None:
         """Add table look and split properties."""
         tbl_pr_elem = table._tbl.tblPr
@@ -522,8 +570,9 @@ class APATablesHandler:
         Apply APA-style borders:
         - Top/Bottom of table: single line
         - Bottom of header row: single line
-        - No vertical lines.
+        - No vertical lines (table-level and every cell).
         """
+        self._set_table_level_borders(table)
         for row in table.rows:
             for cell in row.cells:
                 self._set_cell_border(
@@ -541,6 +590,28 @@ class APATablesHandler:
                 if is_last:
                     borders["bottom"] = {"val": "single", "sz": "12", "color": "auto"}
                 self._set_cell_border(cell, **borders)
+
+    def _set_table_level_borders(self, table: TableType) -> None:
+        """Write explicit horizontal-only borders on tblPr (no verticals)."""
+        tbl = table._tbl
+        tbl_pr = tbl.tblPr
+        if tbl_pr is None:
+            return
+        for old in tbl_pr.findall(qn("w:tblBorders")):
+            tbl_pr.remove(old)
+        borders = OxmlElement("w:tblBorders")
+        for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+            element = OxmlElement(f"w:{edge}")
+            if edge in ("top", "bottom"):
+                element.set(qn("w:val"), "single")
+                element.set(qn("w:sz"), "6")
+                element.set(qn("w:space"), "0")
+            else:
+                element.set(qn("w:val"), "none")
+                element.set(qn("w:sz"), "0")
+                element.set(qn("w:space"), "0")
+            borders.append(element)
+        tbl_pr.append(borders)
 
     def _set_cell_border(self, cell: CellType, **kwargs: Any) -> None:
         """Set border on a table cell (OpenXML). Clears existing first."""
