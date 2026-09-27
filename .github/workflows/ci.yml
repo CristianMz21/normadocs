@@ -186,7 +186,7 @@ jobs:
       # only the echo step below (~30s per leg instead of the full suite).
       - name: Docs-only change (tests skipped by policy)
         if: ${{ needs.changes.outputs.code != 'true' }}
-        run: echo "Docs-only change: full matrix runs on code changes. Local gate: make check."
+        run: echo "Docs-only change - full matrix runs on code changes - local gate is make check"
 
       - uses: actions/checkout@v6
         if: needs.changes.outputs.code == 'true'
