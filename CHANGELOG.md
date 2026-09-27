@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-09-27
+
+### Fixed
+
+- **Release pipeline** (`release.yml`): install the project editable (`pip install --no-deps -e .`) before pytest so the locked system python can import `normadocs` (same pattern as `ci.yml`); the `v0.3.0` tag run failed only on this step.
+- **CI credit usage**: `ci.yml`, `sonarcloud.yml` and `docs.yml` now trigger on `pull_request` to `main` only (plus `push` to `main`). Full gates stay ultra-strict before merge; feature branches validate locally via `make check`.
+
 ## [0.3.0] - 2026-09-27
 
 ### Added
