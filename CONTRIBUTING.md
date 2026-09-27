@@ -49,6 +49,12 @@ runs Semgrep (`p/python` + `p/security-audit`) and Gitleaks, enforces
 `# type: ignore`, `# nosec`, etc.). Deep security analysis (CodeQL) and quality
 consolidation (SonarCloud) run in separate workflows.
 
+**Local-first protocol:** feature branches validate locally via `make check`
+before pushing. CI runs the full ultra-strict gates only on pull requests
+targeting `main` (plus `push` to `main`); docs-only changes skip the heavy
+jobs and are validated by `mkdocs build --strict`. Do not use pushes to
+trigger CI as a debugger — green locally first.
+
 ## Submitting issues
 
 Use the templates under [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/):

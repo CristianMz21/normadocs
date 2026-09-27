@@ -45,11 +45,18 @@ Thank you for your interest in contributing to **NormaDocs**! We welcome contrib
    Or run individually:
 
    ```bash
-   make lint       # Ruff check + Ruff format + MyPy
+   make lint       # Ruff check + Ruff format + MyPy + Pyright
    make test       # pytest
    make test-cov   # pytest + coverage (min 78%)
    make security   # Bandit security scan
+   make semgrep    # Semgrep SAST (needs ".[static]" extra)
+   make gitleaks   # Secret scan (needs gitleaks binary)
    ```
+
+   Quality gates (aligned with `CONTRIBUTING.md` at the repo root): ruff,
+   mypy `--strict`, pyright, semgrep, gitleaks, `RUFF_NOQA=1`
+   zero-suppression policy, `pytest -W error --cov-fail-under=78`.
+   Validate locally before pushing — CI runs full gates only on PRs to `main`.
 
 4. **Commit** with descriptive messages.
 5. **Push** and submit a **Pull Request**.

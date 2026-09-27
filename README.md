@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Type Checked](https://img.shields.io/badge/typed-PEP%20561-brightgreen)](https://peps.python.org/pep-0561/)
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Test Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen.svg)](https://github.com/CristianMz21/normadocs/actions)
+[![Test Coverage](https://img.shields.io/badge/coverage-78%25-brightgreen.svg)](https://github.com/CristianMz21/normadocs/actions)
 [![Downloads](https://img.shields.io/pypi/dm/normadocs.svg)](https://pypi.org/project/normadocs/)
 
 **NormaDocs** converts Markdown documents to professionally formatted DOCX/PDF files with automatic compliance to major academic citation standards.
@@ -131,22 +131,24 @@ APA 7th Edition formatted document:
 
 ### Minimal Example
 
-**Input** (`document.md`):
+**Input** (`document.md`, YAML frontmatter with the 7 cover fields):
 ```markdown
-**My Research Paper**
+---
+title: "My Research Paper"
+author: "Jane Doe"
+program: "Computer Science"
+institution: "Tech University"
+subject: "Research Methods"
+subject_code: "CS101"
+instructor: "Dr. Engineering"
+date: "2026-04-10"
+---
 
-Jane Doe
-Computer Science
-CS101
-Tech University
-Engineering
-2026-04-10
-
-# Abstract
+# Resumen
 
 This paper presents...
 
-**Keywords:** markdown, academic, converter
+**Palabras clave:** markdown, academic, converter
 ```
 
 **Command:**
@@ -184,6 +186,14 @@ pip install "normadocs[pdf,pdf-verifier]"
 sudo apt install libreoffice
 ```
 
+### Code images (optional)
+
+```bash
+# {code} fences rendered as images, SQL auto-format via sqlparse
+pip install "normadocs[codeimage]"
+# plus wkhtmltopdf on PATH
+```
+
 ### From Source
 
 ```bash
@@ -200,7 +210,7 @@ pip install -e ".[dev]"
 normadocs [INPUT] [OPTIONS]
 
 Options:
-  -s, --style [apa7estudiante|apa|icontec|ieee]   Citation standard (default: apa7estudiante)
+  -s, --style [apa7estudiante|apa7|apa|icontec|ieee]   Citation standard (default: apa7estudiante)
   -f, --format [docx|pdf|all]      Output format (default: docx)
   -o, --output DIR                  Output directory
   -b, --bibliography FILE           BibTeX file (.bib)
@@ -327,15 +337,21 @@ DOCX / PDF Output
 Publication to PyPI and Docker Hub requires all quality gates to pass:
 
 ```
-Ruff Lint → MyPy → Bandit → Tests (3.10/3.11/3.12) → Build → Coverage
+Ruff Lint → MyPy + Pyright → Bandit + Semgrep → Tests (3.10–3.13) → Build → Coverage (≥78%)
 ```
 
 | Workflow | Trigger | Action |
 |----------|---------|--------|
-| `ci.yml` | Push/PR | Lint, type check, security, tests |
-| `release.yml` | Tag `v*.*.*` | Publish to PyPI |
-| `docker-publish.yml` | Push/tag | Publish Docker image |
-| `docs.yml` | Push to `main` | Deploy to GitHub Pages |
+| `ci.yml` | Push/PR to `main` | Lint, type check, security, tests, build, zero-annotations gate |
+| `sonarcloud.yml` | Push/PR to `main` | Tests + SonarCloud scan (Quality Gate required) |
+| `release.yml` | Tag `v*.*.*` | Validate, test, publish to PyPI |
+| `docker-publish.yml` | Push/tag (docker paths) | Publish Docker image |
+| `docs.yml` | Push/PR to `main` (docs paths) | Build + deploy to GitHub Pages |
+| `codeql.yml` | Push/PR to `main` + weekly | Code scanning |
+
+Feature branches validate locally via `make check`; CI runs the full gates
+only on pull requests targeting `main`. Docs-only changes skip the heavy
+jobs (validated by `mkdocs build --strict`).
 
 ---
 
@@ -404,8 +420,8 @@ via [`.github/workflows/docs.yml`](.github/workflows/docs.yml)).
 
 ## Project status
 
-NormaDocs is an **early-stage** open-source project. It is published on PyPI
-and usable today, but it does not yet claim large-scale adoption, hundreds of
+NormaDocs code is **Production/Stable** (since 0.3.0) and published on PyPI.
+Adoption is early-stage: it does not yet claim large-scale adoption, hundreds of
 dependent repositories, or high monthly download numbers. Contributions,
 feedback, bug reports, examples, and academic formatting edge cases are
 welcome.
