@@ -2199,9 +2199,9 @@ types-pyyaml==6.0.12.20260815 \
     --hash=sha256:28764110c9cf35846e733da32d8d734df7473c5dde9ef67c3b7332ec0e819858 \
     --hash=sha256:6f332212b7e191f3afd5016a713c510b6340593b7ebec573c7d5d20aa5386d3b
     # via normadocs (pyproject.toml)
-types-requests==2.33.0.20260712 \
-    --hash=sha256:2141b67ab534a5c5cd2dac5034f2a35f42e699c5bf185eee608c5246a069d7fb \
-    --hash=sha256:de027e28c171d3da529689cbfa023b0b4eab188c8dfa22fd834eebd2cee6e7bb
+types-requests==2.33.0.20260906 \
+    --hash=sha256:76ab8a0fb736744a0c3deee7aa57b2927e301f078d9e61f5391b3e92002416b9 \
+    --hash=sha256:9f53622652bd921ead7a54d665be1b8d518165c8b51cc9d68d944cd6b6bfa8fb
     # via normadocs (pyproject.toml)
 types-setuptools==84.0.0.20260812 \
     --hash=sha256:09bedc248ebbb7a232c9419dfcdca329706e61bf2aa5743e9424d027f1d956b4 \
