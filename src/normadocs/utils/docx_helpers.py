@@ -10,11 +10,18 @@ from __future__ import annotations
 
 from typing import cast
 
+from docx.oxml.ns import qn
 from docx.styles.style import ParagraphStyle
 from docx.styles.styles import Styles
 from docx.text.paragraph import Paragraph
 
-__all__ = ["paragraph_style", "paragraph_style_name"]
+__all__ = ["has_page_break_before", "paragraph_style", "paragraph_style_name"]
+
+_PAGE_BREAK_TYPE = "page"
+
+# Block-level body tags: meeting one stops the backward scan because it
+# represents real layout (a table, a paragraph, ...) rather than metadata.
+_BLOCK_TAGS = frozenset((qn("w:p"), qn("w:tbl"), qn("w:sdt"), qn("w:sectPr")))
 
 
 def paragraph_style(styles: Styles, name: str) -> ParagraphStyle:
@@ -50,3 +57,35 @@ def paragraph_style_name(paragraph: Paragraph) -> str:
     if style is None:
         return ""
     return style.name or ""
+
+
+def has_page_break_before(paragraph: Paragraph) -> bool:
+    """Return whether the nearest preceding body content is a page break.
+
+    The backward scan skips empty paragraphs and transparent range markup
+    (``bookmarkStart``/``bookmarkEnd`` anchors that Pandoc emits before
+    linked headings, proof errors, ...), which occupy no layout of their
+    own. It stops at the first block-level element (paragraph, table, ...)
+    or at any element carrying text: a page break there means True,
+    anything else means False.
+
+    Args:
+        paragraph: The paragraph to inspect.
+
+    Returns:
+        True when a page break already forces this paragraph onto a new
+        page, False otherwise.
+    """
+    previous = paragraph._element.getprevious()
+    while previous is not None:
+        if previous.tag == qn("w:p"):
+            if any(br.get(qn("w:type")) == _PAGE_BREAK_TYPE for br in previous.iter(qn("w:br"))):
+                return True
+            if not "".join(previous.itertext()).strip():
+                previous = previous.getprevious()
+                continue
+            return False
+        if previous.tag in _BLOCK_TAGS or "".join(previous.itertext()).strip():
+            return False
+        previous = previous.getprevious()
+    return False

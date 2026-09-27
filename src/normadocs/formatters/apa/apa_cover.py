@@ -8,7 +8,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 
 from ...config import HEADING_1_STYLE, NORMAL_STYLE
 from ...models import DocumentMetadata
-from ...utils.docx_helpers import paragraph_style, paragraph_style_name
+from ...utils.docx_helpers import has_page_break_before, paragraph_style, paragraph_style_name
 
 if TYPE_CHECKING:
     from docx.document import Document as DocType
@@ -75,15 +75,23 @@ class APACoverHandler:
             self.doc.paragraphs[0].insert_paragraph_before("")
 
     def _build_content_lines(self, meta: DocumentMetadata) -> list[tuple[str, bool]]:
-        """Build the ordered cover content lines."""
+        """Build the ordered cover content lines.
+
+        Ultra-strict student order: title, author, program/department,
+        institution, subject + code, instructor, date. Legacy SENA fields
+        (affiliation, center, ficha, location) are appended when present
+        and not already covered, to avoid breaking existing documents.
+        """
         lines: list[tuple[str, bool]] = [(meta.title, True)]
         self._append_subtitle(lines, meta)
         lines.append(("", False))
         lines.append((meta.author or "", False))
+        self._append_program(lines, meta)
         self._append_affiliation(lines, meta)
         self._append_institution(lines, meta)
+        self._append_subject_code(lines, meta)
+        self._append_instructor(lines, meta)
         self._append_program_ficha(lines, meta)
-        self._append_subject_instructor(lines, meta)
         self._append_location(lines, meta)
         self._append_date(lines, meta)
         return lines
@@ -120,25 +128,40 @@ class APACoverHandler:
             lines.append((institution, False))
 
     def _append_program_ficha(self, lines: list[tuple[str, bool]], meta: DocumentMetadata) -> None:
-        """Append program and ficha lines for SENA format."""
-        program = getattr(meta, "program", None) or ""
+        """Append legacy ficha line for SENA format (program is handled separately)."""
         ficha = getattr(meta, "ficha", None) or ""
-        if program:
-            lines.append(("", False))
-            lines.append((program, False))
         if ficha:
             lines.append((ficha, False))
+
+    def _append_program(self, lines: list[tuple[str, bool]], meta: DocumentMetadata) -> None:
+        """Append program/department line."""
+        program = getattr(meta, "program", None) or ""
+        if program:
+            lines.append((program, False))
+
+    def _append_subject_code(self, lines: list[tuple[str, bool]], meta: DocumentMetadata) -> None:
+        """Append subject + code as a single identification line."""
+        subject = meta.subject or ""
+        code = getattr(meta, "subject_code", None) or ""
+        if subject and code:
+            lines.append((f"{subject} ({code})", False))
+        elif subject:
+            lines.append((subject, False))
+        elif code:
+            lines.append((code, False))
+
+    def _append_instructor(self, lines: list[tuple[str, bool]], meta: DocumentMetadata) -> None:
+        """Append instructor name without prefix (APA 7 student title page)."""
+        instructor = meta.instructor or ""
+        if instructor:
+            lines.append((instructor, False))
 
     def _append_subject_instructor(
         self, lines: list[tuple[str, bool]], meta: DocumentMetadata
     ) -> None:
-        """Append subject and instructor lines."""
-        subject = meta.subject or ""
-        instructor = meta.instructor or ""
-        if subject:
-            lines.append((subject, False))
-        if instructor:
-            lines.append((f"Instructor: {instructor}", False))
+        """Append subject and instructor lines (legacy entry point)."""
+        self._append_subject_code(lines, meta)
+        self._append_instructor(lines, meta)
 
     def _append_location(self, lines: list[tuple[str, bool]], meta: DocumentMetadata) -> None:
         """Append location (city/country) when present."""
@@ -147,10 +170,9 @@ class APACoverHandler:
             lines.append((location, False))
 
     def _append_date(self, lines: list[tuple[str, bool]], meta: DocumentMetadata) -> None:
-        """Append date with preceding blank line."""
+        """Append date on consecutive line (no blank; only title-author takes one)."""
         date = meta.date or ""
         if date:
-            lines.append(("", False))
             lines.append((date, False))
 
     def _build_elements_with_spacers(
@@ -205,7 +227,8 @@ class APACoverHandler:
         title_heading = first_heading.insert_paragraph_before(meta.title)
         title_heading.style = first_heading.style
         title_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        title_heading.paragraph_format.page_break_before = True
+        if not has_page_break_before(title_heading):
+            title_heading.paragraph_format.page_break_before = True
         for run in title_heading.runs:
             run.bold = True
 
@@ -229,12 +252,18 @@ class APACoverHandler:
         )
 
     def _add_page_break_after_cover(self) -> None:
-        """Add page break after cover before first non-center heading/text."""
+        """Add page break after cover before first non-center heading/text.
+
+        Never stacks the flag on top of an explicit preprocessor break,
+        which would render as a blank page.
+        """
         for p in self.doc.paragraphs:
             style_name = paragraph_style_name(p)
             if style_name.startswith("Heading"):
-                p.paragraph_format.page_break_before = True
+                if not has_page_break_before(p):
+                    p.paragraph_format.page_break_before = True
                 break
             if p.alignment != WD_ALIGN_PARAGRAPH.CENTER and p.text.strip():
-                p.paragraph_format.page_break_before = True
+                if not has_page_break_before(p):
+                    p.paragraph_format.page_break_before = True
                 break

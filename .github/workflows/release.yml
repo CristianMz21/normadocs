@@ -100,18 +100,18 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Lint with Ruff (no noqa allowed)
-        run: uv run ruff check src/ tests/ --output-format=github --no-cache
+        run: ruff check src/ tests/ --output-format=github --no-cache
         env:
           RUFF_NOQA: "1"
 
       - name: Format check with Ruff
-        run: uv run ruff format --check src/ tests/ --output-format=github --no-cache
+        run: ruff format --check src/ tests/ --output-format=github --no-cache
 
       - name: Type check with MyPy
-        run: uv run mypy --strict src/
+        run: mypy --strict src/
 
   security:
     name: Security Scan
@@ -137,10 +137,10 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Run Bandit
-        run: uv run bandit -r src/ -c pyproject.toml
+        run: bandit -r src/ -c pyproject.toml
 
   tests:
     name: Tests (Python 3.13)
@@ -171,11 +171,11 @@ jobs:
           sudo apt-get install -y pandoc
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Run tests with coverage (warnings as errors)
         run: >-
-          uv run pytest tests/ -W error --cov=normadocs
+          python -m pytest tests/ -W error --cov=normadocs
           --cov-report=term-missing --cov-fail-under=78
 
   build-check:
@@ -202,13 +202,13 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Build sdist and wheel
-        run: uv run python -m build
+        run: python -m build
 
       - name: Validate package metadata
-        run: uv run twine check dist/*
+        run: twine check dist/*
 
       - name: Upload dist artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -273,10 +273,10 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Build package
-        run: uv run python -m build
+        run: python -m build
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0

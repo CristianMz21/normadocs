@@ -22,9 +22,9 @@ unreadable image, empty output).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
-import numpy as np
+import numpy.typing as npt
 import pytesseract
 from PIL import Image
 
@@ -55,7 +55,7 @@ _TARGET_WIDTH: int = 1500
 _DENOISE_H: int = 30
 
 
-def _load_image(image_path: Path) -> np.ndarray:
+def _load_image(image_path: Path) -> npt.NDArray[Any]:
     """Read an image file as a BGR numpy array."""
     import cv2  # lazy: opencv-python is a heavy system-level dep
 
@@ -65,13 +65,13 @@ def _load_image(image_path: Path) -> np.ndarray:
     if img is None:
         raise OCRError(f"could not decode image: {image_path}")
     # cv2.imread is typed as returning Any in the bundled stubs. The runtime
-    # contract is np.ndarray (the IMREAD_COLOR branch is guaranteed non-None
+    # contract is npt.NDArray[Any] (the IMREAD_COLOR branch is guaranteed non-None
     # at this point because we just raised on None). The cast narrows the
     # static type so mypy --strict accepts the function return annotation.
-    return cast(np.ndarray, img)
+    return cast(npt.NDArray[Any], img)
 
 
-def _resize_to_target(img: np.ndarray, target_width: int) -> np.ndarray:
+def _resize_to_target(img: npt.NDArray[Any], target_width: int) -> npt.NDArray[Any]:
     """Resize ``img`` so its width is ``target_width`` (aspect preserved)."""
     import cv2  # lazy: opencv-python is a heavy system-level dep
 
@@ -81,14 +81,14 @@ def _resize_to_target(img: np.ndarray, target_width: int) -> np.ndarray:
     scale = target_width / float(width)
     new_height = round(height * scale)
     # cv2.resize is typed as returning Any in the bundled stubs; runtime
-    # contract is np.ndarray. Cast for the function return annotation.
+    # contract is npt.NDArray[Any]. Cast for the function return annotation.
     return cast(
-        np.ndarray,
+        npt.NDArray[Any],
         cv2.resize(img, (target_width, new_height), interpolation=cv2.INTER_CUBIC),
     )
 
 
-def _preprocess(img_bgr: np.ndarray) -> np.ndarray:
+def _preprocess(img_bgr: npt.NDArray[Any]) -> npt.NDArray[Any]:
     """Apply the OCR-friendly preprocessing pipeline.
 
     Steps (matches the standalone Colab script):
@@ -116,8 +116,8 @@ def _preprocess(img_bgr: np.ndarray) -> np.ndarray:
         15,
     )
     # cv2.adaptiveThreshold is typed as returning Any in the bundled stubs;
-    # runtime contract is np.ndarray. Cast for the function return annotation.
-    return cast(np.ndarray, thresh)
+    # runtime contract is npt.NDArray[Any]. Cast for the function return annotation.
+    return cast(npt.NDArray[Any], thresh)
 
 
 def extract_text_from_image(image_path: str | Path, *, lang: str = _LANGS) -> str:

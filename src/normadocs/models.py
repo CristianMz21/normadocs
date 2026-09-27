@@ -20,6 +20,7 @@ class DocumentMetadata:
     center: str | None = None
     instructor: str | None = None
     subject: str | None = None
+    subject_code: str | None = None
     location: str | None = None
     date: str | None = None
     short_title: str | None = None
@@ -39,6 +40,7 @@ class DocumentMetadata:
             "center",
             "instructor",
             "subject",
+            "subject_code",
             "location",
             "date",
             "short_title",

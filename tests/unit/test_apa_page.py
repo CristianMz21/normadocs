@@ -14,6 +14,7 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 
 from normadocs.formatters.apa.apa_page import APAPageHandler
+from normadocs.utils.docx_helpers import has_page_break_before
 
 
 class TestSetupPageLayout(unittest.TestCase):
@@ -258,7 +259,7 @@ class TestAddSectionPageBreaks(unittest.TestCase):
         return doc, handler, temp_path
 
     def test_page_break_before_conclusiones(self):
-        """Page break should be added before 'Conclusiones' heading."""
+        """No page break is added before 'Conclusiones' (continuous body text)."""
         headings = ["Introducción", "Métodos", "Resultados", "Conclusiones"]
         doc, handler, temp_path = self._create_doc_with_headings(headings)
 
@@ -285,7 +286,7 @@ class TestAddSectionPageBreaks(unittest.TestCase):
                     break
                 prev_elem = prev_elem.getprevious()
 
-            self.assertTrue(has_page_break, "Conclusiones should have a page break before it")
+            self.assertFalse(has_page_break, "Conclusiones must not open a new page")
         finally:
             os.unlink(temp_path)
 
@@ -364,7 +365,7 @@ class TestAddSectionPageBreaks(unittest.TestCase):
             os.unlink(temp_path)
 
     def test_existing_break_does_not_suppress_later_section_break(self):
-        """An existing break before Referencias must not suppress Conclusiones."""
+        """An existing break before References is kept; Conclusiones stays continuous."""
         doc = Document()
         doc.add_paragraph("Introduction", style="Heading 1")
         doc.add_paragraph("Introduction content.", style="Normal")
@@ -391,12 +392,12 @@ class TestAddSectionPageBreaks(unittest.TestCase):
             references = next(p for p in doc.paragraphs if p.text == "References")
             conclusions = next(p for p in doc.paragraphs if p.text == "Conclusiones")
             self.assertTrue(handler._has_page_break_before(references))
-            self.assertTrue(handler._has_page_break_before(conclusions))
+            self.assertFalse(handler._has_page_break_before(conclusions))
         finally:
             os.unlink(temp_path)
 
     def test_page_break_case_insensitive(self):
-        """Page break should work regardless of case (conclusiones vs Conclusiones)."""
+        """Case folding applies, but conclusiones never opens a new page."""
         headings = ["Introducción", "conclusiones"]
         doc, handler, temp_path = self._create_doc_with_headings(headings)
 
@@ -422,7 +423,54 @@ class TestAddSectionPageBreaks(unittest.TestCase):
                     break
                 prev_elem = prev_elem.getprevious()
 
-            self.assertTrue(has_page_break, "conclusiones (lowercase) should have a page break")
+            self.assertFalse(has_page_break, "conclusiones must not open a new page")
+        finally:
+            os.unlink(temp_path)
+
+    def test_bookmark_does_not_duplicate_section_break(self):
+        """A pandoc bookmark between break and heading must not add a second break."""
+        doc = Document()
+        doc.add_paragraph("Discusión", style="Heading 1")
+        doc.add_paragraph("Discussion content.", style="Normal")
+        conclusions = doc.add_paragraph("Conclusiones", style="Heading 1")
+        break_paragraph = OxmlElement("w:p")
+        break_run = OxmlElement("w:r")
+        explicit_break = OxmlElement("w:br")
+        explicit_break.set(qn("w:type"), "page")
+        break_run.append(explicit_break)
+        break_paragraph.append(break_run)
+        conclusions._element.addprevious(break_paragraph)
+        bookmark = OxmlElement("w:bookmarkStart")
+        bookmark.set(qn("w:id"), "7")
+        bookmark.set(qn("w:name"), "conclusiones")
+        conclusions._element.addprevious(bookmark)
+        doc.add_paragraph("Conclusions content.", style="Normal")
+
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as f:
+            temp_path = f.name
+        doc.save(temp_path)
+        doc = Document(temp_path)
+        handler = APAPageHandler(doc)
+
+        try:
+            handler.add_section_page_breaks()
+
+            conclusions = next(p for p in doc.paragraphs if p.text == "Conclusiones")
+            self.assertTrue(has_page_break_before(conclusions))
+            breaks_before = 0
+            prev_elem = conclusions._element.getprevious()
+            while prev_elem is not None:
+                if prev_elem.tag == qn("w:p"):
+                    breaks_before += sum(
+                        1 for br in prev_elem.iter(qn("w:br")) if br.get(qn("w:type")) == "page"
+                    )
+                    if "".join(prev_elem.itertext()).strip():
+                        break
+                    prev_elem = prev_elem.getprevious()
+                    continue
+                prev_elem = prev_elem.getprevious()
+
+            self.assertEqual(breaks_before, 1, "bookmark must not trigger a duplicate break")
         finally:
             os.unlink(temp_path)
 

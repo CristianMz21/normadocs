@@ -4,7 +4,6 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    branches: ["main"]
   workflow_call:
   workflow_dispatch:
 
@@ -40,21 +39,26 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Lint with Ruff (no noqa allowed)
-        run: uv run ruff check src/ tests/ --output-format=github --no-cache
+        run: ruff check src/ tests/ --output-format=github --no-cache
         env:
           RUFF_NOQA: "1"
 
       - name: Format check with Ruff
-        run: uv run ruff format --check src/ tests/ --output-format=github --no-cache
+        run: ruff format --check src/ tests/ --output-format=github --no-cache
 
       - name: Type check with MyPy
-        run: uv run mypy --strict src/
+        run: mypy --strict src/
 
       - name: Type check with Pyright
-        run: uv run pyright
+        # Optional imports (imgkit, weasyprint, sqlparse, fitz, pdfplumber)
+        # live in extras, so sync them for pyright resolution.
+        # --frozen --no-build satisfy Sonar S8544/S8541; --no-binary-package
+        # allows the local editable install (no wheel) while blocking
+        # third-party sdist builds.
+        run: uv run --frozen --no-build --no-binary-package normadocs --extra codeimage --extra pdf --extra pdf-verifier pyright
 
   security:
     name: Security Scan
@@ -79,13 +83,13 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Run Bandit
-        run: uv run bandit -r src/ -c pyproject.toml
+        run: bandit -r src/ -c pyproject.toml
 
       - name: Run Semgrep (advanced SAST)
-        run: uv run semgrep scan --config p/python --config p/security-audit --error --metrics off src/
+        run: semgrep scan --config p/python --config p/security-audit --error --metrics off src/
 
   gitleaks:
     name: Secret Scan (Gitleaks)
@@ -135,11 +139,16 @@ jobs:
           sudo apt-get install -y pandoc
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
+
+      - name: Install project (editable, no deps)
+        # requirements-ci.txt holds deps only; install the project itself so
+        # system python (which runs pytest) can import normadocs.
+        run: pip install --no-deps -e .
 
       - name: Run tests with coverage (warnings as errors)
         run: >-
-          uv run pytest tests/ -W error --cov=normadocs
+          python -m pytest tests/ -W error --cov=normadocs
           --cov-report=term-missing --cov-report=xml --cov-fail-under=78
 
       - name: Upload coverage (3.13 only)
@@ -180,13 +189,13 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies (locked)
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Build sdist and wheel
-        run: uv run python -m build
+        run: python -m build
 
       - name: Validate package metadata
-        run: uv run twine check dist/*
+        run: twine check dist/*
 
       - name: Upload dist artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

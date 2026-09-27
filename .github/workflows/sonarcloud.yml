@@ -10,7 +10,6 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    branches: ["main"]
   workflow_dispatch:
 
 concurrency:
@@ -72,11 +71,17 @@ jobs:
 
       - name: Install dependencies (locked)
         if: steps.sonar_gate.outputs.available == 'true'
-        run: pip install --no-build --only-binary :all: --require-hashes -r requirements-ci.txt
+        run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
+
+      - name: Install project (editable, no deps)
+        if: steps.sonar_gate.outputs.available == 'true'
+        # requirements-ci.txt holds deps only; install the project itself so
+        # system python (which runs pytest) can import normadocs.
+        run: pip install --no-deps -e .
 
       - name: Run tests with coverage
         if: steps.sonar_gate.outputs.available == 'true'
-        run: uv run pytest tests/ --cov=normadocs --cov-report=xml -q
+        run: python -m pytest tests/ --cov=normadocs --cov-report=xml -q
 
       - name: SonarCloud Scan
         if: steps.sonar_gate.outputs.available == 'true'
