@@ -53,18 +53,19 @@ claro que faltan.
 ---
 title: "Efectos del aprendizaje automático en la educación superior"
 author: "Nombre completo"
-affiliation: "Departamento o programa académico"
-institution: "Universidad o institución"
 program: "Programa académico"
+institution: "Universidad o institución"
+subject: "Nombre del curso"
+subject_code: "CUR-2026"
 instructor: "Nombre del docente"
-subject: "Nombre y código del curso"
 date: "2026-08-13"
 short_title: "MACHINE LEARNING EFFECTS"
 ---
 
 # Resumen
 
-Resumen opcional de hasta 250 palabras.
+Resumen opcional de hasta 250 palabras. Abre su propia página; el título
+repetido abre el cuerpo (NormaDocs lo reubica si lo escribes antes).
 
 **Palabras clave:** aprendizaje automático, educación, tecnología
 
@@ -157,9 +158,11 @@ categoría. En modo estricto, cualquier advertencia se trata como error.
 | Categoría | Qué comprobar primero |
 |---|---|
 | `structure` | Portada, secciones obligatorias, orden y contenido |
-| `cover_page` | Título, autor, afiliación, fecha y repetición del título |
+| `cover_page` | 7 campos, Title Case (aviso) y repetición del título |
 | `margins`, `page_setup` | Carta, márgenes de 1", encabezados y pies |
 | `fonts`, `spacing`, `paragraphs` | Fuente, tamaño, doble espacio, alineación y sangrías |
+| `blank_lines` | Sin líneas en blanco indebidas en el cuerpo |
+| `cross_refs` | Citas con referencia y viceversa |
 | `headings` | Niveles APA 1–5 y jerarquía |
 | `references` | Referencias, orden alfabético y sangría francesa |
 | `tables`, `figures` | Etiquetas, títulos, posición y bordes |

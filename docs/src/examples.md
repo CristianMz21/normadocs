@@ -9,6 +9,7 @@ regression checks for the formatter pipeline.
 
 | Standard | File | Description |
 | --- | --- | --- |
+| APA 7th student (default) | [`examples/informe_apa7_ejemplo.md`](https://github.com/CristianMz21/normadocs/blob/main/examples/informe_apa7_ejemplo.md) | Realistic student report: cover, Resumen, objectives, table, block quote, references. Verifies 100/100. |
 | APA 7th Edition | [`examples/example_apa.md`](https://github.com/CristianMz21/normadocs/blob/main/examples/example_apa.md) | Complete APA 7 paper, 107 lines, with abstract, methods, results, references. |
 | ICONTEC NTC 1486 | [`examples/example_icontec.md`](https://github.com/CristianMz21/normadocs/blob/main/examples/example_icontec.md) | Colombian academic standard, 68 lines, with cover page, chapters, references. |
 | IEEE 8th Edition | [`examples/example_ieee.md`](https://github.com/CristianMz21/normadocs/blob/main/examples/example_ieee.md) | Engineering paper, 47 lines, with author block and numbered Roman-numeral sections. |
@@ -20,6 +21,10 @@ From the repository root, with the package installed (`pip install normadocs`)
 and [Pandoc](https://pandoc.org/installing.html) on `PATH`:
 
 ```bash
+# APA student (default profile) with verification report
+normadocs examples/informe_apa7_ejemplo.md --style apa7estudiante \
+  --format all --apa-report ExportDocs/informe_apa.md
+
 # APA
 normadocs examples/example_apa.md --style apa
 
@@ -30,7 +35,9 @@ normadocs examples/example_icontec.md --style icontec
 normadocs examples/example_ieee.md --style ieee
 ```
 
-The output appears in the current directory as
+The student example lands in `ExportDocs/` as
+`informe_apa7_ejemplo_APA7ESTUDIANTE.docx` / `.pdf`. The other outputs
+appear in the current directory as
 `example_apa_APA.docx`, `example_icontec_ICONTEC.docx`, or
 `example_ieee_IEEE.docx`. Use `--output-dir` to choose another directory.
 
@@ -38,6 +45,7 @@ The output appears in the current directory as
 
 | Standard | Default output suffix | Example full filename |
 | --- | --- | --- |
+| APA student | `APA7ESTUDIANTE` | `informe_apa7_ejemplo_APA7ESTUDIANTE.docx` |
 | APA | `APA` | `example_apa_APA.docx` |
 | ICONTEC | `ICONTEC` | `example_icontec_ICONTEC.docx` |
 | IEEE | `IEEE` | `example_ieee_IEEE.docx` |

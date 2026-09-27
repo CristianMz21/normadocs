@@ -12,11 +12,17 @@ pip install -e ".[dev]"
 
 ## Quality Standards
 
-All contributions must pass:
+All contributions must pass (see the full checklist in
+[CONTRIBUTING.md](https://github.com/CristianMz21/normadocs/blob/main/CONTRIBUTING.md)):
 
 ```bash
-make check  # lint + tests + coverage
+make check  # lint (ruff + mypy --strict + pyright) + tests + security
 ```
+
+Rules that bite: no `# noqa` / `# type: ignore` / `# nosec` suppressions
+(CI sets `RUFF_NOQA=1` and fails on any annotation), tests run with
+`-W error` and `--cov-fail-under=78`. Validate feature branches locally
+before pushing — CI runs the full gates only on pull requests to `main`.
 
 ## Code Style
 
