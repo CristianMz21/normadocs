@@ -249,8 +249,9 @@ class APACitationsHandler:
         for p in entries:
             for run in p.runs:
                 self._fix_reference_run(run)
-            if italicize and not any(r.italic for r in p.runs if r.text.strip()):
-                self._italicize_journals(p)
+            needs_italics = italicize and not any(r.italic for r in p.runs if r.text.strip())
+            if needs_italics and not self._italicize_journals(p):
+                self._italicize_book_title(p)
 
         if bool(refs_cfg.get("sort", True)):
             self._sort_entries(entries)
@@ -279,8 +280,12 @@ class APACitationsHandler:
             text = head + tail
         run.text = text
 
-    def _italicize_journals(self, p: ParagraphType) -> None:
-        """Italicize "Journal Name, Volume" spans in a plain reference entry."""
+    def _italicize_journals(self, p: ParagraphType) -> bool:
+        """Italicize "Journal Name, Volume" spans in a plain reference entry.
+
+        Returns True when a journal span was found (whether or not runs
+        could be split around it).
+        """
         raw = list(_JOURNAL_VOLUME.finditer(p.text))
         matches = [
             m
@@ -288,7 +293,7 @@ class APACitationsHandler:
             if m.start() >= 2 and p.text[m.start() - 2] in ".!?" and p.text[m.start() - 1] == " "
         ]
         if not matches:
-            return
+            return False
         offset = 0
         for run in p.runs:
             run_text = run.text or ""
@@ -300,6 +305,51 @@ class APACitationsHandler:
                     self._split_run_italic(run, m_start - start, m_end - start)
                     break
             offset = end
+        return True
+
+    def _italicize_book_title(self, p: ParagraphType) -> None:
+        """Italicize the title of a standalone work (book, report, webpage).
+
+        Applies only when no journal span was found: the title is the first
+        sentence after the year parenthesis ("Authors (Year). Title. Source.").
+        """
+        text = p.text
+        year_end = self._year_paren_end(text)
+        if year_end is None:
+            return
+        title_span = self._first_sentence_span(text, year_end)
+        if title_span is None:
+            return
+        m_start, m_end = title_span
+        offset = 0
+        for run in p.runs:
+            run_text = run.text or ""
+            start = offset
+            end = offset + len(run_text)
+            if start <= m_start and m_end <= end:
+                self._split_run_italic(run, m_start - start, m_end - start)
+                return
+            offset = end
+
+    @staticmethod
+    def _year_paren_end(text: str) -> int | None:
+        """Return the index just past the year parenthesis, if present."""
+        marker = _YEAR_MARKER.search(text)
+        if marker is None:
+            return None
+        closing = text.find(")", marker.start())
+        return closing + 1 if closing != -1 else None
+
+    @staticmethod
+    def _first_sentence_span(text: str, start: int) -> tuple[int, int] | None:
+        """Return the (start, end) span of the first sentence at/after start."""
+        idx = start
+        while idx < len(text) and text[idx] in " .:;":
+            idx += 1
+        dot = text.find(".", idx)
+        if dot == -1 or dot - idx < 2:
+            return None
+        return (idx, dot)
 
     def _split_run_italic(self, run: RunType, start: int, end: int) -> None:
         """Split a run so [start:end] becomes its own italic run."""
