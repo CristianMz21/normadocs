@@ -26,11 +26,12 @@ pandoc --version
 
 ## Unsupported Citation Style
 
-**Symptom:** `Error: Estilo de citación no soportado: '<style>'. Estilos disponibles: apa, icontec, ieee.`
+**Symptom:** `Error: Estilo de citación no soportado: '<style>'. Estilos disponibles: apa, apa7, apa7estudiante, icontec, ieee.`
 
 **Solution:**
 Use one of the supported values with `--style`:
 ```bash
+normadocs input.md --style apa7estudiante
 normadocs input.md --style apa
 normadocs input.md --style icontec
 normadocs input.md --style ieee
@@ -55,7 +56,9 @@ error or the report says `FAILED`.
 
 **Solution:** Read the first `structure` or `cover_page` issues in the APA
 report. The strict academic-report profile requires a cover, repeated title,
-Introduction, development, Conclusions and References in that order. Fix the
+Introduction, development, Conclusions and References in that order. New
+0.3.x checks also flag stray blank lines (`blank_lines`), unindented block
+quotes, non-Title-Case cover titles and uncited references. Fix the
 Markdown headings and metadata, then regenerate; do not patch the generated
 DOCX manually.
 
@@ -111,8 +114,14 @@ Se según [@author2024] demuestra...
 | `FileNotFoundError` | Input file doesn't exist | Check file path |
 | `Pandoc conversion failed` | Pandoc error | Check Markdown syntax |
 | `LanguageTool server JAR not found` | LT not installed | Install Java + LanguageTool |
-| `Estilo de citación no soportado` | Invalid `--style` value | Use `apa`, `icontec`, or `ieee` |
+| `Estilo de citación no soportado` | Invalid `--style` value | Use `apa7estudiante`, `apa`, `icontec`, or `ieee` |
 | `Formato de salida no soportado` | Invalid `--format` value | Use `docx`, `pdf`, or `all` |
+
+## Code images not rendering
+
+**Symptom:** `{code}` blocks stay as text instead of images.
+
+**Solution:** Install the extra plus the renderer: `pip install "normadocs[codeimage]"` and `wkhtmltopdf` on `PATH`. Without them the code is kept as text (graceful degradation, not an error).
 
 ## Getting Help
 

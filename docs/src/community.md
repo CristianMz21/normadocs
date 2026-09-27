@@ -1,6 +1,7 @@
 # Community
 
-NormaDocs is an early-stage open-source project. We welcome students,
+NormaDocs is a Production/Stable open-source project (since 0.3.0) with an
+early-stage community. We welcome students,
 researchers, educators, and developers who want to make academic document
 formatting more reproducible.
 
@@ -38,7 +39,7 @@ categories are:
 | **General** | Anything that does not fit the other categories. | "Hi, I am new here." |
 | **Ideas** | Open-ended proposals before opening a PR. | "Could NormaDocs support university-specific templates?" |
 | **Q&A** | Usage questions and answers. | "How do I switch the running head?" |
-| **Show and tell** | Community projects, derivative tools, integrations. | "I built a VS Code extension that wraps `normadocs convert`." |
+| **Show and tell** | Community projects, derivative tools, integrations. | "I built a VS Code extension that wraps `normadocs`." |
 
 If you are a maintainer enabling Discussions on this repo, please create
 the four categories above with the descriptions in this table. The
@@ -47,11 +48,17 @@ categories cannot be created via the GitHub API; use the web UI under
 
 ## Honesty about adoption
 
-NormaDocs is **early-stage**. It does not yet claim large download numbers,
+NormaDocs code is **Production/Stable** but its adoption is **early-stage**. It does not yet claim large download numbers,
 institutional adoption, or many dependent projects. The community is open
 to anyone who wants to help it grow — and the project is honest about
 where it is today. See [ROADMAP.md](https://github.com/CristianMz21/normadocs/blob/main/ROADMAP.md)
 for where it is heading.
+
+## Local-first contributions
+
+Feature branches validate locally via `make check` before pushing; CI runs
+the full ultra-strict gates only on pull requests targeting `main`. Docs-only
+changes skip the heavy jobs (validated by `mkdocs build --strict`).
 
 ## Code of Conduct
 

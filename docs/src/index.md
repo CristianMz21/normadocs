@@ -14,11 +14,13 @@ Guide](ai-agent.md).
 
 ## Features
 
-- **Multiple Citation Standards**: APA 7th Edition, ICONTEC (NTC 1486), IEEE 8th Edition
-- **Automatic Cover Pages**: Title, author, institution, program, date extraction
+- **Multiple Citation Standards**: APA 7th Edition (professional + student), ICONTEC (NTC 1486), IEEE 8th Edition
+- **Automatic Cover Pages**: 7-field title block (title, author, program, institution, subject, instructor, date)
+- **Strict APA Verifier**: blank-line rules, continuous pagination, hanging indents, cross-references, 100/100 gate
 - **Complete Formatting**: Margins, typography, and spacing per selected standard
 - **Bibliography Support**: BibTeX (`.bib`) files and CSL styles via Pandoc
 - **PDF Generation**: LibreOffice or WeasyPrint
+- **Code Images**: `{code}` fences rendered as images (optional `codeimage` extra)
 - **LanguageTool Integration**: Grammar and spell checking
 
 ## Quick Start
@@ -43,7 +45,8 @@ normadocs document.md -o ./Submissions -s apa -f all
 
 | Standard | Status | Font | Spacing | Typical Use |
 |----------|--------|------|---------|-------------|
-| **APA 7th Edition** | ✅ Formatter + strict verifier | Times New Roman 12pt | Double | Social Sciences |
+| **APA 7th student** (`apa7estudiante`, default) | ✅ Formatter + strict verifier | Times New Roman 12pt (or Arial/Calibri/Georgia 11) | Double, continuous | Student papers |
+| **APA 7th professional** (`apa`) | ✅ Formatter + strict verifier + running head | Times New Roman 12pt | Double | Journals, theses |
 | **ICONTEC (NTC 1486)** | ✅ Formatter; manual review | Arial 12pt | 1.5 lines | Colombian Academic |
 | **IEEE 8th Edition** | ✅ Formatter; manual review | Times New Roman 10pt | Single | Engineering/Technical |
 
