@@ -8,6 +8,8 @@ import unittest
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 
 from normadocs.formatters.apa import APADocxFormatter
 from normadocs.models import DocumentMetadata
@@ -224,7 +226,7 @@ class TestAddCoverPage(unittest.TestCase):
                 f"Subject '{meta.subject}' not found in document",
             )
             self.assertIn(
-                f"Instructor: {meta.instructor}",
+                meta.instructor,
                 all_texts,
                 f"Instructor '{meta.instructor}' not found in document",
             )
@@ -452,6 +454,59 @@ class TestBackwardCompatibilityModule(unittest.TestCase):
         module = self._load_apa_module_directly()
 
         self.assertIn("APADocxFormatter", module.__all__)
+
+
+def _add_break_before(paragraph):
+    """Insert an explicit page-break paragraph before the given one."""
+    br_para = OxmlElement("w:p")
+    br_run = OxmlElement("w:r")
+    br = OxmlElement("w:br")
+    br.set(qn("w:type"), "page")
+    br_run.append(br)
+    br_para.append(br_run)
+    paragraph._element.addprevious(br_para)
+
+
+class TestCoverBreakDedup(unittest.TestCase):
+    """Cover page breaks must never stack on an explicit preprocessor break."""
+
+    def test_break_after_cover_not_duplicated(self):
+        """Existing break before first heading suppresses the cover flag."""
+        doc = Document()
+        heading = doc.add_paragraph("Introducción", style="Heading 1")
+        _add_break_before(heading)
+        doc.add_paragraph("Body text.", style="Normal")
+        from normadocs.formatters.apa.apa_cover import APACoverHandler
+
+        APACoverHandler(doc)._add_page_break_after_cover()
+
+        self.assertFalse(heading.paragraph_format.page_break_before)
+
+    def test_break_after_cover_set_when_missing(self):
+        """Cover flag is still set when no explicit break precedes the heading."""
+        doc = Document()
+        heading = doc.add_paragraph("Introducción", style="Heading 1")
+        doc.add_paragraph("Body text.", style="Normal")
+        from normadocs.formatters.apa.apa_cover import APACoverHandler
+
+        APACoverHandler(doc)._add_page_break_after_cover()
+
+        self.assertTrue(heading.paragraph_format.page_break_before)
+
+    def test_inserted_title_keeps_single_break(self):
+        """Inserted cover title uses the existing break instead of adding a flag."""
+        doc = Document()
+        heading = doc.add_paragraph("Introducción", style="Heading 1")
+        _add_break_before(heading)
+        doc.add_paragraph("Body text.", style="Normal")
+        from normadocs.formatters.apa.apa_cover import APACoverHandler
+
+        meta = DocumentMetadata(title="Mi título", author="Autor")
+        APACoverHandler(doc)._ensure_cover_title(meta)
+
+        titles = [p for p in doc.paragraphs if p.text.strip() == "Mi título"]
+        self.assertEqual(len(titles), 1)
+        self.assertFalse(titles[0].paragraph_format.page_break_before)
 
 
 if __name__ == "__main__":

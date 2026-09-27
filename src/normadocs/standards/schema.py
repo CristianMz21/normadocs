@@ -14,6 +14,12 @@ DEFAULT_APA7_CONFIG: dict[str, Any] = {
     "citation_style": "apa",
     "fonts": {
         "body": {"name": DEFAULT_BODY_FONT, "size": 12},
+        "allowed": [
+            {"name": "Times New Roman", "size": 12},
+            {"name": "Arial", "size": 11},
+            {"name": "Calibri", "size": 11},
+            {"name": "Georgia", "size": 11},
+        ],
         "headings": {
             "name": DEFAULT_BODY_FONT,
             "level1": {"alignment": "center", "bold": True},
@@ -25,6 +31,7 @@ DEFAULT_APA7_CONFIG: dict[str, Any] = {
     },
     "margins": {"unit": "inches", "top": 1.0, "bottom": 1.0, "left": 1.0, "right": 1.0},
     "spacing": {"line": "double", "paragraph_before": 0, "paragraph_after": 0},
+    "running_head": {"enabled": True, "max_length": 50},
     "page_setup": {"page_numbers": True, "header": True, "first_page_number": 1},
     "citations": {"et_al_min_authors": 3, "ampersand": True},
     "block_quote": {"min_words": 40, "indent_inches": 0.5},

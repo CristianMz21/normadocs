@@ -6,6 +6,15 @@ fonts:
   body:
     name: "Times New Roman"
     size: 12
+  allowed:
+    - name: "Times New Roman"
+      size: 12
+    - name: "Arial"
+      size: 11
+    - name: "Calibri"
+      size: 11
+    - name: "Georgia"
+      size: 11
   headings:
     name: "Times New Roman"
     level1:

@@ -9,8 +9,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Inches, Pt
 
-from ...config import DEFAULT_BODY_FONT, W_TYPE, W_VAL
-from ...utils.docx_helpers import paragraph_style_name
+from ...config import DEFAULT_BODY_FONT, W_TYPE, W_VAL, is_section_break_heading
+from ...utils.docx_helpers import has_page_break_before, paragraph_style_name
 
 if TYPE_CHECKING:
     from docx.document import Document as DocType
@@ -176,29 +176,18 @@ class APAPageHandler:
 
     @staticmethod
     def _has_page_break_before(paragraph: Any) -> bool:
-        """Return whether a paragraph already starts on a new page."""
+        """Return whether a paragraph already starts on a new page.
+
+        Delegates to the shared bookmark-transparent scan so an explicit
+        preprocessor break is never duplicated (which renders as a blank
+        page in LibreOffice/Word).
+        """
         if bool(paragraph.paragraph_format.page_break_before):
             return True
-        previous = paragraph._element.getprevious()
-        while previous is not None:
-            if any(br.get(qn("w:type")) == "page" for br in previous.iter(qn("w:br"))):
-                return True
-            if previous.tag == qn("w:p") and not "".join(previous.itertext()).strip():
-                previous = previous.getprevious()
-                continue
-            return False
-        return False
+        return has_page_break_before(paragraph)
 
     def _is_target_section(self, heading_text: str) -> bool:
-        targets = (
-            "Conclusiones",
-            "Referencias",
-            "References",
-            "Appendix A",
-            "Appendices",
-        )
-        lower = heading_text.lower()
-        return any(lower == t.lower() for t in targets)
+        return is_section_break_heading(heading_text)
 
     def _insert_page_break_before(self, p: Any) -> None:
         br_para = OxmlElement("w:p")
@@ -212,10 +201,10 @@ class APAPageHandler:
     def add_section_page_breaks(self) -> None:
         """Add section breaks only when one is not already before the heading.
 
-        Markdown preprocessing already inserts explicit page breaks before
-        level-1 headings. Repeating those breaks here creates blank pages in
-        LibreOffice. Direct callers that provide an unprocessed DOCX retain
-        the legacy fallback for Conclusions/References.
+        APA 7 body text is continuous: only references and appendices open
+        a new page. Markdown preprocessing already inserts explicit page
+        breaks before those headings; this is the legacy fallback for
+        unprocessed DOCX files.
         """
         for p in self.doc.paragraphs:
             if not paragraph_style_name(p).startswith("Heading"):
