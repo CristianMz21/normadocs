@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-27
+
+### Added
+
+- **APA ultra-strict core** (`config.py`, `models.py`, `standards/`): section-break headings (References/Appendices start on a new page), normalized heading matching, `subject`/`subject_code` metadata, allowed font profiles (Times New Roman 12, Arial 11, Calibri 11, Georgia 11) in schema and both APA YAMLs, `has_page_break_before` docx helper.
+- **Verifier batch A** (`verifier/checks/`): strict level-3 headings, professional/student header validation, Block/Quote paragraph exclusions, journal-vs-book italics in references, digit-tolerant running head, TNR-only stubs replaced by font-profile checks, new `BlankLinesCheck`, list-item detection in `DOCXAnalyzer`.
+- **Verifier cover + citations**: program/subject/instructor cover detection with Title-Case warning, short-quotation page-locator check, book-title italicization in the citations formatter.
+- **Verifier structure + tables**: informe section ordering with objetivos/subsections, table checks, figure mention-before validation, new bidirectional citation<->reference `CrossRefsCheck` under its own `CROSS_REFS` category.
+- **End-to-end examples**: realistic informe conversion test with fixture (`tests/fixtures/informe_realista.md`), block-quote e2e, runnable `examples/informe_apa7_ejemplo.md`.
+
+### Fixed
+
+- **Page-break follow-ups** (`preprocessor.py`, `apa_paragraphs.py`, `apa_tables.py`): section-break handling, block-quote/spacing continuity, table formatting fixes.
+
+### Changed
+
+- Development status promoted from Beta to Production/Stable (`pyproject.toml` classifier).
+
 ## [0.2.6] - 2026-08-29
 
 ### Fixed
