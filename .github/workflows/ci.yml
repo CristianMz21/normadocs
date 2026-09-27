@@ -173,6 +173,9 @@ jobs:
     needs: [quality, security, changes]
     # No job-level if: matrix legs must report for branch protection.
     # Docs-only gating is step-level (echo leg, ~30s).
+    # always(): skipped needs (quality/security on docs-only) must not skip
+    # this job, or the matrix legs would never report.
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -284,6 +287,8 @@ jobs:
   annotations-check:
     name: Ensure Zero Annotations
     needs: [quality, security, gitleaks, tests, build-check, changes, docs-build]
+    # always(): must aggregate even when docs-only skips upstream jobs.
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
