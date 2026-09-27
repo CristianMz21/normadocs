@@ -562,6 +562,26 @@ class TestParagraphsCheckExclusions(unittest.TestCase):
             indent_issues, [], f"List paragraphs should be excluded but got: {indent_issues}"
         )
 
+    def test_block_quote_excluded_from_indent(self) -> None:
+        """Block-quote paragraphs (left indent, no first-line indent) must be excluded."""
+
+        def build(doc: Document) -> None:
+            self._add_body_paragraphs(doc, count=5)
+            self._ensure_style(doc, "Block Text")
+            para = doc.add_paragraph(style="Block Text")
+            run = para.add_run("A long block quotation without first-line indent.")
+            run.font.name = "Times New Roman"
+            run.font.size = Pt(12)
+            para.paragraph_format.left_indent = Inches(0.5)
+            para.paragraph_format.first_line_indent = Inches(0)
+
+        docx_path = self._create_docx("block_quote_excluded.docx", build)
+        issues = self._run_check(docx_path)
+        indent_issues = [i for i in issues if "indent" in i.check]
+        self.assertEqual(
+            indent_issues, [], f"Block quotes should be excluded but got: {indent_issues}"
+        )
+
     def test_caption_style_paragraph_excluded(self) -> None:
         """Caption/Compact/Source-styled paragraphs must be excluded from indent check."""
 

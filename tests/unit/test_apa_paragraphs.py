@@ -634,6 +634,28 @@ class TestBreakSurvival(unittest.TestCase):
 
         self.assertIn("\n", doc.paragraphs[0].text)
 
+    def test_bookmark_does_not_stack_break_before_flag(self):
+        """A pandoc bookmark must not hide an explicit break from the setter."""
+        doc = Document()
+        heading = doc.add_paragraph("Referencias", style="Heading 1")
+        break_paragraph = OxmlElement("w:p")
+        break_run = OxmlElement("w:r")
+        explicit_break = OxmlElement("w:br")
+        explicit_break.set(qn("w:type"), "page")
+        break_run.append(explicit_break)
+        break_paragraph.append(break_run)
+        heading._element.addprevious(break_paragraph)
+        bookmark = OxmlElement("w:bookmarkStart")
+        bookmark.set(qn("w:id"), "7")
+        bookmark.set(qn("w:name"), "referencias")
+        heading._element.addprevious(bookmark)
+        handler = APAParagraphsHandler(doc)
+
+        handler._set_page_break_before(heading)
+
+        self.assertTrue(handler._has_page_break_before(heading))
+        self.assertFalse(heading.paragraph_format.page_break_before)
+
 
 class TestBlockQuotes(unittest.TestCase):
     """Tests for APA 8.27 block-quote conversion."""
