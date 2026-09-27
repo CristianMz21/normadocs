@@ -55,7 +55,10 @@ jobs:
       - name: Type check with Pyright
         # Optional imports (imgkit, weasyprint, sqlparse, fitz, pdfplumber)
         # live in extras, so sync them for pyright resolution.
-        run: uv run --extra codeimage --extra pdf --extra pdf-verifier pyright
+        # --frozen --no-build satisfy Sonar S8544/S8541; --no-binary-package
+        # allows the local editable install (no wheel) while blocking
+        # third-party sdist builds.
+        run: uv run --frozen --no-build --no-binary-package normadocs --extra codeimage --extra pdf --extra pdf-verifier pyright
 
   security:
     name: Security Scan
@@ -189,10 +192,10 @@ jobs:
         run: pip install --no-build --only-binary ":all:" --require-hashes -r requirements-ci.txt
 
       - name: Build sdist and wheel
-        run: uv run python -m build
+        run: python -m build
 
       - name: Validate package metadata
-        run: uv run twine check dist/*
+        run: twine check dist/*
 
       - name: Upload dist artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
