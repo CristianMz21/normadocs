@@ -1,0 +1,39 @@
+rules:
+  - id: weasyprint-unrestricted-fetcher
+    languages: [python]
+    severity: ERROR
+    message: >-
+      WeasyPrint must always render with a restricted url_fetcher that blocks
+      http(s):// and out-of-scope file:// URLs (audit F-01). Pass
+      url_fetcher=... to write_pdf().
+    patterns:
+      - pattern: $HTML.write_pdf(...)
+      - pattern-not: $HTML.write_pdf(..., url_fetcher=$FETCHER, ...)
+
+  - id: docker-image-without-digest
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Third-party Docker images must be pinned by digest, never by mutable tag
+      (audit F-05). Use image@sha256:<digest>.
+    pattern: '"erikvl87/languagetool"'
+
+  - id: wkhtmltopdf-local-file-access
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Do not enable local file access in HTML-to-image rendering
+      (audit F-09). The renderer input must stay self-contained.
+    pattern: '"enable-local-file-access"'
+
+  - id: recursive-jar-execution
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Never locate an executable with a recursive directory search and run it
+      (audit F-07). Resolve a fixed, absolute path instead.
+    patterns:
+      - pattern: $DIR.rglob($PATTERN)
+      - pattern-inside: |
+          def start_server(...):
+            ...

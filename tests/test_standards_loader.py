@@ -31,8 +31,16 @@ class TestStandardLoader(unittest.TestCase):
 
     def test_load_nonexistent_raises(self):
         loader = StandardLoader()
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(ValueError):
             loader.load("nonexistent")
+
+    def test_load_path_traversal_raises(self):
+        loader = StandardLoader()
+        with self.assertRaises(ValueError):
+            loader.load("../../etc/passwd")
+        with self.assertRaises(ValueError):
+            loader.load_raw("../icontec")
+        self.assertFalse(loader.exists("../../../etc/passwd"))
 
     def test_load_raw_apa7(self):
         loader = StandardLoader()
@@ -84,15 +92,22 @@ class TestStandardLoaderCustomDir(unittest.TestCase):
                 "fonts": {"body": {"name": "Custom Font", "size": 14}},
                 "margins": {"unit": "inches", "top": 2.0, "bottom": 2.0, "left": 1.5, "right": 1.5},
             }
-            yaml_path = Path(tmpdir) / "custom.yaml"
+            yaml_path = Path(tmpdir) / "icontec.yaml"
             with open(yaml_path, "w", encoding="utf-8") as f:
                 yaml.dump(custom_yaml, f)
 
             loader = StandardLoader(standards_dir=Path(tmpdir))
-            config = loader.load("custom")
+            config = loader.load("icontec")
             self.assertEqual(config["fonts"]["body"]["name"], "Custom Font")
             self.assertEqual(config["fonts"]["body"]["size"], 14)
-            self.assertEqual(config["citation_style"], "apa")
+
+    def test_custom_directory_rejects_unlisted_names(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            Path(tmpdir).joinpath("custom.yaml").write_text("key: value", encoding="utf-8")
+
+            loader = StandardLoader(standards_dir=Path(tmpdir))
+            with self.assertRaises(ValueError):
+                loader.load("custom")
 
     def test_list_from_custom_directory(self):
         with tempfile.TemporaryDirectory() as tmpdir:

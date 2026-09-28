@@ -7,7 +7,9 @@ MERMAID_HTML = """<!DOCTYPE html>
 <head>
     <meta charset="utf-8">
     <title>Diagrama de Gantt - Shoppipai</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.8/dist/mermaid.min.js"
+        integrity="sha384-N3QqR/7q+xm3BGX+CBbNI8AUmRRqcsDzToy+0z1NLDI0QmTKW8zvwLvqulJgk3dP"
+        crossorigin="anonymous"></script>
     <style>
         body {{
             background: white;
@@ -91,11 +93,13 @@ MERMAID_HTML = """<!DOCTYPE html>
 def generate_mermaid_gantt():
     """Generate Mermaid Gantt chart as PNG using playwright."""
     import os
+    from pathlib import Path
 
     from playwright.sync_api import sync_playwright
 
-    html_path = "/home/mackroph/Projectos/Learning/APAScript/IDocs/image/gantt_mermaid.html"
-    png_path = "/home/mackroph/Projectos/Learning/APAScript/IDocs/image/gantt_chart.png"
+    image_dir = Path(__file__).resolve().parent.parent / "IDocs" / "image"
+    html_path = str(image_dir / "gantt_mermaid.html")
+    png_path = str(image_dir / "gantt_chart.png")
 
     # Ensure directory exists
     os.makedirs(os.path.dirname(html_path), exist_ok=True)

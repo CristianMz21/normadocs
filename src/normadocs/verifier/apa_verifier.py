@@ -5,6 +5,7 @@ Orchestrates all verification checks and provides comprehensive reporting.
 
 from __future__ import annotations
 
+import html
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
@@ -374,7 +375,9 @@ class APAVerifier:
             "<body>",
             '    <div class="header">',
             "        <h1>APA 7th Edition Verification Report</h1>",
-            f"        <p><strong>File</strong>: {result.pdf_path}</p>",
+            # Document-controlled fields are escaped: issue text derives from
+            # the analyzed document and must never become executable markup.
+            f"        <p><strong>File</strong>: {html.escape(str(result.pdf_path))}</p>",
             f'        <p class="score {status_class}">'
             f"{status_icon} Score: {result.score:.1f}/100</p>",
             f'        <p class="{status_class}">'
@@ -382,23 +385,28 @@ class APAVerifier:
             f"{'PASSED' if result.passed else 'FAILED'}</p>",
             "    </div>",
         ]
-        html = "\n".join(html_parts) + "\n"
-        html += self._html_errors(result)
-        html += self._html_warnings(result)
-        html += self._html_infos(result)
-        html += "</body></html>"
-        return html
+        html_head = "\n".join(html_parts) + "\n"
+        html_head += self._html_errors(result)
+        html_head += self._html_warnings(result)
+        html_head += self._html_infos(result)
+        html_head += "</body></html>"
+        return html_head
 
     def _html_errors(self, result: VerificationResult) -> str:
         if not result.errors:
             return ""
         parts = [f"<h2>Errors ({len(result.errors)})</h2>\n"]
         for issue in result.errors:
-            ev = f"<div><strong>Evidence</strong>: {issue.evidence}</div>" if issue.evidence else ""
+            evidence = (
+                f"<div><strong>Evidence</strong>: {html.escape(issue.evidence)}</div>"
+                if issue.evidence
+                else ""
+            )
             parts.append(
-                f'<div class="err"><div class="chk">{issue.check}</div>'
-                f"<div><strong>Expected</strong>: {issue.expected}</div>"
-                f"<div><strong>Actual</strong>: {issue.actual}</div>{ev}</div>\n"
+                f'<div class="err"><div class="chk">{html.escape(issue.check)}</div>'
+                f"<div><strong>Expected</strong>: {html.escape(issue.expected)}</div>"
+                f"<div><strong>Actual</strong>: {html.escape(issue.actual)}</div>"
+                f"{evidence}</div>\n"
             )
         return "".join(parts)
 
@@ -408,9 +416,9 @@ class APAVerifier:
         parts = [f"<h2>Warnings ({len(result.warnings)})</h2>\n"]
         for issue in result.warnings:
             parts.append(
-                f'<div class="warn"><div class="chk">{issue.check}</div>'
-                f"<div><strong>Expected</strong>: {issue.expected}</div>"
-                f"<div><strong>Actual</strong>: {issue.actual}</div></div>\n"
+                f'<div class="warn"><div class="chk">{html.escape(issue.check)}</div>'
+                f"<div><strong>Expected</strong>: {html.escape(issue.expected)}</div>"
+                f"<div><strong>Actual</strong>: {html.escape(issue.actual)}</div></div>\n"
             )
         return "".join(parts)
 
@@ -419,7 +427,9 @@ class APAVerifier:
             return ""
         parts = [f"<h2>Info ({len(result.infos)})</h2>\n"]
         for issue in result.infos:
-            parts.append(f'<div class="info">{issue.check}: {issue.actual}</div>\n')
+            parts.append(
+                f'<div class="info">{html.escape(issue.check)}: {html.escape(issue.actual)}</div>\n'
+            )
         return "".join(parts)
 
     def close(self) -> None:

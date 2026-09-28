@@ -22,7 +22,7 @@ security:
 
 semgrep:
 	SEMGREP_SEND_METRICS=off semgrep scan \
-		--config p/python --config p/security-audit --error src/
+		--config p/python --config p/security-audit --config .semgrep/security.yml --error src/
 
 gitleaks:
 	@command -v gitleaks >/dev/null 2>&1 || { \

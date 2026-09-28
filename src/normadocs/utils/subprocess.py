@@ -9,6 +9,8 @@ This module provides a safe wrapper around subprocess.run() that:
 
 from __future__ import annotations
 
+import contextlib
+import os
 import shutil
 import subprocess
 
@@ -65,30 +67,26 @@ def get_command_path(command: str) -> str:
 
 
 def _resolve_command_paths(cmd: list[str]) -> list[str]:
-    """Resolve command executable paths using shutil.which.
+    """Resolve the executable path using shutil.which.
 
-    For each command in the list, if it's not an absolute path,
-    resolves it to the full path using shutil.which().
+    Only ``cmd[0]`` (the executable) is resolved to a full path; the
+    remaining arguments are passed through untouched so that values such
+    as ``pdf``, file names, or flags are never rewritten even when they
+    collide with a binary on PATH.
 
     Args:
-        cmd: List of command arguments with potential command names.
+        cmd: List with the executable followed by its arguments.
 
     Returns:
-        List of command arguments with resolved full paths.
-
-    Raises:
-        FileNotFoundError: If a command is not found in PATH.
+        List with the resolved executable followed by the original arguments.
     """
-    resolved_cmd = []
-    for arg in cmd:
-        if "/" not in arg:
-            try:
-                resolved_cmd.append(get_command_path(arg))
-            except FileNotFoundError:
-                resolved_cmd.append(arg)
-        else:
-            resolved_cmd.append(arg)
-    return resolved_cmd
+    if not cmd:
+        return cmd
+    head, args = cmd[0], cmd[1:]
+    if not os.path.isabs(head) and os.path.dirname(head) == "":
+        with contextlib.suppress(FileNotFoundError):
+            head = get_command_path(head)
+    return [head, *args]
 
 
 def _no_shell_run(
