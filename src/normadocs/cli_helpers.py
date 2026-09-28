@@ -25,6 +25,13 @@ from .utils.subprocess import CommandFailedError, get_command_path, run_command
 
 logger = logging.getLogger("normadocs")
 
+# LanguageTool Docker image pinned by digest (see F-05): `latest` would pull
+# different code on every run. Re-pin with:
+#   docker buildx imagetools inspect erikvl87/languagetool --raw | sha256sum
+LANGUAGETOOL_IMAGE = (
+    "erikvl87/languagetool@sha256:ef8fa12cbd485166c9ceeb7139d76d56d07707a624da6bb1fc1fbb5411750527"
+)
+
 
 class LanguageToolResult(NamedTuple):
     """Result from LanguageTool check."""
@@ -121,11 +128,12 @@ def _ensure_languagetool_server(
                     docker_path,
                     "run",
                     "-d",
+                    "--rm",
                     "--name",
                     "normadocs-lt",
                     "-p",
                     f"{lt_port}:8010",
-                    "erikvl87/languagetool",
+                    LANGUAGETOOL_IMAGE,
                 ],
             )
         except CommandFailedError as e:
@@ -146,7 +154,7 @@ def _ensure_languagetool_server(
         typer.echo(
             f"Error: LanguageTool server no está corriendo en {lt_client.base_url}. "
             "Use --lt-docker para iniciar automáticamente o ejecute:\n"
-            "  docker run -d --name normadocs-lt -p 8081:8081 erikvl87/languagetool",
+            f"  docker run -d --rm --name normadocs-lt -p 8081:8010 {LANGUAGETOOL_IMAGE}",
             err=True,
         )
         raise typer.Exit(code=1)
@@ -308,6 +316,7 @@ def _generate_pdf(
     output_dir: Path,
     clean_md: str,
     output_pdf: Path,
+    input_path: Path | None = None,
 ) -> bool:
     """
     Generate PDF from DOCX if requested.
@@ -318,6 +327,8 @@ def _generate_pdf(
         output_dir: Output directory
         clean_md: Markdown content for WeasyPrint fallback
         output_pdf: Path for output PDF
+        input_path: Original input file (its directory scopes local file
+            access for the WeasyPrint fallback)
 
     Returns:
         True if PDF was generated successfully, False otherwise
@@ -326,7 +337,10 @@ def _generate_pdf(
         return True
 
     logger.info("▸ Generando PDF...")
-    if PDFGenerator.convert(str(output_docx), str(output_dir), clean_md, str(output_pdf)):
+    source_dir = str(input_path.resolve().parent) if input_path else None
+    if PDFGenerator.convert(
+        str(output_docx), str(output_dir), clean_md, str(output_pdf), source_dir
+    ):
         logger.info("✔ PDF generado: %s", output_pdf.name)
         return True
     else:

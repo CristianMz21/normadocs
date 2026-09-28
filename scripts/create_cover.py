@@ -19,7 +19,7 @@ def load_font(path: str, size: int) -> ImageFont.FreeTypeFont:
 def create_cover(output_dir: str | None = None) -> None:
     """Create the cover image and convert to PDF."""
     if output_dir is None:
-        output_dir = "/home/mackroph/Projectos/Learning/APAScript/IDocs/image"
+        output_dir = str(Path(__file__).resolve().parent.parent / "IDocs" / "image")
 
     output_path = Path(output_dir)
     logo_path = output_path / "logo_mackroph.png"

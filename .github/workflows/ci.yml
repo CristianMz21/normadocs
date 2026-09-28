@@ -29,7 +29,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
       - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
@@ -55,12 +55,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -82,10 +82,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -128,10 +128,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -150,7 +150,7 @@ jobs:
         run: bandit -r src/ -c pyproject.toml
 
       - name: Run Semgrep (advanced SAST)
-        run: semgrep scan --config p/python --config p/security-audit --error --metrics off src/
+        run: semgrep scan --config p/python --config p/security-audit --config .semgrep/security.yml --error --metrics off src/
 
   gitleaks:
     name: Secret Scan (Gitleaks)
@@ -159,7 +159,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
 
@@ -192,12 +192,12 @@ jobs:
         if: ${{ needs.changes.outputs.code != 'true' }}
         run: echo "Docs-only change - full matrix runs on code changes - local gate is make check"
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         if: needs.changes.outputs.code == 'true'
 
       - name: Set up Python ${{ matrix.python-version }}
         if: needs.changes.outputs.code == 'true'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
@@ -254,10 +254,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -297,9 +297,12 @@ jobs:
     steps:
       - name: Check for annotations
         shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_RUN_ID: ${{ github.run_id }}
         run: |
-          repo_full="${{ github.repository }}"
-          run_id="${{ github.run_id }}"
+          repo_full="$GH_REPO"
+          run_id="$GH_RUN_ID"
 
           echo "Checking run $run_id for annotations in $repo_full..."
 

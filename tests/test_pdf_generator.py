@@ -98,6 +98,18 @@ class TestPDFGeneratorLibreOffice(unittest.TestCase):
 class TestPDFGeneratorWeasyPrint(unittest.TestCase):
     """Tests for convert_with_weasyprint method."""
 
+    @staticmethod
+    def _mock_weasyprint_modules(mock_weasyprint):
+        """Add a weasyprint.urls mock with a minimal URLFetcher base class."""
+        mock_urls = MagicMock()
+
+        class FakeURLFetcher:
+            def __init__(self, *args, **kwargs):
+                pass
+
+        mock_urls.URLFetcher = FakeURLFetcher
+        return {"weasyprint": mock_weasyprint, "weasyprint.urls": mock_urls}
+
     def test_weasyprint_success(self):
         """WeasyPrint conversion should return True on success."""
         md_content = "# Title\n\nContent paragraph."
@@ -118,9 +130,20 @@ class TestPDFGeneratorWeasyPrint(unittest.TestCase):
                 mock_weasyprint.HTML = mock_html_cls
                 mock_weasyprint.CSS = mock_css_cls
 
-                with patch.dict("sys.modules", {"weasyprint": mock_weasyprint}):
+                modules = self._mock_weasyprint_modules(mock_weasyprint)
+                with patch.dict("sys.modules", modules):
                     result = PDFGenerator.convert_with_weasyprint(md_content, str(output_path))
                     self.assertTrue(result)
+
+                # Raw HTML must stay disabled: untrusted markup must reach
+                # WeasyPrint as literal text, never as live tags.
+                pandoc_cmd = mock_run.call_args[0][0]
+                format_idx = pandoc_cmd.index("-f")
+                self.assertEqual(pandoc_cmd[format_idx + 1], "markdown-raw_html-raw_attribute")
+
+                # A restricted fetcher must scope every render.
+                _, write_kwargs = mock_html_instance.write_pdf.call_args
+                self.assertIn("url_fetcher", write_kwargs)
 
     def test_weasyprint_import_error(self):
         """WeasyPrint ImportError should return False."""
@@ -169,12 +192,12 @@ class TestPDFGeneratorWeasyPrint(unittest.TestCase):
 
                 mock_weasyprint = MagicMock()
                 mock_html_cls = MagicMock()
-                mock_css_cls = MagicMock()
                 mock_html_cls.side_effect = Exception("PDF write error")
                 mock_weasyprint.HTML = mock_html_cls
-                mock_weasyprint.CSS = mock_css_cls
+                mock_weasyprint.CSS = MagicMock()
 
-                with patch.dict("sys.modules", {"weasyprint": mock_weasyprint}):
+                modules = self._mock_weasyprint_modules(mock_weasyprint)
+                with patch.dict("sys.modules", modules):
                     result = PDFGenerator.convert_with_weasyprint(md_content, str(output_path))
                     self.assertFalse(result)
 

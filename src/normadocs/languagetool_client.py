@@ -200,21 +200,31 @@ class LanguageToolClient:
         Start the LanguageTool server.
 
         Args:
-            install_dir: Directory where LanguageTool is installed.
-            jar_pattern: Pattern to find the server JAR file.
+            install_dir: Directory where LanguageTool is installed. Must be
+                an absolute path; only this directory (no recursive search)
+                is inspected, so a stray JAR elsewhere on disk can never be
+                picked up and executed.
+            jar_pattern: File name of the server JAR within ``install_dir``.
+                Must be a plain file name (no separators or glob patterns).
+
+        Raises:
+            ValueError: If ``install_dir`` is not absolute or ``jar_pattern``
+                is not a plain file name.
+            FileNotFoundError: If the server JAR is not found.
         """
         if self.is_server_running():
             return
 
-        # Find the JAR file
-        install_path = Path(install_dir)
-        jar_file = None
+        if not Path(install_dir).is_absolute():
+            raise ValueError(f"install_dir must be an absolute path: {install_dir!r}")
+        if Path(jar_pattern).name != jar_pattern or "*" in jar_pattern:
+            raise ValueError(f"jar_pattern must be a plain file name: {jar_pattern!r}")
 
-        for jar in install_path.rglob(jar_pattern):
-            jar_file = jar
-            break
+        # Only the top level of install_dir is inspected: no recursive
+        # search, so a JAR planted in a subdirectory is never executed.
+        jar_file = Path(install_dir) / jar_pattern
 
-        if not jar_file:
+        if not jar_file.is_file():
             raise FileNotFoundError(
                 f"LanguageTool server JAR not found in {install_dir}. "
                 "Please install LanguageTool first."

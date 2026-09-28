@@ -110,7 +110,7 @@ class TestLoadStandardConfig(unittest.TestCase):
         self.assertEqual(config["name"], "ICONTEC (NTC 1486)")
 
     def test_load_nonexistent_raises(self):
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(ValueError):
             load_standard_config("nonexistent")
 
 
