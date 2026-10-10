@@ -11,8 +11,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from normadocs.cli_helpers import LANGUAGETOOL_IMAGE, _ensure_languagetool_server
 from normadocs.codeimage_processor import CodeImageProcessor
+from normadocs.converter import LANGUAGETOOL_IMAGE, Converter
 from normadocs.models import DocumentMetadata
 from normadocs.pdf_generator import PDFGenerator
 from normadocs.preprocessor import MarkdownPreprocessor
@@ -175,8 +175,8 @@ class TestDockerImagePin(unittest.TestCase):
         self.assertNotIn(":latest", LANGUAGETOOL_IMAGE)
 
     @patch("time.sleep")
-    @patch("normadocs.cli_helpers.run_command")
-    @patch("normadocs.cli_helpers.get_command_path", return_value="docker")
+    @patch("normadocs.converter.run_command")
+    @patch("normadocs.converter.get_command_path", return_value="docker")
     def test_docker_run_uses_rm_and_pinned_image(self, _mock_path, mock_run, _mock_sleep):
         from unittest.mock import MagicMock as Mock
 
@@ -184,7 +184,7 @@ class TestDockerImagePin(unittest.TestCase):
         mock_client.is_server_running.side_effect = [False, True]
         mock_run.return_value = MagicMock(returncode=0)
 
-        _ensure_languagetool_server(mock_client, lt_docker=True, lt_port=8081)
+        Converter._ensure_languagetool_server(mock_client, use_docker=True, port=8081)
 
         cmd = mock_run.call_args[0][0]
         self.assertIn("--rm", cmd)

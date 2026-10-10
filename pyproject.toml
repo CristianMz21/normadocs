@@ -141,6 +141,7 @@ typeCheckingMode = "standard"
 
 # ── Pytest ────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "--tb=short -q"
