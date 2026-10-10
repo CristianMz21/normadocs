@@ -5,7 +5,7 @@ test:
 	pytest tests/ -v
 
 test-cov:
-	pytest tests/ -W error --cov=normadocs --cov-report=term-missing --cov-report=xml --cov-fail-under=86
+	pytest tests/ -W error -W "ignore:.*HarfBuzz-Subset.*:DeprecationWarning" --cov=normadocs --cov-report=term-missing --cov-report=xml --cov-fail-under=86
 
 lint:
 	RUFF_NOQA=1 ruff check src/ tests/ --no-cache
@@ -22,7 +22,7 @@ security:
 
 semgrep:
 	SEMGREP_SEND_METRICS=off semgrep scan \
-		--config p/python --config p/security-audit --error src/
+		--config p/python --config p/security-audit --config .semgrep/security.yml --error src/
 
 gitleaks:
 	@command -v gitleaks >/dev/null 2>&1 || { \

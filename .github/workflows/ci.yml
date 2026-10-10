@@ -1,16 +1,14 @@
 name: CI
 
 on:
-  push:
-    branches: ["main"]
   pull_request:
     branches: ["main"]
   workflow_call:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   PIP_CACHE_DIR: ~/.cache/pip
@@ -22,17 +20,17 @@ jobs:
     # Docs-only PRs (docs/**, markdown, changelog) skip the heavy jobs to
     # save Actions credits. Skipped required checks still satisfy branch
     # protection; docs PRs are validated by docs-build below + docs.yml.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
-      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
           filters: |
@@ -50,17 +48,17 @@ jobs:
   docs-build:
     name: Docs Build (strict)
     # Always runs: the meaningful validation for docs-only changes.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -77,15 +75,15 @@ jobs:
     name: Lint & Type Check
     needs: [changes]
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -123,15 +121,15 @@ jobs:
     name: Security Scan
     needs: [changes]
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -150,21 +148,21 @@ jobs:
         run: bandit -r src/ -c pyproject.toml
 
       - name: Run Semgrep (advanced SAST)
-        run: semgrep scan --config p/python --config p/security-audit --error --metrics off src/
+        run: semgrep scan --config p/python --config p/security-audit --config .semgrep/security.yml --error --metrics off src/
 
   gitleaks:
     name: Secret Scan (Gitleaks)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
 
       - name: Detect committed secrets
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -176,7 +174,7 @@ jobs:
     # always(): skipped needs (quality/security on docs-only) must not skip
     # this job, or the matrix legs would never report.
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -192,12 +190,12 @@ jobs:
         if: ${{ needs.changes.outputs.code != 'true' }}
         run: echo "Docs-only change - full matrix runs on code changes - local gate is make check"
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         if: needs.changes.outputs.code == 'true'
 
       - name: Set up Python ${{ matrix.python-version }}
         if: needs.changes.outputs.code == 'true'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
@@ -213,7 +211,7 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc
+          sudo apt-get install -y pandoc libharfbuzz-subset0
 
       - name: Install dependencies (locked)
         if: needs.changes.outputs.code == 'true'
@@ -228,7 +226,7 @@ jobs:
       - name: Run tests with coverage (warnings as errors)
         if: needs.changes.outputs.code == 'true'
         run: >-
-          python -m pytest tests/ -W error --cov=normadocs
+          python -m pytest tests/ -W error -W "ignore:.*HarfBuzz-Subset.*:DeprecationWarning" --cov=normadocs
           --cov-report=term-missing --cov-report=xml --cov-fail-under=78
 
       - name: Upload coverage (3.13 only)
@@ -249,15 +247,15 @@ jobs:
     name: Build Distribution
     needs: [tests, changes]
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -289,7 +287,7 @@ jobs:
     needs: [quality, security, gitleaks, tests, build-check, changes, docs-build]
     # always(): must aggregate even when docs-only skips upstream jobs.
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       actions: read
@@ -297,9 +295,12 @@ jobs:
     steps:
       - name: Check for annotations
         shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_RUN_ID: ${{ github.run_id }}
         run: |
-          repo_full="${{ github.repository }}"
-          run_id="${{ github.run_id }}"
+          repo_full="$GH_REPO"
+          run_id="$GH_RUN_ID"
 
           echo "Checking run $run_id for annotations in $repo_full..."
 

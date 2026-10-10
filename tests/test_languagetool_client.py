@@ -2,7 +2,9 @@
 Tests for LanguageTool client module.
 """
 
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from normadocs.languagetool_client import (
@@ -244,27 +246,43 @@ class TestStartServer(unittest.TestCase):
 
         with (
             patch.object(client, "is_server_running", return_value=False),
-            patch("normadocs.languagetool_client.Path") as mock_path,
+            tempfile.TemporaryDirectory() as tmpdir,
         ):
-            mock_path.return_value.rglob.return_value = []
-
             with self.assertRaises(FileNotFoundError) as ctx:
-                client.start_server("/opt/LanguageTool")
+                client.start_server(tmpdir)
 
             self.assertIn("LanguageTool server JAR not found", str(ctx.exception))
+
+    def test_start_server_rejects_relative_install_dir(self):
+        """Should raise ValueError for a non-absolute install_dir."""
+        client = LanguageToolClient()
+
+        with (
+            patch.object(client, "is_server_running", return_value=False),
+            self.assertRaises(ValueError),
+        ):
+            client.start_server("relative/path")
+
+    def test_start_server_rejects_jar_traversal(self):
+        """Should raise ValueError when jar_pattern is not a plain file name."""
+        client = LanguageToolClient()
+
+        with (
+            patch.object(client, "is_server_running", return_value=False),
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
+            with self.assertRaises(ValueError):
+                client.start_server(tmpdir, "../evil.jar")
+            with self.assertRaises(ValueError):
+                client.start_server(tmpdir, "sub/dir/server.jar")
 
     @patch("normadocs.languagetool_client.time.sleep")
     @patch("normadocs.languagetool_client.run_background_command")
     @patch("normadocs.languagetool_client.get_command_path")
     def test_start_server_starts_server_successfully(self, mock_get_cmd, mock_bg_run, mock_sleep):
         """Should start server and wait for it to be ready."""
-        from pathlib import Path
-
         client = LanguageToolClient()
         client._server_process = None
-
-        mock_jar = MagicMock(spec=Path)
-        mock_jar.__str__ = MagicMock(return_value="/opt/LanguageTool/languagetool-server.jar")
 
         mock_get_cmd.return_value = "java"
 
@@ -273,39 +291,37 @@ class TestStartServer(unittest.TestCase):
 
         with (
             patch.object(client, "is_server_running", side_effect=[False, False, True]),
-            patch("normadocs.languagetool_client.Path") as mock_path,
+            tempfile.TemporaryDirectory() as tmpdir,
         ):
-            mock_path.return_value.rglob.return_value = [mock_jar]
+            jar_path = Path(tmpdir) / "languagetool-server.jar"
+            jar_path.write_bytes(b"fake-jar")
 
-            client.start_server("/opt/LanguageTool")
+            client.start_server(tmpdir)
 
             mock_bg_run.assert_called_once()
+            started_cmd = mock_bg_run.call_args[0][0]
+            self.assertEqual(started_cmd[2], str(jar_path))
             self.assertEqual(client._server_process, mock_process)
 
     @patch("normadocs.languagetool_client.time.sleep")
     @patch("normadocs.languagetool_client.get_command_path")
     def test_start_server_raises_timeout_error(self, mock_get_cmd, mock_sleep):
         """Should raise RuntimeError when server fails to start within timeout."""
-        from pathlib import Path
-
         client = LanguageToolClient()
         client._server_process = None
 
-        mock_jar = MagicMock(spec=Path)
-        mock_jar.__str__ = MagicMock(return_value="/opt/LanguageTool/languagetool-server.jar")
-
         mock_get_cmd.return_value = "java"
 
-        with (
-            patch.object(client, "is_server_running", return_value=False),
-            patch("normadocs.languagetool_client.Path") as mock_path,
-        ):
-            mock_path.return_value.rglob.return_value = [mock_jar]
-            with patch("normadocs.languagetool_client.run_background_command"):
-                with self.assertRaises(RuntimeError) as ctx:
-                    client.start_server("/opt/LanguageTool")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            (Path(tmpdir) / "languagetool-server.jar").write_bytes(b"fake-jar")
+            with (
+                patch.object(client, "is_server_running", return_value=False),
+                patch("normadocs.languagetool_client.run_background_command"),
+                self.assertRaises(RuntimeError) as ctx,
+            ):
+                client.start_server(tmpdir)
 
-                self.assertIn("failed to start within 30 seconds", str(ctx.exception))
+            self.assertIn("failed to start within 30 seconds", str(ctx.exception))
 
 
 class TestFormatErrors(unittest.TestCase):

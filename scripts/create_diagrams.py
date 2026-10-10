@@ -2,10 +2,11 @@
 """Generate PNG diagrams for the technical proposal."""
 
 import os
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-OUTPUT_DIR = "/home/mackroph/Projectos/Learning/APAScript/IDocs/image"
+OUTPUT_DIR = str(Path(__file__).resolve().parent.parent / "IDocs" / "image")
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 FONT_BOLD_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 

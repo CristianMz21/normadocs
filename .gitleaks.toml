@@ -1,0 +1,12 @@
+# Gitleaks configuration for NormaDocs.
+#
+# The SonarCloud *public* project identifier `CristianMz21_normadocs` appears
+# in sonar-project.properties, in an archived SDD verify-report, and in a
+# deleted workflow (git history). The generic-api-key rule flags it, but a
+# public project key is not a secret: anyone can read it from the SonarCloud
+# URL. This allowlist covers exactly that literal string and nothing else —
+# any real credential still fails the scan (locally and in CI).
+
+[allowlist]
+description = "Public SonarCloud project key (not a secret)"
+regexes = ['''CristianMz21_normadocs''']

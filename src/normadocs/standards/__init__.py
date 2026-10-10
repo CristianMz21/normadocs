@@ -9,6 +9,21 @@ from .schema import get_default_config, merge_with_defaults
 
 _STANDARDS_DIR = Path(__file__).parent
 
+_ALLOWED_STANDARDS = frozenset({"apa7", "apa7estudiante", "icontec", "ieee"})
+
+
+def _validated_key(name: str) -> str:
+    """Normalize a style name and reject anything outside the allowlist.
+
+    The loader must not trust its caller: a name containing path
+    separators or ``..`` would otherwise escape ``standards_dir`` (path
+    traversal) and inject arbitrary YAML configuration into formatters.
+    """
+    key = _get_style_key(name)
+    if key not in _ALLOWED_STANDARDS or Path(key).name != key:
+        raise ValueError(f"Estándar no soportado: {name}")
+    return key
+
 
 def _load_yaml(name: str) -> dict[str, Any]:
     """Load a YAML standard configuration file."""
@@ -46,7 +61,7 @@ class StandardLoader:
 
     def load(self, name: str) -> dict[str, Any]:
         """Load a standard configuration by name, merged with defaults."""
-        key = _get_style_key(name)
+        key = _validated_key(name)
         path = self.standards_dir / f"{key}.yaml"
         if not path.exists():
             raise FileNotFoundError(f"Standard '{name}' not found at {path}")
@@ -56,7 +71,7 @@ class StandardLoader:
 
     def load_raw(self, name: str) -> dict[str, Any]:
         """Load raw YAML config without merging defaults."""
-        key = _get_style_key(name)
+        key = _validated_key(name)
         path = self.standards_dir / f"{key}.yaml"
         if not path.exists():
             raise FileNotFoundError(f"Standard '{name}' not found at {path}")
@@ -69,7 +84,10 @@ class StandardLoader:
 
     def exists(self, name: str) -> bool:
         """Check if a standard exists."""
-        key = _get_style_key(name)
+        try:
+            key = _validated_key(name)
+        except ValueError:
+            return False
         return (self.standards_dir / f"{key}.yaml").exists()
 
 

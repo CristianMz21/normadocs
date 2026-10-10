@@ -2,6 +2,7 @@
 Module for preprocessing Markdown content before Pandoc conversion.
 """
 
+import html
 import re
 
 import yaml
@@ -129,7 +130,7 @@ class MarkdownPreprocessor:
         parts.append('<div style="text-align:center">\n')
 
         title = meta.title or "Sin Título"
-        title_encoded = title.replace("#", "&#35;")
+        title_encoded = html.escape(title, quote=False).replace("#", "&#35;")
         parts.append(f"**{title_encoded}**\n")
         parts.append("")
         parts.append("&nbsp;\n")
@@ -149,7 +150,7 @@ class MarkdownPreprocessor:
         for field in fields:
             val = getattr(meta, field, None)
             if val:
-                parts.append(f"<!-- {field} --> {val}\n")
+                parts.append(f"<!-- {field} --> {html.escape(val, quote=False)}\n")
 
         parts.append("\n</div>\n\n")
 
@@ -668,6 +669,32 @@ class MarkdownPreprocessor:
         return relocated
 
     @staticmethod
+    def _sanitize_raw_attributes(lines: list[str]) -> list[str]:
+        """Neutralize user-supplied Pandoc raw attributes (``{=...}``).
+
+        The DOCX pipeline enables ``+raw_attribute`` so the tool can inject
+        its own OpenXML page breaks. Without sanitization, an untrusted
+        document could smuggle `````{=openxml}`` blocks (or inline
+        ```code`{=openxml}`` spans) that Pandoc copies verbatim into
+        ``document.xml``. Escaping the brace outside fenced code content
+        turns those markers into literal text while the tool's own breaks
+        — inserted later by ``_build_output_parts`` — are unaffected.
+        """
+        sanitized: list[str] = []
+        in_code_block = False
+        for line in lines:
+            stripped = line.strip().replace("\r", "")
+            if MarkdownPreprocessor._is_code_fence(stripped):
+                in_code_block = not in_code_block
+                sanitized.append(line.replace("{=", "\\{="))
+                continue
+            if not in_code_block and "{=" in line:
+                sanitized.append(line.replace("{=", "\\{="))
+            else:
+                sanitized.append(line)
+        return sanitized
+
+    @staticmethod
     def _build_output_parts(joined_lines: list[str]) -> list[str]:
         """Add page breaks only before references/appendices; escape numbered TOC lines.
 
@@ -705,6 +732,8 @@ class MarkdownPreprocessor:
           3. Join hard-wrapped lines into proper paragraphs
           4. Insert page breaks only before references/appendix H1 headings
           5. Skip ## and ### headings (they stay in the same page)
+          6. Neutralize user-supplied raw attributes ({=...}) so only the
+             tool's own OpenXML breaks reach Pandoc
         """
         lines = text.split("\n")
         meta = self.extract_metadata(lines)
@@ -721,6 +750,8 @@ class MarkdownPreprocessor:
         joined_lines = self._join_wrapped_lines(content_lines)
 
         joined_lines = self._relocate_title_before_body(joined_lines, meta.title or "")
+
+        joined_lines = self._sanitize_raw_attributes(joined_lines)
 
         output_parts = self._build_output_parts(joined_lines)
 

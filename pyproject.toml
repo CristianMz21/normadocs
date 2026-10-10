@@ -41,7 +41,7 @@ dependencies = [
 
 [project.optional-dependencies]
 pdf = [
-  "weasyprint>=60.0.0",
+  "weasyprint>=70.0.0",
 ]
 pdf-verifier = [
   "pdfplumber>=0.10.0",

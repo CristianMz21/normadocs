@@ -2,6 +2,8 @@
 Create a full-page Gantt chart using PIL
 """
 
+from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -237,7 +239,9 @@ def create_gantt_fullpage():
         x += 250
 
     # Save
-    output_path = "/home/mackroph/Projectos/Learning/APAScript/IDocs/image/gantt_chart.png"
+    output_path = str(
+        Path(__file__).resolve().parent.parent / "IDocs" / "image" / "gantt_chart.png"
+    )
     img.save(output_path, "PNG", dpi=(150, 150))
     print(f"Gantt chart saved: {output_path}")
     print(f"Dimensions: {width}x{height}")

@@ -202,6 +202,21 @@ cd normadocs
 pip install -e ".[dev]"
 ```
 
+### Trust boundary for untrusted documents
+
+NormaDocs is a local CLI: treat the input Markdown as trusted content.
+When converting documents received from third parties, keep in mind:
+
+- The `--format pdf` fallback (WeasyPrint, used when LibreOffice is absent)
+  renders with raw HTML disabled and a restricted resource fetcher: only
+  `data:` URIs and files under the input/output directories load. Remote
+  URLs and out-of-scope local files are blocked.
+- User-supplied `{=...}` raw-attribute blocks are neutralized before Pandoc,
+  so they render as literal text instead of injected DOCX markup.
+- `--lt-docker` pulls a digest-pinned image, but the full document text is
+  still sent to that container; prefer a local LanguageTool server for
+  sensitive documents.
+
 ---
 
 ## CLI Reference

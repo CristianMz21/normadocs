@@ -145,9 +145,16 @@ def _apply_formatting_stage(style: str, output_docx: Path, meta: Any) -> None:
 
 
 def _generate_pdf_stage(
-    opts: ConvertOptions, output_docx: Path, output_dir: Path, clean_md: str, output_pdf: Path
+    opts: ConvertOptions,
+    output_docx: Path,
+    output_dir: Path,
+    clean_md: str,
+    output_pdf: Path,
+    input_path: Path,
 ) -> bool:
-    return cli_helpers._generate_pdf(opts.format, output_docx, output_dir, clean_md, output_pdf)
+    return cli_helpers._generate_pdf(
+        opts.format, output_docx, output_dir, clean_md, output_pdf, input_path
+    )
 
 
 def _should_verify_apa(opts: ConvertOptions, pdf_generated: bool) -> bool:
@@ -219,7 +226,9 @@ def _orchestrate(input_file: Path, opts: ConvertOptions) -> None:
 
     _apply_formatting_stage(opts.style, output_docx, meta)
 
-    pdf_generated = _generate_pdf_stage(opts, output_docx, output_dir, clean_md, output_pdf)
+    pdf_generated = _generate_pdf_stage(
+        opts, output_docx, output_dir, clean_md, output_pdf, input_file
+    )
 
     if _should_verify_apa(opts, pdf_generated):
         passed = _verify_apa_stage(output_pdf, output_docx, meta, opts)

@@ -269,7 +269,6 @@ class CodeImageProcessor:
         options = {
             "format": self.image_format,
             "quality": "100",
-            "enable-local-file-access": "",
         }
 
         try:

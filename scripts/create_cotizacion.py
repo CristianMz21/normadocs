@@ -2,6 +2,8 @@
 Cotización Realista - Análisis COMPLETO de los 3 proyectos.
 """
 
+from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
 
 _DARK_BLUE = (30, 41, 64)
@@ -410,7 +412,9 @@ def create_cotizacion() -> None:
     _draw_payment(draw, fonts, _WIDTH, timeline_y)
     _draw_footer(draw, fonts, _WIDTH, _HEIGHT)
 
-    output_path = "/home/mackroph/Projectos/Learning/APAScript/IDocs/image/diagrama_cotizacion.png"
+    output_path = str(
+        Path(__file__).resolve().parent.parent / "IDocs" / "image" / "diagrama_cotizacion.png"
+    )
     img.save(output_path, "PNG", dpi=(150, 150))
     print(f"Cotización saved: {output_path}")
     print("Total: $10.800.000 COP | ~14 semanas")
