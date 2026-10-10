@@ -16,7 +16,7 @@ env:
 jobs:
   validate-tag:
     name: Validate Version Tag
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -55,7 +55,7 @@ jobs:
   check-pypi:
     name: Check PyPI Status
     needs: [validate-tag]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -81,7 +81,7 @@ jobs:
   publish:
     name: Upload to PyPI
     needs: [ci, check-pypi]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     if: needs.check-pypi.outputs.already_published != 'true'
     permissions:
@@ -121,7 +121,7 @@ jobs:
   publish-skipped:
     name: Publish Skipped
     needs: [ci, check-pypi]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: needs.check-pypi.outputs.already_published == 'true'
     permissions:
       contents: read

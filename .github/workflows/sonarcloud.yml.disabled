@@ -30,7 +30,7 @@ jobs:
     # NOTE: this job always runs, even on docs-only changes. The SonarCloud
     # app only reports the required "SonarCloud Code Analysis" context after
     # a scan upload; skipping would leave the PR blocked on "Expected".
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: pypi
     steps:

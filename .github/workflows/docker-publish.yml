@@ -29,7 +29,7 @@ concurrency:
 jobs:
   docker-build:
     if: github.actor != 'dependabot[bot]' || github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       contents: read
