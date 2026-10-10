@@ -5,7 +5,7 @@ test:
 	pytest tests/ -v
 
 test-cov:
-	pytest tests/ -W error --cov=normadocs --cov-report=term-missing --cov-report=xml --cov-fail-under=86
+	pytest tests/ -W error -W "ignore:.*HarfBuzz-Subset.*:DeprecationWarning" --cov=normadocs --cov-report=term-missing --cov-report=xml --cov-fail-under=86
 
 lint:
 	RUFF_NOQA=1 ruff check src/ tests/ --no-cache

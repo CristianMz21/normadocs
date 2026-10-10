@@ -144,9 +144,6 @@ typeCheckingMode = "standard"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "--tb=short -q"
-filterwarnings = [
-  "ignore:.*HarfBuzz-Subset.*:DeprecationWarning",
-]
 markers = [
   "ocr: end-to-end OCR tests that require the tesseract binary on PATH",
 ]
