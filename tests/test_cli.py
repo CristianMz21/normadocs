@@ -15,10 +15,10 @@ runner = CliRunner()
 
 
 class TestCLI(unittest.TestCase):
-    @patch("normadocs.cli_helpers.PandocRunner")
-    @patch("normadocs.cli_helpers.get_formatter")
-    @patch("normadocs.cli_helpers.MarkdownPreprocessor")
-    @patch("normadocs.cli.logger")
+    @patch("normadocs.converter.PandocRunner")
+    @patch("normadocs.converter.get_formatter")
+    @patch("normadocs.converter.MarkdownPreprocessor")
+    @patch("normadocs.converter.logger")
     def test_convert_command_success(self, mock_logger, mock_pre, mock_get_fmt, mock_pandoc):
         # ``runner.isolated_filesystem()`` was removed from typer/click's
         # CliRunner in typer 0.26 / click 8.4. Use tempfile directly so the
@@ -65,12 +65,12 @@ class TestCLILanguageTool(unittest.TestCase):
     """Tests for LanguageTool CLI options."""
 
     @patch("subprocess.run")
-    @patch("normadocs.cli_helpers.PandocRunner")
-    @patch("normadocs.cli_helpers.get_formatter")
-    @patch("normadocs.cli_helpers.MarkdownPreprocessor")
-    @patch("normadocs.cli_helpers.Document")
-    @patch("normadocs.cli_helpers.LanguageToolClient")
-    @patch("normadocs.cli.logger")
+    @patch("normadocs.converter.PandocRunner")
+    @patch("normadocs.converter.get_formatter")
+    @patch("normadocs.converter.MarkdownPreprocessor")
+    @patch("normadocs.converter.Document")
+    @patch("normadocs.converter.LanguageToolClient")
+    @patch("normadocs.converter.logger")
     def test_language_tool_option_exists(
         self,
         mock_logger,
@@ -110,12 +110,12 @@ class TestCLILanguageTool(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
 
     @patch("subprocess.run")
-    @patch("normadocs.cli_helpers.PandocRunner")
-    @patch("normadocs.cli_helpers.get_formatter")
-    @patch("normadocs.cli_helpers.MarkdownPreprocessor")
-    @patch("normadocs.cli_helpers.Document")
-    @patch("normadocs.cli_helpers.LanguageToolClient")
-    @patch("normadocs.cli.logger")
+    @patch("normadocs.converter.PandocRunner")
+    @patch("normadocs.converter.get_formatter")
+    @patch("normadocs.converter.MarkdownPreprocessor")
+    @patch("normadocs.converter.Document")
+    @patch("normadocs.converter.LanguageToolClient")
+    @patch("normadocs.converter.logger")
     def test_language_tool_custom_port(
         self,
         mock_logger,
@@ -157,12 +157,12 @@ class TestCLILanguageTool(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
 
     @patch("subprocess.run")
-    @patch("normadocs.cli_helpers.PandocRunner")
-    @patch("normadocs.cli_helpers.get_formatter")
-    @patch("normadocs.cli_helpers.MarkdownPreprocessor")
-    @patch("normadocs.cli_helpers.Document")
-    @patch("normadocs.cli_helpers.LanguageToolClient")
-    @patch("normadocs.cli.logger")
+    @patch("normadocs.converter.PandocRunner")
+    @patch("normadocs.converter.get_formatter")
+    @patch("normadocs.converter.MarkdownPreprocessor")
+    @patch("normadocs.converter.Document")
+    @patch("normadocs.converter.LanguageToolClient")
+    @patch("normadocs.converter.logger")
     def test_language_tool_keep_alive_option(
         self,
         mock_logger,
@@ -202,12 +202,12 @@ class TestCLILanguageTool(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
 
     @patch("subprocess.run")
-    @patch("normadocs.cli_helpers.PandocRunner")
-    @patch("normadocs.cli_helpers.get_formatter")
-    @patch("normadocs.cli_helpers.MarkdownPreprocessor")
-    @patch("normadocs.cli_helpers.Document")
-    @patch("normadocs.cli_helpers.LanguageToolClient")
-    @patch("normadocs.cli.logger")
+    @patch("normadocs.converter.PandocRunner")
+    @patch("normadocs.converter.get_formatter")
+    @patch("normadocs.converter.MarkdownPreprocessor")
+    @patch("normadocs.converter.Document")
+    @patch("normadocs.converter.LanguageToolClient")
+    @patch("normadocs.converter.logger")
     def test_language_tool_report_option(
         self,
         mock_logger,
@@ -265,12 +265,12 @@ class TestCLILanguageToolErrors(unittest.TestCase):
     """Tests for LanguageTool error handling in CLI."""
 
     @patch("subprocess.run")
-    @patch("normadocs.cli_helpers.PandocRunner")
-    @patch("normadocs.cli_helpers.get_formatter")
-    @patch("normadocs.cli_helpers.MarkdownPreprocessor")
-    @patch("normadocs.cli_helpers.Document")
-    @patch("normadocs.cli_helpers.LanguageToolClient")
-    @patch("normadocs.cli.logger")
+    @patch("normadocs.converter.PandocRunner")
+    @patch("normadocs.converter.get_formatter")
+    @patch("normadocs.converter.MarkdownPreprocessor")
+    @patch("normadocs.converter.Document")
+    @patch("normadocs.converter.LanguageToolClient")
+    @patch("normadocs.converter.logger")
     def test_language_tool_error_stops_conversion(
         self,
         mock_logger,
@@ -305,12 +305,12 @@ class TestCLILanguageToolErrors(unittest.TestCase):
             self.assertNotEqual(result.exit_code, 0)
 
     @patch("subprocess.run")
-    @patch("normadocs.cli_helpers.PandocRunner")
-    @patch("normadocs.cli_helpers.get_formatter")
-    @patch("normadocs.cli_helpers.MarkdownPreprocessor")
-    @patch("normadocs.cli_helpers.Document")
-    @patch("normadocs.cli_helpers.LanguageToolClient")
-    @patch("normadocs.cli.logger")
+    @patch("normadocs.converter.PandocRunner")
+    @patch("normadocs.converter.get_formatter")
+    @patch("normadocs.converter.MarkdownPreprocessor")
+    @patch("normadocs.converter.Document")
+    @patch("normadocs.converter.LanguageToolClient")
+    @patch("normadocs.converter.logger")
     def test_language_tool_continue_on_error(
         self,
         mock_logger,
@@ -358,12 +358,12 @@ class TestCLILanguageToolDocker(unittest.TestCase):
     """Tests for LanguageTool Docker integration in CLI."""
 
     @patch("subprocess.run")
-    @patch("normadocs.cli_helpers.PandocRunner")
-    @patch("normadocs.cli_helpers.get_formatter")
-    @patch("normadocs.cli_helpers.MarkdownPreprocessor")
-    @patch("normadocs.cli_helpers.Document")
-    @patch("normadocs.cli_helpers.LanguageToolClient")
-    @patch("normadocs.cli.logger")
+    @patch("normadocs.converter.PandocRunner")
+    @patch("normadocs.converter.get_formatter")
+    @patch("normadocs.converter.MarkdownPreprocessor")
+    @patch("normadocs.converter.Document")
+    @patch("normadocs.converter.LanguageToolClient")
+    @patch("normadocs.converter.logger")
     def test_language_tool_docker_option(
         self,
         mock_logger,

@@ -102,7 +102,7 @@ across all jobs. Practical implications:
 ```
 src/normadocs/
 ├── cli.py               # Typer `convert` — 9-stage orchestration
-├── cli_helpers.py       # Stage implementations (preprocess, pandoc, LT, PDF, verify)
+├── converter.py       # Stage implementations (preprocess, pandoc, LT, PDF, verify)
 ├── preprocessor.py      # Stage 1: metadata, line-joining, cover
 ├── pandoc_client.py     # Stage 2: subprocess → `pandoc` for MD→DOCX
 ├── pdf_generator.py     # LibreOffice (preferred) / WeasyPrint fallback
@@ -230,4 +230,5 @@ in `src/normadocs/standards/__init__.py`).
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
+at specs/003-refactor-architecture/plan.md
 <!-- SPECKIT END -->
