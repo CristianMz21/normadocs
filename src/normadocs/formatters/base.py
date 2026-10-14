@@ -5,9 +5,11 @@ the process() and save() methods.
 """
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any
 
 from docx import Document
+from docx.document import Document as DocumentObject
 from docx.table import Table
 
 from ..models import DocumentMetadata
@@ -16,16 +18,26 @@ from ..models import DocumentMetadata
 class DocumentFormatter(ABC):
     """Abstract base class for all document formatters (APA, ICONTEC, IEEE)."""
 
-    def __init__(self, doc_path: str, config: dict[str, Any] | None = None) -> None:
+    def __init__(self, doc_path: str | Path, config: dict[str, Any] | None = None) -> None:
         """Initialize DocumentFormatter.
 
         Args:
             doc_path: Path to the DOCX file to format.
             config: Optional configuration dictionary.
         """
-        self.doc_path = doc_path
-        self.doc = Document(doc_path)
+        self.doc_path = str(doc_path)
+        self._doc: DocumentObject = Document(self.doc_path)
         self.config = config if config is not None else {}
+
+    @property
+    def doc(self) -> DocumentObject:
+        """Return the underlying python-docx Document object."""
+        return self._doc
+
+    @doc.setter
+    def doc(self, value: DocumentObject) -> None:
+        """Set the underlying python-docx Document object."""
+        self._doc = value
 
     def get_config(self, *keys: str, default: Any = None) -> Any:
         """Get a nested config value using dot notation keys.
@@ -49,11 +61,9 @@ class DocumentFormatter(ABC):
         del meta
         ...
 
-    @abstractmethod
     def save(self, output_path: str) -> None:
         """Save the formatted document."""
-        del output_path
-        ...
+        self.doc.save(str(output_path))
 
     def _format_table_caption(self, table: Table, number: int, title: str) -> None:
         """Format table caption (Table X + Title). Optional override for subclasses."""

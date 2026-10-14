@@ -96,6 +96,11 @@ class APATablesHandler:
             str, self.config.get("fonts", fonts).get("body", {}).get("name", DEFAULT_BODY_FONT)
         )
 
+    def _get_body_size(self) -> int:
+        """Get body font size from config."""
+        fonts: dict[str, Any] = {}
+        return int(cast(int, self.config.get("fonts", fonts).get("body", {}).get("size", 12)))
+
     def _apply_font_style(
         self,
         element: Any,
@@ -115,8 +120,11 @@ class APATablesHandler:
         """
         from .apa_styles import APAStylesHandler
 
-        handler = APAStylesHandler(self.doc)
-        handler._apply_font_style(element, font_name=font_name, size=size, bold=bold, italic=italic)
+        handler = APAStylesHandler(self.doc, self.config)
+        resolved_font = font_name or self._get_body_font()
+        handler._apply_font_style(
+            element, font_name=resolved_font, size=size, bold=bold, italic=italic
+        )
 
     def format_tables(self) -> None:
         """Apply APA borders and formatting to all tables."""
@@ -247,7 +255,7 @@ class APATablesHandler:
             return 9
         if num_cols >= 6:
             return 10
-        return 12
+        return self._get_body_size()
 
     def _calc_col_widths(self, table: TableType, font_size: int) -> list[float]:
         """Calculate column widths in inches."""
@@ -679,19 +687,21 @@ class APATablesHandler:
         caption_p_pr.append(jc)
         spacing = OxmlElement(_W_SPACING)
         spacing.set(qn(_W_AFTER), "0")
-        spacing.set(qn(_W_LINE), "240")
+        spacing.set(qn(_W_LINE), "480")
         spacing.set(qn(_W_LINE_RULE), "auto")
         caption_p_pr.append(spacing)
         caption_p.append(caption_p_pr)
         run = OxmlElement("w:r")
         r_pr = OxmlElement(_W_RPR)
         r_pr.append(OxmlElement("w:b"))
+        body_font = self._get_body_font()
+        half_pts = str(self._get_body_size() * 2)
         font = OxmlElement("w:rFonts")
-        font.set(qn("w:ascii"), DEFAULT_BODY_FONT)
-        font.set(qn("w:hAnsi"), DEFAULT_BODY_FONT)
+        font.set(qn("w:ascii"), body_font)
+        font.set(qn("w:hAnsi"), body_font)
         r_pr.append(font)
         sz = OxmlElement("w:sz")
-        sz.set(qn(_W_VAL), "24")
+        sz.set(qn(_W_VAL), half_pts)
         r_pr.append(sz)
         run.append(r_pr)
         t = OxmlElement("w:t")
@@ -710,19 +720,21 @@ class APATablesHandler:
         title_p_pr.append(jc2)
         spacing2 = OxmlElement(_W_SPACING)
         spacing2.set(qn(_W_AFTER), "120")
-        spacing2.set(qn(_W_LINE), "240")
+        spacing2.set(qn(_W_LINE), "480")
         spacing2.set(qn(_W_LINE_RULE), "auto")
         title_p_pr.append(spacing2)
         title_p.append(title_p_pr)
         title_run = OxmlElement("w:r")
         title_r_pr = OxmlElement(_W_RPR)
         title_r_pr.append(OxmlElement("w:i"))
+        body_font = self._get_body_font()
+        half_pts = str(self._get_body_size() * 2)
         font2 = OxmlElement("w:rFonts")
-        font2.set(qn("w:ascii"), DEFAULT_BODY_FONT)
-        font2.set(qn("w:hAnsi"), DEFAULT_BODY_FONT)
+        font2.set(qn("w:ascii"), body_font)
+        font2.set(qn("w:hAnsi"), body_font)
         title_r_pr.append(font2)
         sz2 = OxmlElement("w:sz")
-        sz2.set(qn(_W_VAL), "24")
+        sz2.set(qn(_W_VAL), half_pts)
         title_r_pr.append(sz2)
         title_run.append(title_r_pr)
         title_t = OxmlElement("w:t")
@@ -996,6 +1008,8 @@ class APATablesHandler:
         nota_p_pr = OxmlElement(_W_PPR)
         nota_spacing = OxmlElement(_W_SPACING)
         nota_spacing.set(qn(_W_AFTER), "0")
+        nota_spacing.set(qn(_W_LINE), "480")
+        nota_spacing.set(qn(_W_LINE_RULE), "auto")
         nota_p_pr.append(nota_spacing)
         nota_p.append(nota_p_pr)
         nota_p.append(self._build_nota_run1())
@@ -1003,14 +1017,23 @@ class APATablesHandler:
         nota_p.append(self._build_nota_run3())
         return nota_p
 
+    def _append_nota_font(self, r_pr: Any) -> None:
+        """Append configured font and size to nota run properties."""
+        body_font = self._get_body_font()
+        font = OxmlElement("w:rFonts")
+        font.set(qn("w:ascii"), body_font)
+        font.set(qn("w:hAnsi"), body_font)
+        r_pr.append(font)
+        sz = OxmlElement("w:sz")
+        sz.set(qn(_W_VAL), str(self._get_body_size() * 2))
+        r_pr.append(sz)
+
     def _build_nota_run1(self) -> Any:
         """Build italic 'Nota. ' run."""
         r1 = OxmlElement("w:r")
         r_pr1 = OxmlElement(_W_RPR)
         r_pr1.append(OxmlElement("w:i"))
-        sz1 = OxmlElement("w:sz")
-        sz1.set(qn(_W_VAL), "24")
-        r_pr1.append(sz1)
+        self._append_nota_font(r_pr1)
         r1.append(r_pr1)
         t1 = OxmlElement("w:t")
         t1.text = "Nota. "
@@ -1021,9 +1044,7 @@ class APATablesHandler:
         """Build description run."""
         r2 = OxmlElement("w:r")
         r_pr2 = OxmlElement(_W_RPR)
-        sz2 = OxmlElement("w:sz")
-        sz2.set(qn(_W_VAL), "24")
-        r_pr2.append(sz2)
+        self._append_nota_font(r_pr2)
         r2.append(r_pr2)
         t2 = OxmlElement("w:t")
         t2.text = desc
@@ -1034,9 +1055,7 @@ class APATablesHandler:
         """Build suffix run."""
         r3 = OxmlElement("w:r")
         r_pr3 = OxmlElement(_W_RPR)
-        sz3 = OxmlElement("w:sz")
-        sz3.set(qn(_W_VAL), "24")
-        r_pr3.append(sz3)
+        self._append_nota_font(r_pr3)
         r3.append(r_pr3)
         t3 = OxmlElement("w:t")
         suffix = cast(str, self._get_table_config().get("note_suffix", " Author's elaboration."))

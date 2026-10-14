@@ -15,6 +15,7 @@ from normadocs.formatters import (
     load_standard_config,
 )
 from normadocs.formatters.apa import APADocxFormatter
+from normadocs.formatters.base import DocumentFormatter
 from normadocs.formatters.icontec import IcontecFormatter
 from normadocs.formatters.ieee import IEEEDocxFormatter
 
@@ -26,6 +27,7 @@ class TestGetFormatter(unittest.TestCase):
             Document().save(str(doc_path))
             formatter = get_formatter(doc_path=str(doc_path))
             self.assertIsInstance(formatter, APADocxFormatter)
+            self.assertIsInstance(formatter, DocumentFormatter)
             self.assertFalse(formatter.config["running_head"]["enabled"])
 
     def test_get_formatter_apa_returns_apa_formatter(self):

@@ -4,10 +4,9 @@ IEEE 8th Edition formatter for academic documents.
 Applies IEEE formatting standards to DOCX files.
 """
 
+from pathlib import Path
 from typing import Any, cast
 
-from docx import Document
-from docx.document import Document as DocumentObject
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Cm, Emu, Inches, Pt, RGBColor
 
@@ -30,7 +29,7 @@ class IEEEDocxFormatter(DocumentFormatter):
     - Figures: "Fig." caption prefix
     """
 
-    def __init__(self, doc_path: str, config: dict[str, Any] | None = None) -> None:
+    def __init__(self, doc_path: str | Path, config: dict[str, Any] | None = None) -> None:
         """Initialize IEEE formatter.
 
         Args:
@@ -38,7 +37,6 @@ class IEEEDocxFormatter(DocumentFormatter):
             config: Optional configuration dictionary to override defaults.
         """
         super().__init__(doc_path, config)
-        self.doc: DocumentObject = Document(doc_path)
 
     def _get_margins(self) -> dict[str, float | str]:
         """Get margins from config with IEEE defaults (1 inch all sides)."""
@@ -53,15 +51,15 @@ class IEEEDocxFormatter(DocumentFormatter):
 
     def _get_font_name(self, key: str = "body") -> str:
         """Get font name from config."""
-        return cast(str, self.config.get("fonts", {}).get(key, {}).get("name", "Times New Roman"))
+        return cast(str, self.get_config("fonts", key, "name", default="Times New Roman"))
 
     def _get_font_size(self, key: str = "body") -> int:
         """Get font size from config (IEEE default is 10pt)."""
-        return cast(int, self.config.get("fonts", {}).get(key, {}).get("size", 10))
+        return cast(int, self.get_config("fonts", key, "size", default=10))
 
     def _get_spacing_line(self) -> str:
         """Get line spacing from config (IEEE default is single)."""
-        return cast(str, self.config.get("spacing", {}).get("line", "single"))
+        return cast(str, self.get_config("spacing", "line", default="single"))
 
     def process(self, meta: DocumentMetadata) -> None:
         """Run the IEEE formatting pipeline."""
@@ -71,10 +69,6 @@ class IEEEDocxFormatter(DocumentFormatter):
         self._format_paragraphs()
         self._format_tables()
         self._format_figures()
-
-    def save(self, output_path: str) -> None:
-        """Save the formatted document."""
-        self.doc.save(str(output_path))
 
     def _setup_page_layout(self) -> None:
         """Set 1 inch margins on all sides."""

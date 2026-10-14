@@ -174,11 +174,13 @@ def deep_copy(obj: Any) -> Any:
     Returns:
         A deep copy of the object.
     """
+    if isinstance(obj, list):
+        return [deep_copy(item) for item in obj]
     if not isinstance(obj, dict):
         return obj
-    result = {}
+    result: dict[Any, Any] = {}
     for key, value in obj.items():
-        if isinstance(value, dict):
+        if isinstance(value, (dict, list)):
             result[key] = deep_copy(value)
         else:
             result[key] = value

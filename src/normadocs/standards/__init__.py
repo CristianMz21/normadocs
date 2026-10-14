@@ -5,7 +5,7 @@ from typing import Any, cast
 
 import yaml
 
-from .schema import get_default_config, merge_with_defaults
+from .schema import deep_copy, deep_merge, get_default_config, merge_with_defaults
 
 _STANDARDS_DIR = Path(__file__).parent
 
@@ -96,6 +96,8 @@ __all__ = [
     "ICONTEC_CONFIG",
     "IEEE_CONFIG",
     "StandardLoader",
+    "deep_copy",
+    "deep_merge",
     "get_default_config",
     "merge_with_defaults",
 ]

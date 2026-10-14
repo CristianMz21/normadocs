@@ -356,6 +356,7 @@ class APAStylesHandler:
             paragraph: The paragraph to apply formatting to.
             font_size: Font size to apply (optional).
         """
-        size = 12 if font_size is None else font_size
+        font_name = self._get_font_name(_BODY_KEY)
+        size = self._get_font_size(_BODY_KEY) if font_size is None else font_size
         for run in paragraph.runs:
-            self._apply_font_style(run, size=size)
+            self._apply_font_style(run, font_name=font_name, size=size)

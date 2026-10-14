@@ -165,6 +165,11 @@ class APAParagraphsHandler:
             str, self.config.get("fonts", fonts).get("body", {}).get("name", DEFAULT_BODY_FONT)
         )
 
+    def _get_body_size(self) -> int:
+        """Get body font size from config."""
+        fonts: dict[str, Any] = {}
+        return int(cast(int, self.config.get("fonts", fonts).get("body", {}).get("size", 12)))
+
     @staticmethod
     def _has_page_break_before(paragraph: ParagraphType) -> bool:
         """Return whether the nearest preceding body content is a page break.
@@ -197,7 +202,7 @@ class APAParagraphsHandler:
         """
         from .apa_styles import APAStylesHandler
 
-        styles_handler = APAStylesHandler(self.doc)
+        styles_handler = APAStylesHandler(self.doc, self.config)
         state = ParagraphState(heading_levels=self._build_heading_level_map())
 
         for p in self.doc.paragraphs:
@@ -608,7 +613,7 @@ class APAParagraphsHandler:
         """Format Table of Contents entries with correct indentation."""
         from .apa_styles import APAStylesHandler
 
-        styles_handler = APAStylesHandler(self.doc)
+        styles_handler = APAStylesHandler(self.doc, self.config)
         text = p.text.strip()
         if not text:
             return
@@ -685,14 +690,16 @@ class APAParagraphsHandler:
         self, p: ParagraphType, styles_handler: Any, title: str, page_num: str
     ) -> None:
         """Create TOC runs with leaders and formatting."""
+        body_font = self._get_body_font()
+        body_size = self._get_body_size()
         run = p.add_run(title)
-        styles_handler._apply_font_style(run)
+        styles_handler._apply_font_style(run, font_name=body_font, size=body_size)
         if title and title[:1].isdigit():
             run.text = "\u200b" + run.text
         run = p.add_run("\t")
-        styles_handler._apply_font_style(run)
+        styles_handler._apply_font_style(run, font_name=body_font, size=body_size)
         run = p.add_run(page_num)
-        styles_handler._apply_font_style(run)
+        styles_handler._apply_font_style(run, font_name=body_font, size=body_size)
 
     def _build_heading_level_map(self) -> dict[str, int]:
         """Build a map of heading text -> heading level from the document."""
@@ -718,7 +725,7 @@ class APAParagraphsHandler:
         """
         from .apa_styles import APAStylesHandler
 
-        styles_handler = APAStylesHandler(self.doc)
+        styles_handler = APAStylesHandler(self.doc, self.config)
         in_references = False
         for p in self.doc.paragraphs:
             style_name = paragraph_style_name(p)
@@ -823,7 +830,9 @@ class APAParagraphsHandler:
             first_run.text = "\u2022\t" + first_run.text
         else:
             run = p.add_run("\u2022\t")
-            styles_handler._apply_font_style(run)
+            styles_handler._apply_font_style(
+                run, font_name=self._get_body_font(), size=self._get_body_size()
+            )
 
     def apply_body_indent(self) -> None:
         """Final pass: apply first-line indent to all body paragraphs.
@@ -840,15 +849,19 @@ class APAParagraphsHandler:
                 continue
             if self._should_skip_body_indent(p, state, text, style_name):
                 continue
+            if state.first_paragraph_after_heading:
+                state.first_paragraph_after_heading = False
+                continue
             p.paragraph_format.first_line_indent = Inches(0.5)
 
-    def _update_indent_state(self, _p: ParagraphType, state: ParagraphState, text: str) -> None:
+    def _update_indent_state(self, p: ParagraphType, state: ParagraphState, text: str) -> None:
         """Update indent-tracking state for heading paragraphs."""
         text_lower = text.lower().strip().rstrip(".")
         if _is_references_heading(text_lower):
             state.in_references = True
             state.in_toc = False
             state.in_abstract = False
+            state.first_paragraph_after_heading = True
             return
         if "contenido" in text_lower or "index" in text_lower:
             state.in_toc = True
@@ -860,6 +873,8 @@ class APAParagraphsHandler:
             state.in_toc = False
             state.in_references = False
             return
+        if paragraph_style_name(p) == _HEADING_1:
+            state.first_paragraph_after_heading = True
         state.in_references = False
         state.in_toc = False
         state.in_abstract = False
@@ -1003,6 +1018,8 @@ class APAParagraphsHandler:
         """Re-create runs from format groups with cleaned text."""
         from docx.shared import Pt
 
+        default_font = self._get_body_font()
+        default_size = Pt(self._get_body_size())
         for idx, (is_bold, is_italic, text, font_name, font_size) in enumerate(groups):
             text = _MULTI_SPACE_RE.sub(" ", text)
             if idx == 0:
@@ -1012,8 +1029,8 @@ class APAParagraphsHandler:
             if not text:
                 continue
             new_run = p.add_run(text)
-            new_run.font.name = font_name or DEFAULT_BODY_FONT
-            new_run.font.size = font_size or Pt(12)
+            new_run.font.name = font_name or default_font
+            new_run.font.size = font_size or default_size
             if is_bold:
                 new_run.bold = True
             if is_italic:

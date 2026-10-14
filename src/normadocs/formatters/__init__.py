@@ -4,7 +4,12 @@ Formatter factory with YAML-based standard support.
 
 from typing import Any
 
-from ..standards import StandardLoader, get_default_config, merge_with_defaults
+from ..standards import (
+    StandardLoader,
+    deep_merge,
+    get_default_config,
+    merge_with_defaults,
+)
 from .apa import APADocxFormatter
 from .base import DocumentFormatter
 from .icontec import IcontecFormatter
@@ -15,6 +20,7 @@ __all__ = [
     "DocumentFormatter",
     "IEEEDocxFormatter",
     "IcontecFormatter",
+    "deep_merge",
     "get_formatter",
     "list_available_standards",
     "load_standard_config",
@@ -46,8 +52,8 @@ def get_formatter(
         yaml_config = get_default_config(style)
 
     if config is not None:
-        final_config = merge_with_defaults(config, style)
-        deep_merge(yaml_config, config)
+        final_config = merge_with_defaults(yaml_config, style)
+        deep_merge(final_config, config)
     else:
         final_config = yaml_config
 
@@ -61,27 +67,6 @@ def get_formatter(
         raise ValueError(
             f"Unsupported style: {style}. Available: apa, apa7estudiante, icontec, ieee"
         )
-
-
-def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
-    """Recursively merge override into base dictionary in-place.
-
-    Performs a deep recursive merge where override values take precedence.
-    Lists are replaced, not concatenated. Modifies base dictionary.
-
-    Args:
-        base: The base dictionary to merge into (modified in-place).
-        override: The override dictionary with values to merge.
-
-    Returns:
-        The merged base dictionary.
-    """
-    for key, value in override.items():
-        if key in base and isinstance(base[key], dict) and isinstance(value, dict):
-            deep_merge(base[key], value)
-        else:
-            base[key] = value
-    return base
 
 
 def load_standard_config(style: str) -> dict[str, Any]:

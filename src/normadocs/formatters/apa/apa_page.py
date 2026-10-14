@@ -56,6 +56,14 @@ class APAPageHandler:
                 return default
         return value
 
+    def _get_body_font(self) -> str:
+        """Get body font name from config."""
+        return cast(str, self.get_config("fonts", "body", "name", default=DEFAULT_BODY_FONT))
+
+    def _get_body_size(self) -> int:
+        """Get body font size from config."""
+        return int(cast(int, self.get_config("fonts", "body", "size", default=12)))
+
     def _get_margins(self) -> dict[str, float]:
         """Get margins from config with defaults."""
         margins = cast(dict[str, Any], self.get_config("margins", default={}))
@@ -132,6 +140,8 @@ class APAPageHandler:
 
         hp = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
         hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        body_font = self._get_body_font()
+        body_size = Pt(self._get_body_size())
 
         # Build PAGE field with begin/separate/end sequence
         # (LibreOffice requires the 'separate' marker to render page numbers)
@@ -139,35 +149,35 @@ class APAPageHandler:
         fld_begin = OxmlElement(_FLD_CHAR)
         fld_begin.set(qn(_FLD_CHAR_TYPE), "begin")
         run_begin._r.append(fld_begin)
-        run_begin.font.name = DEFAULT_BODY_FONT
-        run_begin.font.size = Pt(12)
+        run_begin.font.name = body_font
+        run_begin.font.size = body_size
 
         run_instr = hp.add_run()
         instr = OxmlElement("w:instrText")
         instr.set(qn("xml:space"), "preserve")
         instr.text = " PAGE "
         run_instr._r.append(instr)
-        run_instr.font.name = DEFAULT_BODY_FONT
-        run_instr.font.size = Pt(12)
+        run_instr.font.name = body_font
+        run_instr.font.size = body_size
 
         run_sep = hp.add_run()
         fld_sep = OxmlElement(_FLD_CHAR)
         fld_sep.set(qn(_FLD_CHAR_TYPE), "separate")
         run_sep._r.append(fld_sep)
-        run_sep.font.name = DEFAULT_BODY_FONT
-        run_sep.font.size = Pt(12)
+        run_sep.font.name = body_font
+        run_sep.font.size = body_size
 
         # Placeholder text (will be replaced by actual page number)
         run_num = hp.add_run("1")
-        run_num.font.name = DEFAULT_BODY_FONT
-        run_num.font.size = Pt(12)
+        run_num.font.name = body_font
+        run_num.font.size = body_size
 
         run_end = hp.add_run()
         fld_end = OxmlElement(_FLD_CHAR)
         fld_end.set(qn(_FLD_CHAR_TYPE), "end")
         run_end._r.append(fld_end)
-        run_end.font.name = DEFAULT_BODY_FONT
-        run_end.font.size = Pt(12)
+        run_end.font.name = body_font
+        run_end.font.size = body_size
 
         # Strip excessive paragraphs in header
         while len(header.paragraphs) > 1:
@@ -300,42 +310,44 @@ class APAPageHandler:
     def _add_running_head_content(self, hp: Any, display_title: str) -> None:
         """Add title, tabs, and PAGE field to header paragraph."""
         title_run = hp.add_run(display_title)
-        title_run.font.name = DEFAULT_BODY_FONT
-        title_run.font.size = Pt(12)
+        title_run.font.name = self._get_body_font()
+        title_run.font.size = Pt(self._get_body_size())
         hp.add_run("\t")
         hp.add_run("\t")
         self._add_page_field_runs(hp)
 
     def _add_page_field_runs(self, hp: Any) -> None:
         """Build PAGE field with begin/separate/end sequence."""
+        body_font = self._get_body_font()
+        body_size = Pt(self._get_body_size())
         run_begin = hp.add_run()
         fld_begin = OxmlElement(_FLD_CHAR)
         fld_begin.set(qn(_FLD_CHAR_TYPE), "begin")
         run_begin._r.append(fld_begin)
-        run_begin.font.name = DEFAULT_BODY_FONT
-        run_begin.font.size = Pt(12)
+        run_begin.font.name = body_font
+        run_begin.font.size = body_size
         run_instr = hp.add_run()
         instr = OxmlElement("w:instrText")
         instr.set(qn("xml:space"), "preserve")
         instr.text = " PAGE "
         run_instr._r.append(instr)
-        run_instr.font.name = DEFAULT_BODY_FONT
-        run_instr.font.size = Pt(12)
+        run_instr.font.name = body_font
+        run_instr.font.size = body_size
         run_sep = hp.add_run()
         fld_sep = OxmlElement(_FLD_CHAR)
         fld_sep.set(qn(_FLD_CHAR_TYPE), "separate")
         run_sep._r.append(fld_sep)
-        run_sep.font.name = DEFAULT_BODY_FONT
-        run_sep.font.size = Pt(12)
+        run_sep.font.name = body_font
+        run_sep.font.size = body_size
         run_num = hp.add_run("1")
-        run_num.font.name = DEFAULT_BODY_FONT
-        run_num.font.size = Pt(12)
+        run_num.font.name = body_font
+        run_num.font.size = body_size
         run_end = hp.add_run()
         fld_end = OxmlElement(_FLD_CHAR)
         fld_end.set(qn(_FLD_CHAR_TYPE), "end")
         run_end._r.append(fld_end)
-        run_end.font.name = DEFAULT_BODY_FONT
-        run_end.font.size = Pt(12)
+        run_end.font.name = body_font
+        run_end.font.size = body_size
 
     def _strip_excess_header_paragraphs(self, header: Any) -> None:
         """Remove extra paragraphs from a header."""

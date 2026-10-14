@@ -141,11 +141,15 @@ class APAFiguresHandler:
         """Get body font name from config."""
         return cast(str, self.get_config("fonts", "body", "name", default=DEFAULT_BODY_FONT))
 
+    def _get_body_font_size(self) -> int:
+        """Get body font size from config."""
+        return int(cast(int, self.get_config("fonts", "body", "size", default=12)))
+
     def _apply_font_style(self, run: RunType, bold: bool = False, italic: bool = False) -> None:
         """Apply font style to a run (helper for this handler)."""
         from .apa_styles import APAStylesHandler
 
-        handler = APAStylesHandler(self.doc)
+        handler = APAStylesHandler(self.doc, self.config)
         handler._apply_font_style(run, bold=bold, italic=italic)
 
     def _make_figure_paragraph(
@@ -168,11 +172,12 @@ class APAFiguresHandler:
         if italic:
             r_pr.append(OxmlElement("w:i"))
         rn = OxmlElement("w:rFonts")
-        rn.set(qn("w:ascii"), DEFAULT_BODY_FONT)
-        rn.set(qn("w:hAnsi"), DEFAULT_BODY_FONT)
+        font_name = self._get_body_font()
+        rn.set(qn("w:ascii"), font_name)
+        rn.set(qn("w:hAnsi"), font_name)
         r_pr.append(rn)
         sz = OxmlElement("w:sz")
-        sz.set(qn(_W_VAL), "24")
+        sz.set(qn(_W_VAL), str(self._get_body_font_size() * 2))
         r_pr.append(sz)
         run.append(r_pr)
         t = OxmlElement(_W_T)
@@ -435,11 +440,12 @@ class APAFiguresHandler:
     def _append_font_props(self, rpr: Element) -> None:
         """Append Times New Roman 12pt run properties to a w:rPr element."""
         font = OxmlElement("w:rFonts")
-        font.set(qn("w:ascii"), DEFAULT_BODY_FONT)
-        font.set(qn("w:hAnsi"), DEFAULT_BODY_FONT)
+        font_name = self._get_body_font()
+        font.set(qn("w:ascii"), font_name)
+        font.set(qn("w:hAnsi"), font_name)
         rpr.append(font)
         sz = OxmlElement("w:sz")
-        sz.set(qn(_W_VAL), "24")
+        sz.set(qn(_W_VAL), str(self._get_body_font_size() * 2))
         rpr.append(sz)
 
     @staticmethod

@@ -121,17 +121,18 @@ class APAEquationsHandler:
         run.append(OxmlElement("w:tab"))
         return run
 
-    @staticmethod
-    def _make_number_run(label: str) -> Any:
+    def _make_number_run(self, label: str) -> Any:
         """Build a Times New Roman 12pt run with tab + equation number text."""
+        font_name = cast(str, self.get_config("fonts", "body", "name", default=DEFAULT_BODY_FONT))
+        font_size = int(cast(int, self.get_config("fonts", "body", "size", default=12)))
         run = OxmlElement("w:r")
         rpr = OxmlElement("w:rPr")
         fonts = OxmlElement("w:rFonts")
-        fonts.set(qn("w:ascii"), DEFAULT_BODY_FONT)
-        fonts.set(qn("w:hAnsi"), DEFAULT_BODY_FONT)
+        fonts.set(qn("w:ascii"), font_name)
+        fonts.set(qn("w:hAnsi"), font_name)
         rpr.append(fonts)
         size = OxmlElement("w:sz")
-        size.set(qn(W_VAL), "24")
+        size.set(qn(W_VAL), str(font_size * 2))
         rpr.append(size)
         run.append(rpr)
         run.append(OxmlElement("w:tab"))

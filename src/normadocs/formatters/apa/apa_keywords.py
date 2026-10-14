@@ -107,8 +107,15 @@ class APAKeywordsHandler:
         """Apply font style to a run (helper for this handler)."""
         from .apa_styles import APAStylesHandler
 
-        handler = APAStylesHandler(self.doc)
-        handler._apply_font_style(run, italic=italic)
+        handler = APAStylesHandler(self.doc, self.config)
+        font_name = handler._get_font_name()
+        font_size = handler._get_font_size()
+        handler._apply_font_style(
+            run,
+            font_name=font_name,
+            size=font_size,
+            italic=italic,
+        )
 
     def format_keywords(self) -> None:
         """Format 'Palabras clave' per APA 7.

@@ -5,10 +5,9 @@ Applies ICONTEC formatting standards including Arial 12pt font,
 """
 
 import math
+from pathlib import Path
 from typing import Any, cast
 
-from docx import Document
-from docx.document import Document as DocumentObject
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Cm, Inches, Pt, RGBColor
 from docx.text.paragraph import Paragraph
@@ -23,7 +22,7 @@ class IcontecFormatter(DocumentFormatter):
     Applies ICONTEC (NTC 1486) formatting to a DOCX file.
     """
 
-    def __init__(self, doc_path: str, config: dict[str, Any] | None = None) -> None:
+    def __init__(self, doc_path: str | Path, config: dict[str, Any] | None = None) -> None:
         """Initialize ICONTEC formatter.
 
         Args:
@@ -31,7 +30,6 @@ class IcontecFormatter(DocumentFormatter):
             config: Optional configuration dictionary to override defaults.
         """
         super().__init__(doc_path, config)
-        self.doc: DocumentObject = Document(doc_path)
 
     def _get_margins(self) -> dict[str, float]:
         """Get margin settings from config.
@@ -54,8 +52,7 @@ class IcontecFormatter(DocumentFormatter):
         Returns:
             Font name string (e.g., "Arial").
         """
-        result: str = cast(str, self.config.get("fonts", {}).get(key, {}).get("name", "Arial"))
-        return result
+        return cast(str, self.get_config("fonts", key, "name", default="Arial"))
 
     def _get_font_size(self, key: str = "body") -> int:
         """Get the font size from config.
@@ -63,8 +60,7 @@ class IcontecFormatter(DocumentFormatter):
         Returns:
             Font size in points (e.g., 12).
         """
-        result: int = cast(int, self.config.get("fonts", {}).get(key, {}).get("size", 12))
-        return result
+        return cast(int, self.get_config("fonts", key, "size", default=12))
 
     def _get_spacing_line(self) -> float:
         """Get line spacing from config.
@@ -72,8 +68,7 @@ class IcontecFormatter(DocumentFormatter):
         Returns:
             Line spacing value (e.g., 1.5 or 1.0).
         """
-        result: float = self.config.get("spacing", {}).get("line", 1.5)
-        return result
+        return cast(float, self.get_config("spacing", "line", default=1.5))
 
     def _margin_to_unit(self, value: float, unit: str) -> Cm | Inches:
         """Convert margin value based on unit.
@@ -97,14 +92,6 @@ class IcontecFormatter(DocumentFormatter):
         self._process_paragraphs()
         # Tables and Citations logic can be added later/adapted
         # For now, we focus on layout and text style.
-
-    def save(self, output_path: str) -> None:
-        """Save the formatted document.
-
-        Args:
-            output_path: Path where the formatted DOCX will be saved.
-        """
-        self.doc.save(str(output_path))
 
     def _setup_page_layout(self) -> None:
         """

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, cast
 
-from docx import Document
 from docx.document import Document as DocumentObject
 from docx.oxml.table import CT_Tc
 from docx.section import Section
@@ -13,6 +13,7 @@ from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
 from ...models import DocumentMetadata
+from ..base import DocumentFormatter
 from .apa_citations import APACitationsHandler
 from .apa_cover import APACoverHandler
 from .apa_equations import APAEquationsHandler
@@ -24,7 +25,7 @@ from .apa_styles import APAStylesHandler
 from .apa_tables import APATablesHandler
 
 
-class APADocxFormatter:
+class APADocxFormatter(DocumentFormatter):
     """Applies APA 7th Edition formatting to a DOCX file.
 
     This class orchestrates multiple handler classes to apply comprehensive
@@ -36,15 +37,14 @@ class APADocxFormatter:
         config: Optional configuration dictionary to override defaults.
     """
 
-    def __init__(self, doc_path: str, config: dict[str, Any] | None = None) -> None:
+    def __init__(self, doc_path: str | Path, config: dict[str, Any] | None = None) -> None:
         """Initialize the formatter with document path and optional config.
 
         Args:
             doc_path: Path to the DOCX file to format.
             config: Optional configuration dictionary to override defaults.
         """
-        self._doc: DocumentObject = Document(doc_path)
-        self.config = config if config is not None else {}
+        super().__init__(doc_path, config)
 
         # Initialize handlers with config
         self._styles = APAStylesHandler(self._doc, self.config)

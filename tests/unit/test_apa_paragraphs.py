@@ -120,6 +120,34 @@ class TestProcessParagraphs(unittest.TestCase):
 
             os.unlink(temp_path)
 
+    def test_first_paragraph_after_heading_stays_unindented_after_apply_body_indent(self):
+        """apply_body_indent must not add indent to the first paragraph after a heading."""
+        paragraphs = [
+            {"text": "Introducción", "style": "Heading 1"},
+            {
+                "text": "Primer párrafo después del encabezado que debe mantenerse sin sangría.",
+                "style": "Normal",
+            },
+            {
+                "text": "Segundo párrafo consecutivo que sí debe llevar sangría de media pulgada.",
+                "style": "Normal",
+            },
+        ]
+        formatter, temp_path = self._create_formatter_with_doc(paragraphs)
+
+        try:
+            formatter._process_paragraphs()
+            formatter._apply_body_indent()
+
+            first_para = formatter.doc.paragraphs[1]
+            second_para = formatter.doc.paragraphs[2]
+            self.assertEqual(first_para.paragraph_format.first_line_indent, Inches(0))
+            self.assertEqual(second_para.paragraph_format.first_line_indent, Inches(0.5))
+        finally:
+            import os
+
+            os.unlink(temp_path)
+
     def test_subsequent_paragraphs_have_half_inch_indent(self):
         """Subsequent paragraphs (not first after heading) should have 0.5in first-line indent."""
         paragraphs = [
